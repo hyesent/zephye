@@ -37,7 +37,6 @@ export const QUOTES = {
     { content: "Love is composed of a single soul inhabiting two bodies.", author: "Aristotle" },
     //... add your 100 romantic quotes here
   ],
-  // Add Life, Mindfulness, FamilyGratitude arrays if you want them in QOTD pool too
 }
 
 // Helper: flatten all quotes into one array with category tags
@@ -166,16 +165,21 @@ export default function App() {
       const savedManual = localStorage.getItem('zephye_isManual')
 
       if (savedLoc && savedManual === 'true') {
-        const loc = JSON.parse(savedLoc)
-        setLocation(loc)
-        setIsManualLocation(true)
-        fetchWeatherData(loc.lat, loc.lon)
-        setHasFetched(true)
+        try {
+          const loc = JSON.parse(savedLoc)
+          setLocation(loc)
+          setIsManualLocation(true)
+          fetchWeatherData(loc.lat, loc.lon)
+          setHasFetched(true)
+        } catch {
+          initLocation()
+        }
       } else {
         initLocation()
       }
       fetchQuoteOfDay()
     }
+  // eslint-disable-next-line
   }, [session, hasFetched])
 
   const showToast = (msg) => {
@@ -183,16 +187,21 @@ export default function App() {
     setTimeout(() => setToast(''), 2000)
   }
 
-  // NEW: Non-repeating Quote of the Day logic
+  // FIXED: Safe localStorage + crash protection
   const fetchQuoteOfDay = () => {
-    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0]
     const storageKey = 'zephye_qotd_data'
-    const saved = localStorage.getItem(storageKey)
     const pool = getAllQuotesPool()
 
-    let data = saved? JSON.parse(saved) : { date: '', usedIndices: [], shuffledOrder: [] }
+    let data = { date: '', usedIndices: [], shuffledOrder: [] }
 
-    // Reset if new day OR pool exhausted
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) data = JSON.parse(saved)
+    } catch (e) {
+      console.log('Corrupted QOTD data, resetting...')
+    }
+
     if (data.date!== today || data.usedIndices.length >= pool.length) {
       data = {
         date: today,
@@ -201,11 +210,9 @@ export default function App() {
       }
     }
 
-    // Pick next unused quote
     const nextIndex = data.shuffledOrder[data.usedIndices.length]
     const quote = pool[nextIndex]
 
-    // Mark as used
     data.usedIndices.push(nextIndex)
     localStorage.setItem(storageKey, JSON.stringify(data))
 
@@ -345,38 +352,38 @@ export default function App() {
   }
 
   const saveQuote = async (quote) => {
-  if (!quote) return
-  
-  if (!session) {
-    showToast('Please login to save quotes')
-    return
-  }
-  
-  const { error } = await supabase.from('saved_quotes').insert({
-    user_id: session.user.id,
-    quote_text: quote.text || quote.content, // handles both field names
-    quote_author: quote.author || 'Unknown',
-    category: quote.tag || 'Motivational'
-  })
-  
-  showToast(error ? 'Failed to save: ' + error.message : 'Quote saved ♥')
-}
+    if (!quote) return
 
-const saveFact = async (fact) => {
-  if (!fact) return
-  
-  if (!session) {
-    showToast('Please login to save facts')
-    return
+    if (!session) {
+      showToast('Please login to save quotes')
+      return
+    }
+
+    const { error } = await supabase.from('saved_quotes').insert({
+      user_id: session.user.id,
+      quote_text: quote.text || quote.content,
+      quote_author: quote.author || 'Unknown',
+      category: quote.tag || 'Motivational'
+    })
+
+    showToast(error? 'Failed to save: ' + error.message : 'Quote saved ♥')
   }
-  
-  const { error } = await supabase.from('saved_facts').insert({
-    user_id: session.user.id,
-    fact_text: fact.text
-  })
-  
-  showToast(error ? 'Failed to save: ' + error.message : 'Fact saved ♥')
-}
+
+  const saveFact = async (fact) => {
+    if (!fact) return
+
+    if (!session) {
+      showToast('Please login to save facts')
+      return
+    }
+
+    const { error } = await supabase.from('saved_facts').insert({
+      user_id: session.user.id,
+      fact_text: fact.text
+    })
+
+    showToast(error? 'Failed to save: ' + error.message : 'Fact saved ♥')
+  }
 
   const shareQuote = async (text, author) => {
     const shareText = `"${text}" - ${author}\n\nvia Zephye`
@@ -736,13 +743,14 @@ function Auth() {
         </button>
 
         <div style={{textAlign: 'center', marginTop: '24px'}}>
-          <p style={{color: '#94a3b8', fontSize: '12px'}}>c hyesent.dev</p>
+          <p style={{color: '#94a3b8', fontSize: '12px'}}>© hyesent.dev</p>
         </div>
       </div>
     </div>
   )
 }
 
+// FIXED: Quote category filter now works
 function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
@@ -754,14 +762,17 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   useEffect(() => {
     fetchQuote()
     fetchFact()
+  // eslint-disable-next-line
   }, [])
 
   useEffect(() => {
     fetchQuote()
+  // eslint-disable-next-line
   }, [quoteCategory])
 
   useEffect(() => {
     fetchFact()
+  // eslint-disable-next-line
   }, [factCategory])
 
   const fetchQuote = () => {
@@ -770,16 +781,28 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
     setLastFetch(now)
     setLoading(true)
 
-    const pool = getAllQuotesPool()
+    let pool = []
+    if (quoteCategory === 'All') {
+      pool = getAllQuotesPool()
+    } else {
+      pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
+    }
+
+    //... continues from where it cut off
+
     const random = pool[Math.floor(Math.random() * pool.length)]
     setCurrentQuote(random)
     setLoading(false)
   }
 
   const fetchFact = () => {
-    const cat = factCategory === 'All'? 'Science' : factCategory
-    const pool = LOCAL_FACTS[cat] || LOCAL_FACTS.Science
-    const random =pool[Math.floor(Math.random() * pool.length)]
+    let pool = []
+    if (factCategory === 'All') {
+      Object.values(LOCAL_FACTS).forEach(arr => pool.push(...arr))
+    } else {
+      pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
+    }
+    const random = pool[Math.floor(Math.random() * pool.length)]
     setCurrentFact(random)
   }
 
@@ -920,4 +943,4 @@ function SavedTab({ user, showToast, shareQuote }) {
       <button className="btn-ghost mb-4" style={{width: '100%'}} onClick={() => supabase.auth.signOut()}>Sign Out</button>
     </>
   )
-}
+         }
