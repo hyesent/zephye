@@ -14,32 +14,26 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
 
-// 900 QUOTES TOTAL - PASTE YOUR FULL QUOTES OBJECT HERE
 export const QUOTES = {
   Motivational: [
     { content: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
     { content: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
     { content: "Act as if what you do makes a difference. It does.", author: "William James" },
-    //... add your 200 motivational quotes here
   ],
   Success: [
     { content: "Success is not the key to happiness. Happiness is the key to success.", author: "Albert Schweitzer" },
     { content: "Success usually comes to those who are too busy to be looking for it.", author: "Henry David Thoreau" },
-    //... add your 100 success quotes here
   ],
   Wisdom: [
     { content: "The only true wisdom is in knowing you know nothing.", author: "Socrates" },
     { content: "Turn your wounds into wisdom.", author: "Oprah Winfrey" },
-    //... add your 200 wisdom quotes here
   ],
   Love: [
     { content: "You know you're in love when you can't fall asleep because reality is finally better than your dreams.", author: "Dr. Seuss" },
     { content: "Love is composed of a single soul inhabiting two bodies.", author: "Aristotle" },
-    //... add your 100 romantic quotes here
   ],
 }
 
-// Helper: flatten all quotes into one array with category tags
 const getAllQuotesPool = () => {
   const pool = []
   Object.entries(QUOTES).forEach(([category, quotes]) => {
@@ -48,7 +42,6 @@ const getAllQuotesPool = () => {
   return pool
 }
 
-// Helper: shuffle array
 const shuffleArray = (arr) => {
   const shuffled = [...arr]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -179,18 +172,45 @@ export default function App() {
       }
       fetchQuoteOfDay()
     }
-  // eslint-disable-next-line
   }, [session, hasFetched])
+
+  useEffect(() => {
+    if (session && hasFetched) {
+      fetchQuoteOfDay()
+    }
+  }, [location.lat, location.lon])
 
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 2000)
   }
 
-  // FIXED: Safe localStorage + crash protection
+  const getLocalDateString = (timeZone) => {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date())
+    } catch {
+      return new Date().toLocaleDateString('en-CA')
+    }
+  }
+
+  const getTimezoneFromCoords = (lat, lon) => {
+    if (lat > 6 && lat < 7 && lon > 3 && lon < 4) return 'Africa/Lagos'
+    if (lat > 40 && lat < 41 && lon > -74.5 && lon < -73.5) return 'America/New_York'
+    if (lat > 51 && lat < 52 && lon > -0.2 && lon < 0.2) return 'Europe/London'
+    if (lat > 48 && lat < 49 && lon > 2 && lon < 3) return 'Europe/Paris'
+    if (lat > 35 && lat < 36 && lon > 139 && lon < 140) return 'Asia/Tokyo'
+    return Intl.DateTimeFormat().resolvedOptions().timeZone
+  }
+
   const fetchQuoteOfDay = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const storageKey = 'zephye_qotd_data'
+    const timezone = isManualLocation? getTimezoneFromCoords(location.lat, location.lon) : undefined
+    const today = getLocalDateString(timezone)
+    const storageKey = `zephye_qotd_${location.lat.toFixed(2)}_${location.lon.toFixed(2)}`
     const pool = getAllQuotesPool()
 
     let data = { date: '', usedIndices: [], shuffledOrder: [] }
@@ -750,29 +770,25 @@ function Auth() {
   )
 }
 
-// FIXED: Quote category filter now works
 function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
   const [currentQuote, setCurrentQuote] = useState(null)
-  const [currentFact, setCurrentFact] = useState(null)
+    const [currentFact, setCurrentFact] = useState(null)
   const [loading, setLoading] = useState(false)
   const [lastFetch, setLastFetch] = useState(0)
 
   useEffect(() => {
     fetchQuote()
     fetchFact()
-  // eslint-disable-next-line
   }, [])
 
   useEffect(() => {
     fetchQuote()
-  // eslint-disable-next-line
   }, [quoteCategory])
 
   useEffect(() => {
     fetchFact()
-  // eslint-disable-next-line
   }, [factCategory])
 
   const fetchQuote = () => {
@@ -787,8 +803,6 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
     } else {
       pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
     }
-
-    //... continues from where it cut off
 
     const random = pool[Math.floor(Math.random() * pool.length)]
     setCurrentQuote(random)
@@ -943,4 +957,4 @@ function SavedTab({ user, showToast, shareQuote }) {
       <button className="btn-ghost mb-4" style={{width: '100%'}} onClick={() => supabase.auth.signOut()}>Sign Out</button>
     </>
   )
-         }
+        }
