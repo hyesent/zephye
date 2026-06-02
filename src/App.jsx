@@ -591,7 +591,7 @@ const saveFact = async (fact) => {
         {tab === 'saved' && <SavedTab user={session.user} showToast={showToast} shareQuote={shareQuote} />}
 
         <div className="text-center mt-4 mb-4">
-          <p className="text-sm text-muted"> © hyesent.dev</p>
+          <p className="text-sm text-muted">© hyesent.dev</p>
         </div>
       </div>
 
