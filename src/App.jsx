@@ -578,7 +578,10 @@ export default function App() {
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">© hyesent.dev</p>
-          <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+        </div>
+      </div>
+      <div className="bottom-nav">
+              <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
         <button className={`nav-btn ${tab === 'saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
       </div>
@@ -778,7 +781,4 @@ function SavedTab({ showToast, shareQuote }) {
       )}
     </div>
   )
-}
-        </div>
-      </div>
-      <div className="bottom-nav">
+          }
