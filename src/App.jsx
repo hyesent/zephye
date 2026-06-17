@@ -1,54 +1,15 @@
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
-})
+import { QUOTES } from './data/quotes.js'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
 
-export const QUOTES = {
-  Motivational: [
-    { content: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-    { content: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
-    { content: "Act as if what you do makes a difference. It does.", author: "William James" },
-  ],
-  Success: [
-    { content: "Success is not the key to happiness. Happiness is the key to success.", author: "Albert Schweitzer" },
-    { content: "Success usually comes to those who are too busy to be looking for it.", author: "Henry David Thoreau" },
-  ],
-  Wisdom: [
-    { content: "The only true wisdom is in knowing you know nothing.", author: "Socrates" },
-    { content: "Turn your wounds into wisdom.", author: "Oprah Winfrey" },
-  ],
-  Love: [
-    { content: "You know you're in love when you can't fall asleep because reality is finally better than your dreams.", author: "Dr. Seuss" },
-    { content: "Love is composed of a single soul inhabiting two bodies.", author: "Aristotle" },
-  ],
-}
-
 const getAllQuotesPool = () => {
   const pool = []
-  Object.entries(QUOTES).forEach(([category, quotes]) => {
-    quotes.forEach(q => pool.push({...q, tag: category }))
+  Object.keys(QUOTES).forEach(cat => {
+    QUOTES[cat].forEach(q => pool.push({...q, tag: cat }))
   })
   return pool
-}
-
-const shuffleArray = (arr) => {
-  const shuffled = [...arr]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
 }
 
 const LOCAL_FACTS = {
@@ -115,13 +76,10 @@ function WeatherIcon({ code }) {
     if (code === 3) return <div className="weather-icon">☁️</div>
     return <div className="weather-icon">⛅</div>
   }
-
   return getAnimatedIcon(code)
 }
 
 export default function App() {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('weather')
   const [weather, setWeather] = useState(null)
   const [aqi, setAqi] = useState(null)
@@ -133,125 +91,120 @@ export default function App() {
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showAirDropdown, setShowAirDropdown] = useState(false)
   const [citySearch, setCitySearch] = useState('')
-  const [hasFetched, setHasFetched] = useState(false)
   const [isManualLocation, setIsManualLocation] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [todayStats, setTodayStats] = useState({
+    sunHours: 0,
+    rainHours: 0,
+    stormHours: 0,
+    maxRainProb: 0,
+    rainPeriods: [],
+    sunrise: '--:--',
+    sunset: '--:--',
+    moonPhase: '',
+    feelsLike: 0,
+    windGust: 0,
+    pressureTrend: '→'
+  })
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setLoading(false)
-      if (session) showToast('Welcome to Zephye')
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    if (session &&!hasFetched) {
-      const savedLoc = localStorage.getItem('zephye_location')
-      const savedManual = localStorage.getItem('zephye_isManual')
-
-      if (savedLoc && savedManual === 'true') {
-        try {
-          const loc = JSON.parse(savedLoc)
-          setLocation(loc)
-          setIsManualLocation(true)
-          fetchWeatherData(loc.lat, loc.lon)
-          setHasFetched(true)
-        } catch {
-          initLocation()
-        }
-      } else {
+    const savedLoc = localStorage.getItem('zephye_location')
+    const savedManual = localStorage.getItem('zephye_isManual')
+    if (savedLoc && savedManual === 'true') {
+      try {
+        const loc = JSON.parse(savedLoc)
+        setLocation(loc)
+        setIsManualLocation(true)
+        fetchWeatherData(loc.lat, loc.lon)
+      } catch {
         initLocation()
       }
-      fetchQuoteOfDay()
+    } else {
+      initLocation()
     }
-  }, [session, hasFetched])
-
-  useEffect(() => {
-    if (session && hasFetched) {
-      fetchQuoteOfDay()
-    }
-  }, [location.lat, location.lon])
+    fetchQuoteOfDay()
+  }, [])
 
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 2000)
   }
 
-  const getLocalDateString = (timeZone) => {
-    try {
-      return new Intl.DateTimeFormat('en-CA', {
-        timeZone: timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(new Date())
-    } catch {
-      return new Date().toLocaleDateString('en-CA')
-    }
-  }
-
-  const getTimezoneFromCoords = (lat, lon) => {
-    if (lat > 6 && lat < 7 && lon > 3 && lon < 4) return 'Africa/Lagos'
-    if (lat > 40 && lat < 41 && lon > -74.5 && lon < -73.5) return 'America/New_York'
-    if (lat > 51 && lat < 52 && lon > -0.2 && lon < 0.2) return 'Europe/London'
-    if (lat > 48 && lat < 49 && lon > 2 && lon < 3) return 'Europe/Paris'
-    if (lat > 35 && lat < 36 && lon > 139 && lon < 140) return 'Asia/Tokyo'
-    return Intl.DateTimeFormat().resolvedOptions().timeZone
-  }
-
   const fetchQuoteOfDay = () => {
-    const timezone = isManualLocation? getTimezoneFromCoords(location.lat, location.lon) : undefined
-    const today = getLocalDateString(timezone)
-    const storageKey = `zephye_qotd_${location.lat.toFixed(2)}_${location.lon.toFixed(2)}`
     const pool = getAllQuotesPool()
+    const today = new Date().toISOString().split('T')[0]
+    const baseDate = new Date('2024-01-01').getTime()
+    const dayNumber = Math.floor((new Date(today).getTime() - baseDate) / 86400000)
+    const index = dayNumber % pool.length
+    setQuoteOfDay(pool[index])
+  }
 
-    let data = { date: '', usedIndices: [], shuffledOrder: [] }
+  const getMoonEmoji = (phase) => {
+    if (phase < 0.03 || phase > 0.97) return '🌑'
+    if (phase < 0.22) return '🌒'
+    if (phase < 0.28) return '🌓'
+    if (phase < 0.47) return '🌔'
+    if (phase < 0.53) return '🌕'
+    if (phase < 0.72) return '🌖'
+    if (phase < 0.78) return '🌗'
+    return '🌘'
+  }
 
-    try {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) data = JSON.parse(saved)
-    } catch (e) {
-      console.log('Corrupted QOTD data, resetting...')
-    }
+  const getPressureTrend = (hourly) => {
+    if (!hourly?.pressure_msl?.length >= 3) return '→'
+    const last3 = hourly.pressure_msl.slice(0, 3)
+    const avg = last3.reduce((a,b) => a+b, 0) / 3
+    const current = hourly.pressure_msl[0]
+    if (current > avg + 1) return '↑'
+    if (current < avg - 1) return '↓'
+    return '→'
+  }
 
-    if (data.date!== today || data.usedIndices.length >= pool.length) {
-      data = {
-        date: today,
-        usedIndices: [],
-        shuffledOrder: shuffleArray([...Array(pool.length).keys()])
+  const calculateTodayStats = (hourly, daily) => {
+    if (!hourly?.time) return
+    let sunHours = 0, rainHours = 0, stormHours = 0, maxRainProb = 0
+    let currentRainPeriod = null
+    const rainPeriods = []
+
+    hourly.time.slice(0, 24).forEach((time, i) => {
+      const code = hourly.weathercode?.[i] || 0
+      const prob = hourly.precipitation_probability?.[i] || 0
+      const precip = hourly.precipitation?.[i] || 0
+
+      if (code === 0 || code === 1) sunHours++
+      if (prob > 30 || precip > 0.1) {
+        rainHours++
+        const hour = new Date(time).getHours()
+        if (!currentRainPeriod) currentRainPeriod = { start: hour, end: hour }
+        else if (hour === currentRainPeriod.end + 1) currentRainPeriod.end = hour
+        else {
+          rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
+          currentRainPeriod = { start: hour, end: hour }
+        }
+      } else if (currentRainPeriod) {
+        rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
+        currentRainPeriod = null
       }
-    }
+      if (code >= 95) stormHours++
+      if (prob > maxRainProb) maxRainProb = prob
+    })
+    if (currentRainPeriod) rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
 
-    const nextIndex = data.shuffledOrder[data.usedIndices.length]
-    const quote = pool[nextIndex]
+    const sunrise = daily?.sunrise?.[0]? new Date(daily.sunrise[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
+    const sunset = daily?.sunset?.[0]? new Date(daily.sunset[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
+    const moonPhase = daily?.moon_phase?.[0]!= null? getMoonEmoji(daily.moon_phase[0]) : ''
+    const feelsLike = hourly?.apparent_temperature?.[0] || 0
+    const windGust = hourly?.wind_gusts_10m?.[0] || 0
+    const pressureTrend = getPressureTrend(hourly)
 
-    data.usedIndices.push(nextIndex)
-    localStorage.setItem(storageKey, JSON.stringify(data))
-
-    setQuoteOfDay(quote)
+    setTodayStats({ sunHours, rainHours, stormHours, maxRainProb, rainPeriods, sunrise, sunset, moonPhase, feelsLike, windGust, pressureTrend })
   }
 
   const initLocation = async () => {
-    if (isManualLocation) {
-      fetchWeatherData(location.lat, location.lon)
-      setHasFetched(true)
-      return
-    }
-
     if (!navigator.geolocation) {
       fetchWeatherData(6.5244, 3.3792)
-      setHasFetched(true)
       return
     }
-
     try {
       const permission = await navigator.permissions.query({ name: 'geolocation' })
       setLocationPermission(permission.state)
@@ -259,7 +212,6 @@ export default function App() {
         getCurrentLocation()
       } else {
         fetchWeatherData(6.5244, 3.3792)
-        setHasFetched(true)
       }
     } catch {
       getCurrentLocation()
@@ -267,7 +219,6 @@ export default function App() {
   }
 
   const getCurrentLocation = () => {
-    setIsLoading(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords
@@ -277,15 +228,12 @@ export default function App() {
         setIsManualLocation(false)
         localStorage.removeItem('zephye_location')
         localStorage.removeItem('zephye_isManual')
-        setIsLoading(false)
         showToast('Location updated')
       },
       (err) => {
-        setIsLoading(false)
         setLocationPermission('denied')
         showToast('Location denied')
         fetchWeatherData(6.5244, 3.3792)
-        setHasFetched(true)
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
@@ -312,12 +260,10 @@ export default function App() {
         const { latitude: lat, longitude: lon, name, country, admin1 } = data.results[0]
         const displayName = `${name}${admin1? ', ' + admin1 : ''}, ${country}`
         const newLocation = { lat, lon, name: displayName }
-
         setLocation(newLocation)
         setIsManualLocation(true)
         localStorage.setItem('zephye_location', JSON.stringify(newLocation))
         localStorage.setItem('zephye_isManual', 'true')
-
         fetchWeatherData(lat, lon)
         setShowLocationModal(false)
         setCitySearch('')
@@ -335,74 +281,61 @@ export default function App() {
       showToast('Wait 30s before refreshing')
       return
     }
-
     try {
+      setIsLoading(true)
       setCanRefresh(false)
       setTimeout(() => setCanRefresh(true), 30000)
-
       const [weatherRes, aqiRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,pressure_msl,visibility,uv_index&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max&timezone=auto`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,pressure_msl,visibility,uv_index&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,apparent_temperature,wind_gusts_10m,pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,moon_phase&timezone=auto`),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide`)
       ])
-
       if (!weatherRes.ok) throw new Error('Weather failed')
       const weatherData = await weatherRes.json()
       const aqiData = await aqiRes.json()
       setWeather(weatherData)
       setAqi(aqiData.current)
+      calculateTodayStats(weatherData.hourly, weatherData.daily)
+      setIsLoading(false)
+      showToast('Welcome to Zephye')
     } catch (err) {
       console.error(err)
       setWeather({
         current: { temperature_2m: 28, weather_code: 0, wind_speed_10m: 8, wind_direction_10m: 180, relative_humidity_2m: 75, pressure_msl: 1013, visibility: 10000, uv_index: 8 },
-        hourly: {
-          time: Array.from({length: 24}, (_, i) => new Date(Date.now() + i * 3600000).toISOString()),
-          temperature_2m: Array(24).fill(28),
-          weather_code: Array(24).fill(0)
-        },
-        daily: {
-          time: Array.from({length: 7}, (_, i) => new Date(Date.now() + i * 86400000).toISOString().split('T')[0]),
-          temperature_2m_max: Array(7).fill(32),
-          temperature_2m_min: Array(7).fill(24),
-          weather_code: Array(7).fill(0),
-          uv_index_max: Array(7).fill(8)
-        }
+        hourly: { time: Array.from({length: 24}, (_, i) => new Date(Date.now() + i * 3600000).toISOString()), temperature_2m: Array(24).fill(28), weather_code: Array(24).fill(0), apparent_temperature: Array(24).fill(30) },
+        daily: { time: Array.from({length: 7}, (_, i) => new Date(Date.now() + i * 86400000).toISOString().split('T')[0]), temperature_2m_max: Array(7).fill(32), temperature_2m_min: Array(7).fill(24), weather_code: Array(7).fill(0), uv_index_max: Array(7).fill(8), sunrise: Array(7).fill('06:30'), sunset: Array(7).fill('18:45'), moon_phase: Array(7).fill(0.5) }
       })
       setAqi({ us_aqi: 55, pm2_5: 12, pm10: 20, nitrogen_dioxide: 15, sulphur_dioxide: 5, ozone: 60, carbon_monoxide: 800 })
+      setIsLoading(false)
+      showToast('Welcome to Zephye')
     }
   }
 
-  const saveQuote = async (quote) => {
+  const saveQuote = (quote) => {
     if (!quote) return
-
-    if (!session) {
-      showToast('Please login to save quotes')
-      return
-    }
-
-    const { error } = await supabase.from('saved_quotes').insert({
-      user_id: session.user.id,
-      quote_text: quote.text || quote.content,
+    const saved = JSON.parse(localStorage.getItem('zephye_saved_quotes') || '[]')
+    const newQuote = {
+      id: Date.now(),
+      quote_text: quote.content || quote.text,
       quote_author: quote.author || 'Unknown',
-      category: quote.tag || 'Motivational'
-    })
-
-    showToast(error? 'Failed to save: ' + error.message : 'Quote saved ♥')
+      category: quote.tag || 'Motivational',
+      created_at: new Date().toISOString()
+    }
+    saved.unshift(newQuote)
+    localStorage.setItem('zephye_saved_quotes', JSON.stringify(saved))
+    showToast('Quote saved ♥')
   }
 
-  const saveFact = async (fact) => {
+  const saveFact = (fact) => {
     if (!fact) return
-
-    if (!session) {
-      showToast('Please login to save facts')
-      return
+    const saved = JSON.parse(localStorage.getItem('zephye_saved_facts') || '[]')
+    const newFact = {
+      id: Date.now(),
+      fact_text: fact.text,
+      created_at: new Date().toISOString()
     }
-
-    const { error } = await supabase.from('saved_facts').insert({
-      user_id: session.user.id,
-      fact_text: fact.text
-    })
-
-    showToast(error? 'Failed to save: ' + error.message : 'Fact saved ♥')
+    saved.unshift(newFact)
+    localStorage.setItem('zephye_saved_facts', JSON.stringify(saved))
+    showToast('Fact saved ♥')
   }
 
   const shareQuote = async (text, author) => {
@@ -461,18 +394,6 @@ export default function App() {
     return 'NW'
   }
 
-  if (loading) {
-    return (
-      <div style={{minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        <div style={{padding: '40px', textAlign: 'center', color: '#f8fafc'}}>
-          <h2>Loading Zephye...</h2>
-        </div>
-      </div>
-    )
-  }
-
-  if (!session) return <Auth />
-
   const weatherCode = weather?.current?.weather_code?? 0
   const windSpeed = weather?.current?.wind_speed_10m?? 0
   const windDir = weather?.current?.wind_direction_10m?? 0
@@ -484,24 +405,29 @@ export default function App() {
   const aqiInfo = getAqiLevel(aqi?.us_aqi)
   const stormInfo = getStormLevel(weatherCode, windSpeed)
 
+  if (isLoading &&!weather) {
+    return (
+      <div className="app">
+        <div className="weather-bg cloudy"></div>
+        <div className="container" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh'}}>
+          <div className="glass" style={{padding: '40px', borderRadius: '20px', textAlign: 'center'}}>
+            <div className="text-4xl mb-4">🌤️</div>
+            <p className="text-xl font-bold">Loading Zephye...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <div className={`weather-bg ${bgClass}`}></div>
-
       {toast && <div className="toast">{toast}</div>}
-
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px'}}>
             <h3 className="font-bold mb-4">Change Location</h3>
-            <input
-              type="text"
-              placeholder="Search city..."
-              value={citySearch}
-              onChange={e => setCitySearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && searchCity()}
-              className="mb-4"
-            />
+            <input type="text" placeholder="Search city..." value={citySearch} onChange={e => setCitySearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchCity()} className="mb-4" />
             <div className="flex gap-2">
               <button className="btn-primary" onClick={searchCity}>Search</button>
               <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)} disabled={!canRefresh}>
@@ -511,7 +437,6 @@ export default function App() {
           </div>
         </div>
       )}
-
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
           <>
@@ -521,11 +446,7 @@ export default function App() {
                   <div className="text-xs text-white/70 mb-1">📍 Location</div>
                   <div className="text-lg font-bold">{location.name}</div>
                   <div className="text-xs text-white/70 mt-1">
-                    {new Date().toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </div>
                 </button>
                 <div className="text-right">
@@ -533,7 +454,6 @@ export default function App() {
                   <h1 className="text-3xl font-bold mt-1">{weather?.current? Math.round(weather.current.temperature_2m) : '--'}°</h1>
                 </div>
               </div>
-
               <div className="flex gap-2 flex-wrap">
                 {stormInfo && (
                   <div className="status-badge" style={{background: stormInfo.color + '33', borderColor: stormInfo.color, color: stormInfo.color}}>
@@ -542,11 +462,7 @@ export default function App() {
                 )}
                 {aqiInfo && (
                   <div style={{position: 'relative'}}>
-                    <button
-                      className="status-badge"
-                      style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}}
-                      onClick={() => setShowAirDropdown(!showAirDropdown)}
-                    >
+                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
                       🌬️ Air: {aqiInfo.label} ▼
                     </button>
                     {showAirDropdown && (
@@ -565,6 +481,56 @@ export default function App() {
               </div>
             </div>
 
+            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
+              <p className="text-sm font-bold mb-3">Today's Weather</p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="glass" style={{padding: '12px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)'}}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">☀️</span>
+                    <span className="text-xs text-white/70">Sunshine</span>
+                  </div>
+                  <p className="text-lg font-bold">{todayStats.sunHours}h</p>
+                </div>
+                <div className="glass" style={{padding: '12px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)'}}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">🌧️</span>
+                    <span className="text-xs text-white/70">Rain</span>
+                  </div>
+                  <p className="text-lg font-bold">{todayStats.rainHours}h</p>
+                  {todayStats.maxRainProb > 0 && <p className="text-xs text-white/70">{todayStats.maxRainProb}% max</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
+                  <div className="text-xs text-white/70 mb-1">⛈️ Thunder</div>
+                  <p className="text-sm font-bold">{todayStats.stormHours}h</p>
+                </div>
+                <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
+                  <div className="text-xs text-white/70 mb-1">🌡️ Feels Like</div>
+                  <p className="text-sm font-bold">{Math.round(todayStats.feelsLike)}°</p>
+                </div>
+                <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
+                  <div className="text-xs text-white/70 mb-1">💨 Wind Gust</div>
+                  <p className="text-sm font-bold">{Math.round(todayStats.windGust)} km/h</p>
+                </div>
+              <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                <div className="text-xs">
+                  <span className="text-white/70">🌅 {todayStats.sunrise}</span>
+                  <span className="mx-2">|</span>
+                  <span className="text-white/70">🌇 {todayStats.sunset}</span>
+                </div>
+                <div className="text-xs">
+                  <span className="text-white/70">Pressure {todayStats.pressureTrend}</span>
+                  <span className="mx-2">{todayStats.moonPhase}</span>
+                </div>
+              </div>
+              {todayStats.rainPeriods.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-white/10">
+                  <p className="text-xs text-white/70">Rain expected: {todayStats.rainPeriods.join(', ')}</p>
+                </div>
+              )}
+            </div>
+
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Quote of the Day</p>
@@ -576,7 +542,6 @@ export default function App() {
               <p className="font-bold mb-2">"{quoteOfDay?.content || 'Loading quote...'}"</p>
               <p className="text-xs text-white/70">- {quoteOfDay?.author || '...'}</p>
             </div>
-
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Hourly Forecast</p>
@@ -584,20 +549,16 @@ export default function App() {
                   {canRefresh? 'Refresh ⟳' : 'Wait...'}
                 </button>
               </div>
-
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
                 {weather?.hourly?.time?.slice(0,24).map((time, i) => (
                   <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth: '72px', scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.05)'}}>
-                    <p className="text-xs text-white/70">
-                      {new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}
-                    </p>
+                    <p className="text-xs text-white/70">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
                     <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
                     <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
                   </div>
                 ))}
               </div>
             </div>
-
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <p className="text-sm font-bold mb-3">7-Day Forecast</p>
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
@@ -613,158 +574,13 @@ export default function App() {
             </div>
           </>
         )}
-
         {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
-        {tab === 'saved' && <SavedTab user={session.user} showToast={showToast} shareQuote={shareQuote} />}
-
+        {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">© hyesent.dev</p>
-        </div>
-      </div>
-
-      <div className="bottom-nav">
-        <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+          <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
         <button className={`nav-btn ${tab === 'saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
-      </div>
-    </div>
-  )
-}
-
-function Auth() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLogin, setIsLogin] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleAuth = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin }
-        })
-        if (error) throw error
-        setError('Check your email to confirm signup!')
-      }
-    } catch (err) {
-      setError(err.message)
-    }
-    setLoading(false)
-  }
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#0f172a',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '400px',
-        background: '#1a2332',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '20px',
-        padding: '40px'
-      }}>
-        <h1 style={{fontWeight: 700, marginBottom: '8px', fontSize: '24px'}}>Zephye</h1>
-        <p style={{color: '#94a3b8', fontSize: '14px', marginBottom: '24px'}}>Weather. Wisdom. Daily.</p>
-
-        <form onSubmit={handleAuth}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              background: '#0f172a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#f8fafc',
-              fontSize: '14px',
-              marginBottom: '16px',
-              outline: 'none'
-            }}
-          />
-          <input
-            type="password"
-            placeholder="Password (min 6 chars)"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            minLength="6"
-            autoComplete={isLogin? "current-password" : "new-password"}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              background: '#0f172a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#f8fafc',
-              fontSize: '14px',
-              marginBottom: '16px',
-              outline: 'none'
-            }}
-          />
-          {error && <p style={{color: '#ef4444', fontSize: '12px', marginBottom: '16px'}}>{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              background: '#38bdf8',
-              color: '#0f172a',
-              fontWeight: 600,
-              fontSize: '14px',
-              border: 'none',
-              cursor: loading? 'not-allowed' : 'pointer',
-              opacity: loading? 0.5 : 1
-            }}
-          >
-            {loading? 'Loading...' : isLogin? 'Sign In' : 'Sign Up'}
-          </button>
-        </form>
-
-        <button
-          onClick={() => setIsLogin(!isLogin)}
-          type="button"
-          style={{
-            width: '100%',
-            padding: '12px',
-            marginTop: '12px',
-            borderRadius: '12px',
-            background: 'rgba(255,255,255,0.05)',
-            color: '#f8fafc',
-            border: '1px solid rgba(255,255,255,0.1)',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          {isLogin? 'Need an account? Sign Up' : 'Have an account? Sign In'}
-        </button>
-
-        <div style={{textAlign: 'center', marginTop: '24px'}}>
-          <p style={{color: '#94a3b8', fontSize: '12px'}}>© hyesent.dev</p>
-        </div>
       </div>
     </div>
   )
@@ -774,7 +590,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
   const [currentQuote, setCurrentQuote] = useState(null)
-    const [currentFact, setCurrentFact] = useState(null)
+  const [currentFact, setCurrentFact] = useState(null)
   const [loading, setLoading] = useState(false)
   const [lastFetch, setLastFetch] = useState(0)
 
@@ -796,28 +612,42 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
     if (now - lastFetch < 5000) return
     setLastFetch(now)
     setLoading(true)
-
     let pool = []
     if (quoteCategory === 'All') {
       pool = getAllQuotesPool()
     } else {
       pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
     }
-
     const random = pool[Math.floor(Math.random() * pool.length)]
     setCurrentQuote(random)
     setLoading(false)
   }
 
-  const fetchFact = () => {
-    let pool = []
-    if (factCategory === 'All') {
-      Object.values(LOCAL_FACTS).forEach(arr => pool.push(...arr))
-    } else {
-      pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
+  const fetchFact = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en')
+      if (!res.ok) throw new Error('API 1 failed')
+      const data = await res.json()
+      setCurrentFact({ text: data.text })
+    } catch {
+      try {
+        const res2 = await fetch('https://numbersapi.com/random/trivia?json')
+        if (!res2.ok) throw new Error('API 2 failed')
+        const data2 = await res2.json()
+        setCurrentFact({ text: data2.text })
+      } catch {
+        let pool = []
+        if (factCategory === 'All') {
+          Object.values(LOCAL_FACTS).forEach(arr => pool.push(...arr))
+        } else {
+          pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
+        }
+        const random = pool[Math.floor(Math.random() * pool.length)]
+        setCurrentFact(random)
+      }
     }
-    const random = pool[Math.floor(Math.random() * pool.length)]
-    setCurrentFact(random)
+    setLoading(false)
   }
 
   return (
@@ -829,19 +659,13 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
             {loading? 'Loading...' : 'New Quote ⟳'}
           </button>
         </div>
-
         <div className="sub-tabs mb-4">
           {QUOTE_CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              className={`sub-tab ${quoteCategory === cat? 'active' : ''}`}
-              onClick={() => setQuoteCategory(cat)}
-            >
+            <button key={cat} className={`sub-tab ${quoteCategory === cat? 'active' : ''}`} onClick={() => setQuoteCategory(cat)}>
               {cat}
             </button>
           ))}
         </div>
-
         {currentQuote && (
           <div className="list-item">
             <p className="font-bold mb-4">"{currentQuote.content}"</p>
@@ -853,29 +677,27 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
           </div>
         )}
       </div>
-
       <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
-       <div className="flex justify-between items-center mb-4">
-          <p className="font-bold">Did You Know?</p>
-          <button className="btn-ghost text-sm" onClick={fetchFact}>New Fact ⟳</button>
+        <div className="flex justify-between items-center mb-4">
+          <p className="font-bold">Random Facts</p>
+          <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
+            {loading? 'Loading...' : 'New Fact ⟳'}
+          </button>
         </div>
-
         <div className="sub-tabs mb-4">
           {FACT_CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              className={`sub-tab ${factCategory === cat? 'active' : ''}`}
-              onClick={() => setFactCategory(cat)}
-            >
+            <button key={cat} className={`sub-tab ${factCategory === cat? 'active' : ''}`} onClick={() => setFactCategory(cat)}>
               {cat}
             </button>
           ))}
         </div>
-
         {currentFact && (
           <div className="list-item">
-            <p className="text-sm mb-4">{currentFact.text}</p>
-            <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save ♥</button>
+            <p className="font-bold mb-4">{currentFact.text}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button>
+              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save ♥</button>
+            </div>
           </div>
         )}
       </div>
@@ -883,78 +705,80 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   )
 }
 
-function SavedTab({ user, showToast, shareQuote }) {
-  const [quotes, setQuotes] = useState([])
-  const [facts, setFacts] = useState([])
-  const [loading, setLoading] = useState(true)
+function SavedTab({ showToast, shareQuote }) {
+  const [savedQuotes, setSavedQuotes] = useState([])
+  const [savedFacts, setSavedFacts] = useState([])
+  const [activeSubTab, setActiveSubTab] = useState('quotes')
 
-  useEffect(() => { loadSaved() }, [])
+  useEffect(() => {
+    loadSaved()
+  }, [])
 
-  const loadSaved = async () => {
-    try {
-      const [quotesRes, factsRes] = await Promise.all([
-        supabase.from('saved_quotes').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('saved_facts').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-      ])
-      setQuotes(quotesRes.data || [])
-      setFacts(factsRes.data || [])
-    } catch (err) {
-      showToast('Failed to load: ' + err.message)
-    }
-    setLoading(false)
+  const loadSaved = () => {
+    const quotes = JSON.parse(localStorage.getItem('zephye_saved_quotes') || '[]')
+    const facts = JSON.parse(localStorage.getItem('zephye_saved_facts') || '[]')
+    setSavedQuotes(quotes)
+    setSavedFacts(facts)
   }
 
-  const deleteQuote = async (id) => {
-    const { error } = await supabase.from('saved_quotes').delete().eq('id', id)
-    if (!error) {
-      setQuotes(quotes.filter(q => q.id!== id))
-      showToast('Quote deleted')
-    } else {
-      showToast('Delete failed: ' + error.message)
-    }
+  const deleteQuote = (id) => {
+    const updated = savedQuotes.filter(q => q.id !== id)
+    localStorage.setItem('zephye_saved_quotes', JSON.stringify(updated))
+    setSavedQuotes(updated)
+    showToast('Quote deleted')
   }
 
-  const deleteFact = async (id) => {
-    const { error } = await supabase.from('saved_facts').delete().eq('id', id)
-    if (!error) {
-      setFacts(facts.filter(f => f.id!== id))
-      showToast('Fact deleted')
-    } else {
-      showToast('Delete failed: ' + error.message)
-    }
+  const deleteFact = (id) => {
+    const updated = savedFacts.filter(f => f.id !== id)
+    localStorage.setItem('zephye_saved_facts', JSON.stringify(updated))
+    setSavedFacts(updated)
+    showToast('Fact deleted')
   }
-
-  if (loading) return <div className="glass" style={{padding: '40px', textAlign: 'center', borderRadius: '20px'}}>Loading saved...</div>
 
   return (
-    <>
-      <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
-        <p className="font-bold mb-4">Saved Quotes ({quotes.length})</p>
-        {quotes.length === 0? <p className="text-muted text-sm">No saved quotes yet</p> :
-          quotes.map(q => (
-            <div key={q.id} className="list-item">
-              <p className="font-bold mb-4">"{q.quote_text}"</p>
-              <p className="text-sm text-muted mb-4">- {q.quote_author}</p>
+    <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
+      <div className="sub-tabs mb-4">
+        <button className={`sub-tab ${activeSubTab === 'quotes'? 'active' : ''}`} onClick={() => setActiveSubTab('quotes')}>
+          Quotes ({savedQuotes.length})
+        </button>
+        <button className={`sub-tab ${activeSubTab === 'facts'? 'active' : ''}`} onClick={() => setActiveSubTab('facts')}>
+          Facts ({savedFacts.length})
+        </button>
+      </div>
+      {activeSubTab === 'quotes' && (
+        savedQuotes.length === 0? (
+          <p className="text-center text-muted py-8">No saved quotes yet. Save some! ♥</p>
+        ) : (
+          savedQuotes.map(quote => (
+            <div key={quote.id} className="list-item">
+              <p className="font-bold mb-2">"{quote.quote_text}"</p>
+              <p className="text-sm text-muted mb-3">- {quote.quote_author}</p>
               <div className="flex gap-2">
-                <button className="btn-share text-sm" onClick={() => shareQuote(q.quote_text, q.quote_author)}>Share</button>
-                <button className="btn-danger text-sm" onClick={() => deleteQuote(q.id)}>Delete</button>
+                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
+                <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
               </div>
             </div>
           ))
-        }
-      </div>
-      <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
-        <p className="font-bold mb-4">Saved Facts ({facts.length})</p>
-        {facts.length === 0? <p className="text-muted text-sm">No saved facts yet</p> :
-          facts.map(f => (
-            <div key={f.id} className="list-item">
-              <p className="text-sm mb-4">{f.fact_text}</p>
-              <button className="btn-danger text-sm" onClick={() => deleteFact(f.id)}>Delete</button>
+        )
+      )}
+      {activeSubTab === 'facts' && (
+        savedFacts.length === 0? (
+          <p className="text-center text-muted py-8">No saved facts yet. Save some! ♥</p>
+        ) : (
+          savedFacts.map(fact => (
+            <div key={fact.id} className="list-item">
+              <p className="font-bold mb-3">{fact.fact_text}</p>
+              <div className="flex gap-2">
+                <button className="btn-share text-xs" onClick={() => shareQuote(fact.fact_text, 'Fact')}>Share</button>
+                <button className="btn-ghost text-xs" onClick={() => deleteFact(fact.id)}>Delete</button>
+              </div>
             </div>
           ))
-        }
-      </div>
-      <button className="btn-ghost mb-4" style={{width: '100%'}} onClick={() => supabase.auth.signOut()}>Sign Out</button>
-    </>
+        )
+      )}
+    </div>
   )
-        }
+}
+        </div>
+      </div>
+      <div className="bottom-nav">
