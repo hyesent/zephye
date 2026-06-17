@@ -151,7 +151,7 @@ export default function App() {
   }
 
   const getPressureTrend = (hourly) => {
-    if (!hourly?.pressure_msl?.length >= 3) return '→'
+    if (!hourly?.pressure_msl || hourly.pressure_msl.length < 3) return '→'
     const last3 = hourly.pressure_msl.slice(0, 3)
     const avg = last3.reduce((a,b) => a+b, 0) / 3
     const current = hourly.pressure_msl[0]
@@ -322,7 +322,7 @@ export default function App() {
     }
     saved.unshift(newQuote)
     localStorage.setItem('zephye_saved_quotes', JSON.stringify(saved))
-    showToast('Quote saved ♥')
+    showToast('Quote saved')
   }
 
   const saveFact = (fact) => {
@@ -335,7 +335,7 @@ export default function App() {
     }
     saved.unshift(newFact)
     localStorage.setItem('zephye_saved_facts', JSON.stringify(saved))
-    showToast('Fact saved ♥')
+    showToast('Fact saved')
   }
 
   const shareQuote = async (text, author) => {
@@ -431,7 +431,7 @@ export default function App() {
             <div className="flex gap-2">
               <button className="btn-primary" onClick={searchCity}>Search</button>
               <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)} disabled={!canRefresh}>
-                {canRefresh? 'Refresh ⟳' : 'Wait...'}
+                {canRefresh? 'Refresh' : 'Wait...'}
               </button>
             </div>
           </div>
@@ -443,7 +443,7 @@ export default function App() {
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
               <div className="flex items-start justify-between mb-4">
                 <button className="location-btn" onClick={() => setShowLocationModal(true)}>
-                  <div className="text-xs text-white/70 mb-1">📍 Location</div>
+                  <div className="text-xs text-white/70 mb-1">Location</div>
                   <div className="text-lg font-bold">{location.name}</div>
                   <div className="text-xs text-white/70 mt-1">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -457,13 +457,13 @@ export default function App() {
               <div className="flex gap-2 flex-wrap">
                 {stormInfo && (
                   <div className="status-badge" style={{background: stormInfo.color + '33', borderColor: stormInfo.color, color: stormInfo.color}}>
-                    ⚠️ {stormInfo.level}
+                    {stormInfo.level}
                   </div>
                 )}
                 {aqiInfo && (
                   <div style={{position: 'relative'}}>
                     <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
-                      🌬️ Air: {aqiInfo.label} ▼
+                      Air: {aqiInfo.label}
                     </button>
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
@@ -502,22 +502,23 @@ export default function App() {
               </div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
-                  <div className="text-xs text-white/70 mb-1">⛈️ Thunder</div>
+                  <div className="text-xs text-white/70 mb-1">Thunder</div>
                   <p className="text-sm font-bold">{todayStats.stormHours}h</p>
                 </div>
                 <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
-                  <div className="text-xs text-white/70 mb-1">🌡️ Feels Like</div>
+                  <div className="text-xs text-white/70 mb-1">Feels Like</div>
                   <p className="text-sm font-bold">{Math.round(todayStats.feelsLike)}°</p>
                 </div>
                 <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
-                  <div className="text-xs text-white/70 mb-1">💨 Wind Gust</div>
+                  <div className="text-xs text-white/70 mb-1">Wind Gust</div>
                   <p className="text-sm font-bold">{Math.round(todayStats.windGust)} km/h</p>
                 </div>
+              </div>
               <div className="flex justify-between items-center pt-2 border-t border-white/10">
                 <div className="text-xs">
-                  <span className="text-white/70">🌅 {todayStats.sunrise}</span>
+                  <span className="text-white/70">Sunrise {todayStats.sunrise}</span>
                   <span className="mx-2">|</span>
-                  <span className="text-white/70">🌇 {todayStats.sunset}</span>
+                  <span className="text-white/70">Sunset {todayStats.sunset}</span>
                 </div>
                 <div className="text-xs">
                   <span className="text-white/70">Pressure {todayStats.pressureTrend}</span>
@@ -536,9 +537,8 @@ export default function App() {
                 <p className="text-sm font-bold">Quote of the Day</p>
                 <div className="flex gap-2">
                   <button className="btn-share text-xs" onClick={() => shareQuote(quoteOfDay?.content, quoteOfDay?.author)}>Share</button>
-                  <button className="btn-ghost text-xs" onClick={() => saveQuote(quoteOfDay)}>Save ♥</button>
+                  <button className="btn-ghost text-xs" onClick={() => saveQuote(quoteOfDay)}>Save</button>
                 </div>
-              </div>
               <p className="font-bold mb-2">"{quoteOfDay?.content || 'Loading quote...'}"</p>
               <p className="text-xs text-white/70">- {quoteOfDay?.author || '...'}</p>
             </div>
@@ -546,7 +546,7 @@ export default function App() {
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Hourly Forecast</p>
                 <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)} disabled={!canRefresh}>
-                  {canRefresh? 'Refresh ⟳' : 'Wait...'}
+                  {canRefresh? 'Refresh' : 'Wait...'}
                 </button>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
@@ -581,7 +581,7 @@ export default function App() {
         </div>
       </div>
       <div className="bottom-nav">
-              <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+        <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
         <button className={`nav-btn ${tab === 'saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
       </div>
@@ -659,7 +659,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Explore Quotes</p>
           <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>
-            {loading? 'Loading...' : 'New Quote ⟳'}
+            {loading? 'Loading...' : 'New Quote'}
           </button>
         </div>
         <div className="sub-tabs mb-4">
@@ -675,7 +675,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
             <p className="text-sm text-muted mb-4">- {currentQuote.author}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
-              <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save ♥</button>
+              <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
             </div>
           </div>
         )}
@@ -684,7 +684,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Random Facts</p>
           <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
-            {loading? 'Loading...' : 'New Fact ⟳'}
+            {loading? 'Loading...' : 'New Fact'}
           </button>
         </div>
         <div className="sub-tabs mb-4">
@@ -699,7 +699,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
             <p className="font-bold mb-4">{currentFact.text}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button>
-              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save ♥</button>
+              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
             </div>
           </div>
         )}
@@ -725,14 +725,14 @@ function SavedTab({ showToast, shareQuote }) {
   }
 
   const deleteQuote = (id) => {
-    const updated = savedQuotes.filter(q => q.id !== id)
+    const updated = savedQuotes.filter(q => q.id!== id)
     localStorage.setItem('zephye_saved_quotes', JSON.stringify(updated))
     setSavedQuotes(updated)
     showToast('Quote deleted')
   }
 
   const deleteFact = (id) => {
-    const updated = savedFacts.filter(f => f.id !== id)
+    const updated = savedFacts.filter(f => f.id!== id)
     localStorage.setItem('zephye_saved_facts', JSON.stringify(updated))
     setSavedFacts(updated)
     showToast('Fact deleted')
@@ -750,7 +750,7 @@ function SavedTab({ showToast, shareQuote }) {
       </div>
       {activeSubTab === 'quotes' && (
         savedQuotes.length === 0? (
-          <p className="text-center text-muted py-8">No saved quotes yet. Save some! ♥</p>
+          <p className="text-center text-muted py-8">No saved quotes yet. Save some!</p>
         ) : (
           savedQuotes.map(quote => (
             <div key={quote.id} className="list-item">
@@ -766,7 +766,7 @@ function SavedTab({ showToast, shareQuote }) {
       )}
       {activeSubTab === 'facts' && (
         savedFacts.length === 0? (
-          <p className="text-center text-muted py-8">No saved facts yet. Save some! ♥</p>
+          <p className="text-center text-muted py-8">No saved facts yet. Save some!</p>
         ) : (
           savedFacts.map(fact => (
             <div key={fact.id} className="list-item">
@@ -781,4 +781,4 @@ function SavedTab({ showToast, shareQuote }) {
       )}
     </div>
   )
-          }
+      }
