@@ -3,6 +3,7 @@ import { QUOTES } from './data/quotes.js'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
+const OPENWEATHER_KEY = "576b156966c5789a1b3fd0074c8469f1"
 
 const getAllQuotesPool = () => {
   const pool = []
@@ -86,7 +87,7 @@ export default function App() {
   const [quoteOfDay, setQuoteOfDay] = useState(null)
   const [toast, setToast] = useState('')
   const [canRefresh, setCanRefresh] = useState(true)
-  const [location, setLocation] = useState({ lat: 6.5244, lon: 3.3792, name: 'Lagos, NG' })
+  const [location, setLocation] = useState({ lat: 6.5244, lon: 3.3792, name: 'Lagos, Nigeria' })
   const [locationPermission, setLocationPermission] = useState('prompt')
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showAirDropdown, setShowAirDropdown] = useState(false)
@@ -106,6 +107,7 @@ export default function App() {
     windGust: 0,
     pressureTrend: '→'
   })
+  const [hasWelcomed, setHasWelcomed] = useState(false)
 
   useEffect(() => {
     const savedLoc = localStorage.getItem('zephye_location')
@@ -125,9 +127,17 @@ export default function App() {
     fetchQuoteOfDay()
   }, [])
 
+  useEffect(() => {
+    // Show greeting toast once per session
+    if (!hasWelcomed && weather &&!isLoading) {
+      setTimeout(() => showToast('Welcome to Zephye 👋'), 1000)
+      setHasWelcomed(true)
+    }
+  }, [weather, isLoading, hasWelcomed])
+
   const showToast = (msg) => {
     setToast(msg)
-    setTimeout(() => setToast(''), 2000)
+    setTimeout(() => setToast(''), 2500)
   }
 
   const fetchQuoteOfDay = () => {
@@ -228,7 +238,6 @@ export default function App() {
         setIsManualLocation(false)
         localStorage.removeItem('zephye_location')
         localStorage.removeItem('zephye_isManual')
-        showToast('Location updated')
       },
       (err) => {
         setLocationPermission('denied')
@@ -241,24 +250,51 @@ export default function App() {
 
   const reverseGeocode = async (lat, lon) => {
     try {
-      const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`, {
+        headers: { 'User-Agent': 'Zephye-App/1.0' }
+      })
       const data = await res.json()
-      const name = data.city || data.locality || data.principalSubdivision || 'Current Location'
-      const country = data.countryCode? `, ${data.countryCode}` : ''
-      setLocation({ lat, lon, name: name + country })
+
+      const lga = data.address.county?.replace(' Local Government Area','') ||
+                  data.address.town ||
+                  data.address.city ||
+                  data.address.village ||
+                  'Current Location'
+      const state = data.address.state || 'State'
+      const country = data.address.country || 'Country'
+
+      setLocation({ lat, lon, name: `${lga}, ${state}, ${country}` })
+      setIsManualLocation(false)
+      localStorage.removeItem('zephye_location')
+      localStorage.removeItem('zephye_isManual')
     } catch {
       setLocation({ lat, lon, name: 'Current Location' })
     }
   }
 
   const searchCity = async () => {
-    if (!citySearch.trim()) return
+    if (!citySearch.trim()) {
+      showToast('Type a place name')
+      return
+    }
+
     try {
-      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(citySearch)}&count=5&language=en&format=json`)
-      const data = await res.json()
-      if (data.results?.[0]) {
-        const { latitude: lat, longitude: lon, name, country, admin1 } = data.results[0]
-        const displayName = `${name}${admin1? ', ' + admin1 : ''}, ${country}`
+      // Try Open-Meteo geocoding first - free, no key
+      let res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(citySearch)}&count=5&language=en&format=json`)
+      let data = await res.json()
+
+      // If Open-Meteo fails, try OpenWeather geocoding as backup
+      if (!data.results || data.results.length === 0) {
+        const owRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(citySearch)}&limit=5&appid=${OPENWEATHER_KEY}`)
+        const owData = await owRes.json()
+
+        if (!owData || owData.length === 0) {
+          showToast('Place not found')
+          return
+        }
+
+        const { lat, lon, name, state, country } = owData[0]
+        const displayName = `${name}${state? ', ' + state : ''}, ${country}`
         const newLocation = { lat, lon, name: displayName }
         setLocation(newLocation)
         setIsManualLocation(true)
@@ -267,46 +303,94 @@ export default function App() {
         fetchWeatherData(lat, lon)
         setShowLocationModal(false)
         setCitySearch('')
-        showToast(`Location: ${name}`)
-      } else {
-        showToast('City not found')
+        showToast(`Location: ${displayName}`)
+        return
       }
+
+      // Use first result from Open-Meteo
+      const { latitude: lat, longitude: lon, name, country, admin1 } = data.results[0]
+      const displayName = `${name}${admin1? ', ' + admin1 : ''}, ${country}`
+      const newLocation = { lat, lon, name: displayName }
+      setLocation(newLocation)
+      setIsManualLocation(true)
+      localStorage.setItem('zephye_location', JSON.stringify(newLocation))
+      localStorage.setItem('zephye_isManual', 'true')
+      fetchWeatherData(lat, lon)
+      setShowLocationModal(false)
+      setCitySearch('')
+      showToast(`Location: ${name}`)
+
     } catch {
-      showToast('Search failed')
+      showToast('Search failed. Check internet')
     }
   }
 
   const fetchWeatherData = async (lat, lon) => {
-    if (!canRefresh) {
-      showToast('Wait 30s before refreshing')
-      return
-    }
     try {
       setIsLoading(true)
       setCanRefresh(false)
       setTimeout(() => setCanRefresh(true), 30000)
+
+      let weatherData, aqiData
+
+      // Try Open-Meteo first - free, no key
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,pressure_msl,visibility,uv_index&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,apparent_temperature,wind_gusts_10m,pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,moon_phase&timezone=auto`),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide`)
       ])
-      if (!weatherRes.ok) throw new Error('Weather failed')
-      const weatherData = await weatherRes.json()
-      const aqiData = await aqiRes.json()
+
+      if (weatherRes.ok) {
+        weatherData = await weatherRes.json()
+        aqiData = await aqiRes.json()
+      } else {
+        // Backup: OpenWeather with your key
+        showToast('Using OpenWeather backup...')
+        const owRes = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_KEY}`)
+        const ow = await owRes.json()
+
+        weatherData = {
+          current: {
+            temperature_2m: ow.current.temp,
+            weather_code: ow.current.weather[0].id,
+            wind_speed_10m: ow.current.wind_speed * 3.6,
+            wind_direction_10m: ow.current.wind_deg,
+            relative_humidity_2m: ow.current.humidity,
+            pressure_msl: ow.current.pressure,
+            visibility: ow.current.visibility,
+            uv_index: ow.current.uvi
+          },
+          hourly: {
+            time: ow.hourly.slice(0,24).map(h => new Date(h.dt * 1000).toISOString()),
+            temperature_2m: ow.hourly.slice(0,24).map(h => h.temp),
+            weather_code: ow.hourly.slice(0,24).map(h => h.weather[0].id),
+            precipitation_probability: ow.hourly.slice(0,24).map(h => (h.pop || 0) * 100),
+            precipitation: ow.hourly.slice(0,24).map(h => h.rain?.['1h'] || 0),
+            apparent_temperature: ow.hourly.slice(0,24).map(h => h.feels_like),
+            wind_gusts_10m: ow.hourly.slice(0,24).map(h => (h.wind_gust || 0) * 3.6),
+            pressure_msl: ow.hourly.slice(0,24).map(h => h.pressure)
+          },
+          daily: {
+            time: ow.daily.slice(0,7).map(d => new Date(d.dt * 1000).toISOString().split('T')[0]),
+            temperature_2m_max: ow.daily.slice(0,7).map(d => d.temp.max),
+            temperature_2m_min: ow.daily.slice(0,7).map(d => d.temp.min),
+            weather_code: ow.daily.slice(0,7).map(d => d.weather[0].id),
+            uv_index_max: ow.daily.slice(0,7).map(d => d.uvi),
+            sunrise: ow.daily.slice(0,7).map(d => new Date(d.sunrise * 1000).toISOString()),
+            sunset: ow.daily.slice(0,7).map(d => new Date(d.sunset * 1000).toISOString()),
+            moon_phase: ow.daily.slice(0,7).map(d => d.moon_phase)
+          }
+        }
+        aqiData = { current: { us_aqi: null } }
+      }
+
       setWeather(weatherData)
       setAqi(aqiData.current)
       calculateTodayStats(weatherData.hourly, weatherData.daily)
       setIsLoading(false)
-      showToast('Welcome to Zephye')
     } catch (err) {
-      console.error(err)
-      setWeather({
-        current: { temperature_2m: 28, weather_code: 0, wind_speed_10m: 8, wind_direction_10m: 180, relative_humidity_2m: 75, pressure_msl: 1013, visibility: 10000, uv_index: 8 },
-        hourly: { time: Array.from({length: 24}, (_, i) => new Date(Date.now() + i * 3600000).toISOString()), temperature_2m: Array(24).fill(28), weather_code: Array(24).fill(0), apparent_temperature: Array(24).fill(30) },
-        daily: { time: Array.from({length: 7}, (_, i) => new Date(Date.now() + i * 86400000).toISOString().split('T')[0]), temperature_2m_max: Array(7).fill(32), temperature_2m_min: Array(7).fill(24), weather_code: Array(7).fill(0), uv_index_max: Array(7).fill(8), sunrise: Array(7).fill('06:30'), sunset: Array(7).fill('18:45'), moon_phase: Array(7).fill(0.5) }
-      })
-      setAqi({ us_aqi: 55, pm2_5: 12, pm10: 20, nitrogen_dioxide: 15, sulphur_dioxide: 5, ozone: 60, carbon_monoxide: 800 })
+      console.error('Weather error:', err)
+      showToast('Weather failed. Try manual location')
       setIsLoading(false)
-      showToast('Welcome to Zephye')
     }
   }
 
@@ -427,12 +511,22 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px'}}>
             <h3 className="font-bold mb-4">Change Location</h3>
-            <input type="text" placeholder="Search city..." value={citySearch} onChange={e => setCitySearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchCity()} className="mb-4" />
+            <input
+              type="text"
+              placeholder="Type any city, LGA, country..."
+              value={citySearch}
+              onChange={e => setCitySearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchCity()}
+              className="mb-4 w-full"
+              autoFocus
+            />
+            <p className="text-xs text-white/60 mb-3">Type "London", "Ifo LGA", "Tokyo" - any real place</p>
             <div className="flex gap-2">
-              <button className="btn-primary" onClick={searchCity}>Search</button>
-              <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)} disabled={!canRefresh}>
-                {canRefresh? 'Refresh' : 'Wait...'}
-              </button>
+              <button className="btn-primary flex-1" onClick={searchCity}>Search</button>
+              <button className="btn-ghost text-xs" onClick={() => {
+                setShowLocationModal(false)
+                setCitySearch('')
+              }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -442,8 +536,10 @@ export default function App() {
           <>
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
               <div className="flex items-start justify-between mb-4">
-                <button className="location-btn" onClick={() => setShowLocationModal(true)}>
-                  <div className="text-xs text-white/70 mb-1">Location</div>
+                <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
+                  <div className="text-xs text-white/70 mb-1 flex items-center gap-1">
+                    📍 Location
+                  </div>
                   <div className="text-lg font-bold">{location.name}</div>
                   <div className="text-xs text-white/70 mt-1">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -562,8 +658,8 @@ export default function App() {
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Hourly Forecast</p>
-                <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)} disabled={!canRefresh}>
-                  {canRefresh? 'Refresh' : 'Wait...'}
+                <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)}>
+                  Refresh
                 </button>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
@@ -623,6 +719,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   useEffect(() => {
     fetchQuote()
   }, [quoteCategory])
+
   useEffect(() => {
     fetchFact()
   }, [factCategory])
@@ -798,4 +895,4 @@ function SavedTab({ showToast, shareQuote }) {
       )}
     </div>
   )
-}
+      }
