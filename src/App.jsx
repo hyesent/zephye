@@ -463,7 +463,7 @@ export default function App() {
                 {aqiInfo && (
                   <div style={{position: 'relative'}}>
                     <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
-                      Air: {aqiInfo.label}
+                      Air: {aqiInfo.label} ▼
                     </button>
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
@@ -532,6 +532,21 @@ export default function App() {
               )}
             </div>
 
+            {/* NEW GLASS CARD - Daily Insight */}
+            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
+              <p className="text-sm font-bold mb-3">Daily Insight</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-white/70">UV Index</p>
+                  <p className="text-xl font-bold">{uvIndex}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-white/70">Visibility</p>
+                  <p className="text-xl font-bold">{(visibility/1000).toFixed(1)} km</p>
+                </div>
+              </div>
+            </div>
+
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Quote of the Day</p>
@@ -539,9 +554,11 @@ export default function App() {
                   <button className="btn-share text-xs" onClick={() => shareQuote(quoteOfDay?.content, quoteOfDay?.author)}>Share</button>
                   <button className="btn-ghost text-xs" onClick={() => saveQuote(quoteOfDay)}>Save</button>
                 </div>
+              </div>
               <p className="font-bold mb-2">"{quoteOfDay?.content || 'Loading quote...'}"</p>
               <p className="text-xs text-white/70">- {quoteOfDay?.author || '...'}</p>
             </div>
+
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Hourly Forecast</p>
@@ -559,6 +576,7 @@ export default function App() {
                 ))}
               </div>
             </div>
+
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <p className="text-sm font-bold mb-3">7-Day Forecast</p>
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
@@ -577,7 +595,7 @@ export default function App() {
         {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
-          <p className="text-sm text-muted">© hyesent.dev</p>
+          <p className="text-sm text-muted">©️ hyesent.dev</p>
         </div>
       </div>
       <div className="bottom-nav">
@@ -605,7 +623,6 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   useEffect(() => {
     fetchQuote()
   }, [quoteCategory])
-
   useEffect(() => {
     fetchFact()
   }, [factCategory])
@@ -682,7 +699,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
       </div>
       <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
         <div className="flex justify-between items-center mb-4">
-          <p className="font-bold">Random Facts</p>
+          <p className="font-bold">Did You Know?</p>
           <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
             {loading? 'Loading...' : 'New Fact'}
           </button>
@@ -781,4 +798,4 @@ function SavedTab({ showToast, shareQuote }) {
       )}
     </div>
   )
-      }
+}
