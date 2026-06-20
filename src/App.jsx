@@ -102,7 +102,6 @@ export default function App() {
     rainPeriods: [],
     sunrise: '--:--',
     sunset: '--:--',
-    moonPhase: '',
     feelsLike: 0,
     windGust: 0,
     pressureTrend: '→'
@@ -149,17 +148,6 @@ export default function App() {
     setQuoteOfDay(pool[index])
   }
 
-  const getMoonEmoji = (phase) => {
-    if (phase < 0.03 || phase > 0.97) return '🌑'
-    if (phase < 0.22) return '🌒'
-    if (phase < 0.28) return '🌓'
-    if (phase < 0.47) return '🌔'
-    if (phase < 0.53) return '🌕'
-    if (phase < 0.72) return '🌖'
-    if (phase < 0.78) return '🌗'
-    return '🌘'
-  }
-
   const getPressureTrend = (hourly) => {
     if (!hourly?.pressure_msl || hourly.pressure_msl.length < 3) return '→'
     const last3 = hourly.pressure_msl.slice(0, 3)
@@ -202,12 +190,11 @@ export default function App() {
 
     const sunrise = daily?.sunrise?.[0]? new Date(daily.sunrise[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
     const sunset = daily?.sunset?.[0]? new Date(daily.sunset[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
-    const moonPhase = daily?.moon_phase?.[0]!= null? getMoonEmoji(daily.moon_phase[0]) : ''
     const feelsLike = hourly?.apparent_temperature?.[0] || 0
     const windGust = hourly?.wind_gusts_10m?.[0] || 0
     const pressureTrend = getPressureTrend(hourly)
 
-    setTodayStats({ sunHours, rainHours, stormHours, maxRainProb, rainPeriods, sunrise, sunset, moonPhase, feelsLike, windGust, pressureTrend })
+    setTodayStats({ sunHours, rainHours, stormHours, maxRainProb, rainPeriods, sunrise, sunset, feelsLike, windGust, pressureTrend })
   }
 
   const initLocation = async () => {
@@ -338,7 +325,7 @@ export default function App() {
         fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
           `&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,winddirection,windspeed_10m` +
-          `&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset,moon_phase` +
+          `&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset` +
           `&timezone=auto`
         ),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide`)
@@ -379,8 +366,7 @@ export default function App() {
             weather_code: om.daily?.weathercode ?? [],
             uv_index_max: om.daily?.uv_index_max ?? [],
             sunrise: om.daily?.sunrise ?? [],
-            sunset: om.daily?.sunset ?? [],
-            moon_phase: om.daily?.moon_phase ?? []
+            sunset: om.daily?.sunset ?? []
           }
         }
 
@@ -419,8 +405,7 @@ export default function App() {
             weather_code: ow.daily.slice(0,7).map(d => d.weather[0].id),
             uv_index_max: ow.daily.slice(0,7).map(d => d.uvi),
             sunrise: ow.daily.slice(0,7).map(d => new Date(d.sunrise * 1000).toISOString()),
-            sunset: ow.daily.slice(0,7).map(d => new Date(d.sunset * 1000).toISOString()),
-            moon_phase: ow.daily.slice(0,7).map(d => d.moon_phase)
+            sunset: ow.daily.slice(0,7).map(d => new Date(d.sunset * 1000).toISOString())
           }
         }
         aqiData = { current: { us_aqi: null } }
@@ -601,14 +586,14 @@ export default function App() {
                 )}
                 {aqiInfo && (
                   <div style={{position: 'relative'}}>
-                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
+                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(![...]
                       Air: {aqiInfo.label} ▼
                     </button>
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
                         <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</s[...]
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir[...]
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
@@ -661,7 +646,6 @@ export default function App() {
                 </div>
                 <div className="text-xs">
                   <span className="text-white/70">Pressure {todayStats.pressureTrend}</span>
-                  <span className="mx-2">{todayStats.moonPhase}</span>
                 </div>
               </div>
               {todayStats.rainPeriods.length > 0 && (
