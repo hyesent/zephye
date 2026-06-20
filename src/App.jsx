@@ -702,6 +702,7 @@ export default function App() {
         <button className={`nav-btn ${tab === 'saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
       </div>
     </div>
+          </div>
   )
 }
 
