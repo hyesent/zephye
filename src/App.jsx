@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { QUOTES } from './data/quotes.js'
+import { AudioProvider } from './AudioContext.jsx'
+import WeatherManTab from './WeatherManTab.jsx'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
@@ -80,7 +82,7 @@ function WeatherIcon({ code }) {
   return getAnimatedIcon(code)
 }
 
-export default function App() {
+function AppContent() {
   const [tab, setTab] = useState('weather')
   const [weather, setWeather] = useState(null)
   const [aqi, setAqi] = useState(null)
@@ -109,6 +111,16 @@ export default function App() {
   const [hasWelcomed, setHasWelcomed] = useState(false)
 
   useEffect(() => {
+    // Ping HYEZEN on every refresh
+    fetch('https://hyezen.onrender.com/api/ping', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ 
+        timestamp: Date.now(),
+        user: localStorage.getItem('weatherman_name') || 'anonymous'
+      })
+    }).catch(() => {})
+
     const savedLoc = localStorage.getItem('zephye_location')
     const savedManual = localStorage.getItem('zephye_isManual')
     if (savedLoc && savedManual === 'true') {
@@ -127,8 +139,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    // Show greeting toast once per session
-    if (!hasWelcomed && weather && !isLoading) {
+    if (!hasWelcomed && weather &&!isLoading) {
       setTimeout(() => showToast('Welcome to Zephye 👋'), 1000)
       setHasWelcomed(true)
     }
@@ -266,11 +277,9 @@ export default function App() {
     }
 
     try {
-      // Try Open-Meteo geocoding first - free, no key
       let res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(citySearch)}&count=5&language=en&format=json`)
       let data = await res.json()
 
-      // If Open-Meteo fails, try OpenWeather geocoding as backup
       if (!data.results || data.results.length === 0) {
         const owRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(citySearch)}&limit=5&appid=${OPENWEATHER_KEY}`)
         const owData = await owRes.json()
@@ -294,7 +303,6 @@ export default function App() {
         return
       }
 
-      // Use first result from Open-Meteo
       const { latitude: lat, longitude: lon, name, country, admin1 } = data.results[0]
       const displayName = `${name}${admin1? ', ' + admin1 : ''}, ${country}`
       const newLocation = { lat, lon, name: displayName }
@@ -320,7 +328,6 @@ export default function App() {
 
       let weatherData, aqiData
 
-      // Try Open-Meteo first - free, no key
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
@@ -335,44 +342,42 @@ export default function App() {
         const om = await weatherRes.json()
         const aqiJson = await aqiRes.json()
 
-        // map Open-Meteo response into the shape the app expects
         weatherData = {
           current: {
-            temperature_2m: om.current_weather?.temperature ?? null,
-            weather_code: om.current_weather?.weathercode ?? 0,
-            wind_speed_10m: om.current_weather?.windspeed ?? 0,
-            wind_direction_10m: om.current_weather?.winddirection ?? 0,
+            temperature_2m: om.current_weather?.temperature?? null,
+            weather_code: om.current_weather?.weathercode?? 0,
+            wind_speed_10m: om.current_weather?.windspeed?? 0,
+            wind_direction_10m: om.current_weather?.winddirection?? 0,
             relative_humidity_2m: null,
             pressure_msl: null,
             visibility: null,
-            uv_index: om.daily?.uv_index_max?.[0] ?? 0
+            uv_index: om.daily?.uv_index_max?.[0]?? 0
           },
           hourly: {
-            time: om.hourly?.time ?? [],
-            temperature_2m: om.hourly?.temperature_2m ?? [],
-            weather_code: om.hourly?.weathercode ?? [],
-            precipitation_probability: om.hourly?.precipitation_probability ?? [],
-            precipitation: om.hourly?.precipitation ?? [],
-            apparent_temperature: om.hourly?.apparent_temperature ?? [],
-            wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [],
-            pressure_msl: om.hourly?.pressure_msl ?? [],
-            wind_direction_10m: om.hourly?.winddirection ?? [],
-            wind_speed_10m: om.hourly?.windspeed_10m ?? []
+            time: om.hourly?.time?? [],
+            temperature_2m: om.hourly?.temperature_2m?? [],
+            weather_code: om.hourly?.weathercode?? [],
+            precipitation_probability: om.hourly?.precipitation_probability?? [],
+            precipitation: om.hourly?.precipitation?? [],
+            apparent_temperature: om.hourly?.apparent_temperature?? [],
+            wind_gusts_10m: om.hourly?.wind_gusts_10m?? [],
+            pressure_msl: om.hourly?.pressure_msl?? [],
+            wind_direction_10m: om.hourly?.winddirection?? [],
+            wind_speed_10m: om.hourly?.windspeed_10m?? []
           },
           daily: {
-            time: om.daily?.time ?? [],
-            temperature_2m_max: om.daily?.temperature_2m_max ?? [],
-            temperature_2m_min: om.daily?.temperature_2m_min ?? [],
-            weather_code: om.daily?.weathercode ?? [],
-            uv_index_max: om.daily?.uv_index_max ?? [],
-            sunrise: om.daily?.sunrise ?? [],
-            sunset: om.daily?.sunset ?? []
+            time: om.daily?.time?? [],
+            temperature_2m_max: om.daily?.temperature_2m_max?? [],
+            temperature_2m_min: om.daily?.temperature_2m_min?? [],
+            weather_code: om.daily?.weathercode?? [],
+            uv_index_max: om.daily?.uv_index_max?? [],
+            sunrise: om.daily?.sunrise?? [],
+            sunset: om.daily?.sunset?? []
           }
         }
 
         aqiData = aqiJson
       } else {
-        // Backup: OpenWeather with your key
         showToast('Using OpenWeather backup...')
         const owRes = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_KEY}`)
         const ow = await owRes.json()
@@ -561,159 +566,14 @@ export default function App() {
       )}
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
-          <>
-            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
-              <div className="flex items-start justify-between mb-4">
-                <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
-                  <div className="text-xs text-white/70 mb-1 flex items-center gap-1">
-                    📍 Location
-                  </div>
-                  <div className="text-lg font-bold">{location.name}</div>
-                  <div className="text-xs text-white/70 mt-1">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </div>
-                </button>
-                <div className="text-right">
-                  <WeatherIcon code={weatherCode} />
-                  <h1 className="text-3xl font-bold mt-1">{weather?.current? Math.round(weather.current.temperature_2m) : '--'}°</h1>
-                </div>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {stormInfo && (
-                  <div className="status-badge" style={{background: stormInfo.color + '33', borderColor: stormInfo.color, color: stormInfo.color}}>
-                    {stormInfo.level}
-                  </div>
-                )}
-                {aqiInfo && (
-                  <div style={{position: 'relative'}}>
-                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
-                      Air: {aqiInfo.label} ▼
-                    </button>
-                    {showAirDropdown && (
-                      <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
-                        <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-white/70">UV Index</span><span className="font-bold">{uvIndex}</span></div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
-              <p className="text-sm font-bold mb-3">Today's Weather</p>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="glass" style={{padding: '12px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)'}}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">☀️</span>
-                    <span className="text-xs text-white/70">Sunshine</span>
-                  </div>
-                  <p className="text-lg font-bold">{todayStats.sunHours}h</p>
-                </div>
-                <div className="glass" style={{padding: '12px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)'}}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">🌧️</span>
-                    <span className="text-xs text-white/70">Rain</span>
-                  </div>
-                  <p className="text-lg font-bold">{todayStats.rainHours}h</p>
-                  {todayStats.maxRainProb > 0 && <p className="text-xs text-white/70">{todayStats.maxRainProb}% max</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
-                  <div className="text-xs text-white/70 mb-1">Thunder</div>
-                  <p className="text-sm font-bold">{todayStats.stormHours}h</p>
-                </div>
-                <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
-                  <div className="text-xs text-white/70 mb-1">Feels Like</div>
-                  <p className="text-sm font-bold">{Math.round(todayStats.feelsLike)}°</p>
-                </div>
-                <div className="glass" style={{padding: '10px', borderRadius: '10px'}}>
-                  <div className="text-xs text-white/70 mb-1">Wind Gust</div>
-                  <p className="text-sm font-bold">{Math.round(todayStats.windGust)} km/h</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                <div className="text-xs">
-                  <span className="text-white/70">Sunrise {todayStats.sunrise}</span>
-                  <span className="mx-2">|</span>
-                  <span className="text-white/70">Sunset {todayStats.sunset}</span>
-                </div>
-                <div className="text-xs">
-                  <span className="text-white/70">Pressure {todayStats.pressureTrend}</span>
-                </div>
-              </div>
-              {todayStats.rainPeriods.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-white/10">
-                  <p className="text-xs text-white/70">Rain expected: {todayStats.rainPeriods.join(', ')}</p>
-                </div>
-              )}
-            </div>
-
-            {/* NEW GLASS CARD - Daily Insight */}
-            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
-              <p className="text-sm font-bold mb-3">Daily Insight</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-white/70">UV Index</p>
-                  <p className="text-xl font-bold">{uvIndex}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-white/70">Visibility</p>
-                  <p className="text-xl font-bold">{(visibility/1000).toFixed(1)} km</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
-              <div className="flex justify-between items-center mb-3">
-                <p className="text-sm font-bold">Quote of the Day</p>
-                <div className="flex gap-2">
-                  <button className="btn-share text-xs" onClick={() => shareQuote(quoteOfDay?.content, quoteOfDay?.author)}>Share</button>
-                  <button className="btn-ghost text-xs" onClick={() => saveQuote(quoteOfDay)}>Save</button>
-                </div>
-              </div>
-              <p className="font-bold mb-2">"{quoteOfDay?.content || 'Loading quote...'}"</p>
-              <p className="text-xs text-white/70">- {quoteOfDay?.author || '...'}</p>
-            </div>
-
-            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
-              <div className="flex justify-between items-center mb-3">
-                <p className="text-sm font-bold">Hourly Forecast</p>
-                <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)}>
-                  Refresh
-                </button>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
-                {weather?.hourly?.time?.slice(0,24).map((time, i) => (
-                  <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth: '72px', scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.05)'}}>
-                    <p className="text-xs text-white/70">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
-                    <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
-                    <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
-              <p className="text-sm font-bold mb-3">7-Day Forecast</p>
-              {weather?.daily?.time?.slice(0,7).map((day, i) => (
-                <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
-                  <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en', {weekday: 'short'})}</span>
-                  <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
-                  <div className="flex gap-3 text-sm">
-                    <span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
-                    <span className="text-white/50">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <WeatherManTab 
+            weather={weather}
+            location={location}
+            todayStats={todayStats}
+            aqi={aqi}
+            quote={quoteOfDay}
+            onRefresh={() => fetchWeatherData(location.lat, location.lon)}
+          />
         )}
         {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
@@ -840,7 +700,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
             <p className="font-bold mb-4">{currentFact.text}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button>
-              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
+                            <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
             </div>
           </div>
         )}
@@ -923,3 +783,11 @@ function SavedTab({ showToast, shareQuote }) {
     </div>
   )
 }
+
+export default function App() {
+  return (
+    <AudioProvider>
+      <AppContent />
+    </AudioProvider>
+  )
+      }
