@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react'
-import  QUOTES from './data/quotes.js'
+import { QUOTES } from './data/quotes.js'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
