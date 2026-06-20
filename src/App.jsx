@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { QUOTES } from './data/quotes.js'
 
@@ -337,14 +336,55 @@ export default function App() {
       // Try Open-Meteo first - free, no key
       const [weatherRes, aqiRes] = await Promise.all([
         fetch(
-`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,pressure_msl&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,apparent_temperature,wind_gusts_10m,pressure_msl,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&timezone=auto`
-),
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,winddirection,windspeed_10m` +
+          `&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset,moon_phase` +
+          `&timezone=auto`
+        ),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide`)
       ])
 
       if (weatherRes.ok) {
-        weatherData = await weatherRes.json()
-        aqiData = await aqiRes.json()
+        const om = await weatherRes.json()
+        const aqiJson = await aqiRes.json()
+
+        // map Open-Meteo response into the shape the app expects
+        weatherData = {
+          current: {
+            temperature_2m: om.current_weather?.temperature ?? null,
+            weather_code: om.current_weather?.weathercode ?? 0,
+            wind_speed_10m: om.current_weather?.windspeed ?? 0,
+            wind_direction_10m: om.current_weather?.winddirection ?? 0,
+            relative_humidity_2m: null,
+            pressure_msl: null,
+            visibility: null,
+            uv_index: om.daily?.uv_index_max?.[0] ?? 0
+          },
+          hourly: {
+            time: om.hourly?.time ?? [],
+            temperature_2m: om.hourly?.temperature_2m ?? [],
+            weather_code: om.hourly?.weathercode ?? [],
+            precipitation_probability: om.hourly?.precipitation_probability ?? [],
+            precipitation: om.hourly?.precipitation ?? [],
+            apparent_temperature: om.hourly?.apparent_temperature ?? [],
+            wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [],
+            pressure_msl: om.hourly?.pressure_msl ?? [],
+            wind_direction_10m: om.hourly?.winddirection ?? [],
+            wind_speed_10m: om.hourly?.windspeed_10m ?? []
+          },
+          daily: {
+            time: om.daily?.time ?? [],
+            temperature_2m_max: om.daily?.temperature_2m_max ?? [],
+            temperature_2m_min: om.daily?.temperature_2m_min ?? [],
+            weather_code: om.daily?.weathercode ?? [],
+            uv_index_max: om.daily?.uv_index_max ?? [],
+            sunrise: om.daily?.sunrise ?? [],
+            sunset: om.daily?.sunset ?? [],
+            moon_phase: om.daily?.moon_phase ?? []
+          }
+        }
+
+        aqiData = aqiJson
       } else {
         // Backup: OpenWeather with your key
         showToast('Using OpenWeather backup...')
@@ -567,8 +607,8 @@ export default function App() {
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
                         <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi || '--'}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{windSpeed} km/h {getWindDirection(windDir)}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
