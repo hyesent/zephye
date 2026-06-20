@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zephye-v1';
+const CACHE_NAME = 'zephye-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -16,7 +16,7 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Activate - take control immediately
+// Activate - take control immediately and clean old caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -31,10 +31,24 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Fetch - serve from cache, fallback to network
+// Fetch - try network first, fallback to cache for navigation and assets
 self.addEventListener('fetch', (e) => {
+  // For navigation requests, prefer network but fallback to cache (so SPA still works offline)
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          return caches.open(CACHE_NAME).then(cache => {
+            cache.put(e.request, response.clone());
+            return response;
+          });
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
   e.respondWith(
-    caches.match(e.request)
-      .then((response) => response || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
