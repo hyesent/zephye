@@ -586,14 +586,14 @@ export default function App() {
                 )}
                 {aqiInfo && (
                   <div style={{position: 'relative'}}>
-                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(![...]
+                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
                       Air: {aqiInfo.label} ▼
                     </button>
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
                         <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</s[...]
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir[...]
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
@@ -922,4 +922,4 @@ function SavedTab({ showToast, shareQuote }) {
       )}
     </div>
   )
-    }
+}
