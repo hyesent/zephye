@@ -99,7 +99,7 @@ function AppContent() {
   const [todayStats, setTodayStats] = useState({
     sunHours: 0,
     rainHours: 0,
-    stormHours: 0,
+    thunderHours: 0,
     maxRainProb: 0,
     rainPeriods: [],
     sunrise: '--:--',
@@ -111,13 +111,14 @@ function AppContent() {
   const [hasWelcomed, setHasWelcomed] = useState(false)
 
   useEffect(() => {
-    // Ping HYEZEN on every refresh
+    // Ping HYEZEN backend on every refresh from frontend
     fetch('https://hyezen.onrender.com/api/ping', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         timestamp: Date.now(),
-        user: localStorage.getItem('weatherman_name') || 'anonymous'
+        user: localStorage.getItem('weatherman_name') || 'anonymous',
+        location: location.name
       })
     }).catch(() => {})
 
@@ -171,7 +172,7 @@ function AppContent() {
 
   const calculateTodayStats = (hourly, daily) => {
     if (!hourly?.time) return
-    let sunHours = 0, rainHours = 0, stormHours = 0, maxRainProb = 0
+    let sunHours = 0, rainHours = 0, thunderHours = 0, maxRainProb = 0
     let currentRainPeriod = null
     const rainPeriods = []
 
@@ -194,7 +195,7 @@ function AppContent() {
         rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
         currentRainPeriod = null
       }
-      if (code >= 95) stormHours++
+      if (code >= 95) thunderHours++
       if (prob > maxRainProb) maxRainProb = prob
     })
     if (currentRainPeriod) rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
@@ -205,7 +206,7 @@ function AppContent() {
     const windGust = hourly?.wind_gusts_10m?.[0] || 0
     const pressureTrend = getPressureTrend(hourly)
 
-    setTodayStats({ sunHours, rainHours, stormHours, maxRainProb, rainPeriods, sunrise, sunset, feelsLike, windGust, pressureTrend })
+    setTodayStats({ sunHours, rainHours, thunderHours, maxRainProb, rainPeriods, sunrise, sunset, feelsLike, windGust, pressureTrend })
   }
 
   const initLocation = async () => {
@@ -566,23 +567,119 @@ function AppContent() {
       )}
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
-          <WeatherManTab 
-            weather={weather}
-            location={location}
-            todayStats={todayStats}
-            aqi={aqi}
-            quote={quoteOfDay}
-            onRefresh={() => fetchWeatherData(location.lat, location.lon)}
-          />
+          <>
+            {/* LOCATION HEADER - KEPT */}
+            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
+              <div className="flex items-start justify-between mb-4">
+                <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
+                  <div className="text-xs text-white/70 mb-1 flex items-center gap-1">
+                    📍 Location
+                  </div>
+                  <div className="text-lg font-bold">{location.name}</div>
+                  <div className="text-xs text-white/70 mt-1">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                </button>
+                <div className="text-right">
+                  <WeatherIcon code={weatherCode} />
+                  <h1 className="text-3xl font-bold mt-1">{weather?.current? Math.round(weather.current.temperature_2m) : '--'}°</h1>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {stormInfo && (
+                  <div className="status-badge" style={{background: stormInfo.color + '33', borderColor: stormInfo.color, color: stormInfo.color}}>
+                    {stormInfo.level}
+                  </div>
+                )}
+                {aqiInfo && (
+                  <div style={{position: 'relative'}}>
+                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
+                      Air: {aqiInfo.label} ▼
+                    </button>
+                    {showAirDropdown && (
+                      <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
+                        <p className="font-bold mb-3">Weather Details</p>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi?? '--'}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-white/70">UV Index</span><span className="font-bold">{uvIndex}</span></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* NUKED: Today's Weather card + Daily Insight card */}
+
+            {/* WEATHERMAN TAB - REPLACES THE TWO CARDS */}
+            <WeatherManTab
+              weather={weather}
+              location={location}
+              todayStats={todayStats}
+              aqi={aqi}
+              quote={quoteOfDay}
+              onRefresh={() => fetchWeatherData(location.lat, location.lon)}
+            />
+
+            {/* QUOTE OF THE DAY - KEPT */}
+            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-bold">Quote of the Day</p>
+                <div className="flex gap-2">
+                  <button className="btn-share text-xs" onClick={() => shareQuote(quoteOfDay?.content, quoteOfDay?.author)}>Share</button>
+                  <button className="btn-ghost text-xs" onClick={() => saveQuote(quoteOfDay)}>Save</button>
+                </div>
+              </div>
+              <p className="font-bold mb-2">"{quoteOfDay?.content || 'Loading quote...'}"</p>
+              <p className="text-xs text-white/70">- {quoteOfDay?.author || '...'}</p>
+            </div>
+
+            {/* HOURLY FORECAST - KEPT */}
+            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-bold">Hourly Forecast</p>
+                <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)}>
+                  Refresh
+                </button>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
+                {weather?.hourly?.time?.slice(0,24).map((time, i) => (
+                  <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth: '72px', scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.05)'}}>
+                    <p className="text-xs text-white/70">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
+                    <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
+                    <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 7-DAY FORECAST - KEPT */}
+            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
+              <p className="text-sm font-bold mb-3">7-Day Forecast</p>
+              {weather?.daily?.time?.slice(0,7).map((day, i) => (
+                <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
+                  <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en', {weekday: 'short'})}</span>
+                  <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
+                  <div className="flex gap-3 text-sm">
+                    <span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
+                    <span className="text-white/50">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
-        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
+        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} 'active'={shareQuote} saveFact={saveFact} />}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
         </div>
       </div>
       <div className="bottom-nav">
-        <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+        <button className={`nav-btn ${tab === 'weather'?         'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
         <button className={`nav-btn ${tab === 'saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
       </div>
@@ -700,7 +797,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
             <p className="font-bold mb-4">{currentFact.text}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button>
-                            <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
+              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
             </div>
           </div>
         )}
@@ -790,4 +887,4 @@ export default function App() {
       <AppContent />
     </AudioProvider>
   )
-      }
+  }
