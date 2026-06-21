@@ -156,6 +156,7 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
       selectedVoice={selectedVoice}
       setSelectedVoice={setSelectedVoice}
       userName={userName}
+      setUserName={setUserName}
       briefMode={briefMode}
       setBriefMode={setBriefMode}
       isSpeaking={isSpeaking}
@@ -164,4 +165,4 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
       getAqiLevel={getAqiLevel}
     />
   )
-}
+    }
