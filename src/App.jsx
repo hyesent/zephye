@@ -672,7 +672,7 @@ function AppContent() {
             </div>
           </>
         )}
-        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} 'active'={shareQuote} saveFact={saveFact} />}
+        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
