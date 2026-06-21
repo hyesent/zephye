@@ -32,9 +32,9 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/api/voices/fair`)
-   .then(r => r.json())
-   .then(data => setVoices(data || []))
-   .catch(() => setVoices([]))
+  .then(r => r.json())
+  .then(data => setVoices(data || []))
+  .catch(() => setVoices([]))
   }, [])
 
   const saveName = () => {
@@ -194,93 +194,78 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
         </div>
       )}
 
-      {/* ZEPHYE PANEL ONLY - Replaces Today's Weather + Daily Insight */}
+      {/* ZEPHYE PANEL - Fixed layout */}
       <div className="glass" style={{
         padding: '20px',
         borderRadius: '20px',
         background: 'linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(147,51,234,0.1) 100%)',
         border: '1px solid rgba(59,130,246,0.2)'
       }}>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <div style={{
-              background: '#ef4444',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              fontSize: '10px',
-              fontWeight: '800',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <div style={{
-                width: '5px',
-                height: '5px',
-                background: '#fff',
-                borderRadius: '50%',
-                animation: isSpeaking? 'pulse 1s infinite' : 'none'
-              }}></div>
-              ZEPHYE
-            </div>
-            {userName && (
-              <div className="text-xs text-white/60">Hi {userName}</div>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setTempName(userName)
-                setShowNameModal(true)
-              }}
-              className="glass text-xs"
-              style={{
-                padding: '6px 10px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff'
-              }}
-            >
-              ⚙️
-            </button>
-
-            <button
-              onClick={() => setBriefMode(!briefMode)}
-              className="glass text-xs"
-              style={{
-                padding: '6px 10px',
-                borderRadius: '8px',
-                border: briefMode? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
-                background: briefMode? 'rgba(59,130,246,0.2)' : 'rgba(0,0,0,0.3)',
-                color: '#fff',
-                fontWeight: briefMode? '700' : '500'
-              }}
-            >
-              {briefMode? '⚡ Brief' : '📋 Full'}
-            </button>
-
-            <select
-              value={selectedVoice}
-              onChange={(e) => setSelectedVoice(e.target.value)}
-              className="glass text-xs"
-              style={{
-                padding: '6px 10px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff',
-                maxWidth: '120px'
-              }}
-            >
-              {voices.map(v => (
-                <option key={v.name} value={v.name}>{v.label}</option>
-              ))}
-            </select>
-          </div>
+        {/* ZEPHYE TITLE - Top line now */}
+        <div className="mb-3">
+          <span className="text-base font-bold text-white/90">Zephye</span>
+          {userName && (
+            <span className="text-xs text-white/60 ml-2">Hi {userName}</span>
+          )}
         </div>
 
-        {/* ALL 15 METRICS - Fixed null/undefined */}
+        {/* CONTROLS ROW - Full width flex */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => {
+              setTempName(userName)
+              setShowNameModal(true)
+            }}
+            className="glass text-xs flex-1"
+            style={{
+              padding: '8px 10px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(0,0,0,0.3)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px'
+            }}
+          >
+            👤 You
+          </button>
+
+          <button
+            onClick={() => setBriefMode(!briefMode)}
+            className="glass text-xs flex-1"
+            style={{
+              padding: '8px 10px',
+              borderRadius: '8px',
+              border: briefMode? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+              background: briefMode? 'rgba(59,130,246,0.2)' : 'rgba(0,0,0,0.3)',
+              color: '#fff',
+              fontWeight: briefMode? '700' : '500'
+            }}
+          >
+            {briefMode? '⚡ Brief' : '📋 Full'}
+          </button>
+
+          <select
+            value={selectedVoice}
+            onChange={(e) => setSelectedVoice(e.target.value)}
+            className="glass text-xs flex-1"
+            style={{
+              padding: '8px 10px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(0,0,0,0.3)',
+              color: '#fff'
+            }}
+          >
+            {voices.map(v => (
+              <option key={v.name} value={v.name}>{v.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* ALL 15 METRICS */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -318,7 +303,7 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
             cursor: 'pointer'
           }}
         >
-          {isSpeaking? ' Stop Zephye 🌬' : briefMode? '⚡ Play Brief Update' : '🔊 Play Full Briefing'}
+          {isSpeaking? ' Stop Zephye 🌬 ' : briefMode? '⚡ Play Brief Update' : '🔊 Play Full Briefing'}
         </button>
       </div>
     </>
