@@ -111,7 +111,6 @@ function AppContent() {
   const [hasWelcomed, setHasWelcomed] = useState(false)
 
   useEffect(() => {
-    // Ping HYEZEN backend on every refresh from frontend
     fetch('https://hyezen.onrender.com/api/ping', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -572,7 +571,6 @@ function AppContent() {
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
           <>
-            {/* LOCATION HEADER - KEPT */}
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
               <div className="flex items-start justify-between mb-4">
                 <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
@@ -616,9 +614,6 @@ function AppContent() {
               </div>
             </div>
 
-            {/* NUKED: Today's Weather card + Daily Insight card */}
-
-            {/* WEATHERMAN TAB - REPLACES THE TWO CARDS */}
             <WeatherManTab
               weather={weather}
               location={location}
@@ -628,7 +623,6 @@ function AppContent() {
               onRefresh={() => fetchWeatherData(location.lat, location.lon)}
             />
 
-            {/* QUOTE OF THE DAY - KEPT */}
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 1}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Quote of the Day</p>
@@ -641,7 +635,6 @@ function AppContent() {
               <p className="text-xs text-white/70">- {quoteOfDay?.author || '...'}</p>
             </div>
 
-            {/* HOURLY FORECAST - KEPT */}
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Hourly Forecast</p>
@@ -654,13 +647,12 @@ function AppContent() {
                   <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth: '72px', scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.05)'}}>
                     <p className="text-xs text-white/70">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
                     <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
-                    <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
+                                        <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* 7-DAY FORECAST - KEPT */}
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
               <p className="text-sm font-bold mb-3">7-Day Forecast</p>
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
@@ -681,6 +673,7 @@ function AppContent() {
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
         </div>
+      </div>
       <div className="bottom-nav">
         <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
@@ -722,7 +715,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
     } else {
       pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
     }
-    const random = pool[Math.floor(Math.random() _ pool.length)]
+    const random = pool[Math.floor(Math.random() * pool.length)]
     setCurrentQuote(random)
     setLoading(false)
   }
@@ -747,7 +740,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
         } else {
           pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
         }
-        const random = pool[Math.floor(Math.random() _ pool.length)]
+        const random = pool[Math.floor(Math.random() * pool.length)]
         setCurrentFact(random)
       }
     }
@@ -826,14 +819,14 @@ function SavedTab({ showToast, shareQuote }) {
   }
 
   const deleteQuote = (id) => {
-    const updated = savedQuotes.filter(q => q.id !== id)
+    const updated = savedQuotes.filter(q => q.id!== id)
     localStorage.setItem('zephye_saved_quotes', JSON.stringify(updated))
     setSavedQuotes(updated)
     showToast('Quote deleted')
   }
 
   const deleteFact = (id) => {
-    const updated = savedFacts.filter(f => f.id !== id)
+    const updated = savedFacts.filter(f => f.id!== id)
     localStorage.setItem('zephye_saved_facts', JSON.stringify(updated))
     setSavedFacts(updated)
     showToast('Fact deleted')
@@ -850,15 +843,15 @@ function SavedTab({ showToast, shareQuote }) {
         </button>
       </div>
       {activeSubTab === 'quotes' && (
-        http://savedQuotes.length === 0? (
+        savedQuotes.length === 0? (
           <p className="text-center text-muted py-8">No saved quotes yet. Save some!</p>
         ) : (
-          http://savedQuotes.map(quote => (
+          savedQuotes.map(quote => (
             <div key={quote.id} className="list-item">
               <p className="font-bold mb-2">"{quote.quote_text}"</p>
               <p className="text-sm text-muted mb-3">- {quote.quote_author}</p>
               <div className="flex gap-2">
-                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, http://quote.quote_author)}>Share</button>
+                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
                 <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
               </div>
             </div>
@@ -866,10 +859,246 @@ function SavedTab({ showToast, shareQuote }) {
         )
       )}
       {activeSubTab === 'facts' && (
-        http://savedFacts.length === 0? (
+        savedFacts.length === 0? (
           <p className="text-center text-muted py-8">No saved facts yet. Save some!</p>
         ) : (
-          http://savedFacts.map(fact => (
+          savedFacts.map(fact => (
+            <div key={fact.id} className="list-item">
+              <p className="font-bold mb-3">{fact.fact_text}</p>
+              <div className="flex gap-2">
+                <button className="btn-share text-xs" onClick={() => shareQuote(fact.fact_text, 'Fact')}>Share</button>
+                <button className="btn-ghost text-xs" onClick={() => deleteFact(fact.id)}>Delete</button>
+              </div>
+            </div>
+          ))
+        )
+      )}
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AudioProvider>
+      <AppContent />
+    </AudioProvider>
+  )
+                                                        }                    <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
+              <p className="text-sm font-bold mb-3">7-Day Forecast</p>
+              {weather?.daily?.time?.slice(0,7).map((day, i) => (
+                <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
+                  <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en', {weekday: 'short'})}</span>
+                  <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
+                  <div className="flex gap-3 text-sm">
+                    <span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
+                    <span className="text-white/50">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
+        {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
+        <div className="text-center mt-4 mb-4">
+          <p className="text-sm text-muted">©️ hyesent.dev</p>
+        </div>
+      </div>
+      <div className="bottom-nav">
+        <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+        <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
+        <button className={`nav-btn ${tab ==='saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
+      </div>
+    </div>
+  )
+}
+
+function QuotesTab({ saveQuote, shareQuote, saveFact }) {
+  const [quoteCategory, setQuoteCategory] = useState('All')
+  const [factCategory, setFactCategory] = useState('All')
+  const [currentQuote, setCurrentQuote] = useState(null)
+  const [currentFact, setCurrentFact] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [lastFetch, setLastFetch] = useState(0)
+
+  useEffect(() => {
+    fetchQuote()
+    fetchFact()
+  }, [])
+
+  useEffect(() => {
+    fetchQuote()
+  }, [quoteCategory])
+
+  useEffect(() => {
+    fetchFact()
+  }, [factCategory])
+
+  const fetchQuote = () => {
+    const now = Date.now()
+    if (now - lastFetch < 5000) return
+    setLastFetch(now)
+    setLoading(true)
+    let pool = []
+    if (quoteCategory === 'All') {
+      pool = getAllQuotesPool()
+    } else {
+      pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
+    }
+    const random = pool[Math.floor(Math.random() * pool.length)]
+    setCurrentQuote(random)
+    setLoading(false)
+  }
+
+  const fetchFact = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en')
+      if (!res.ok) throw new Error('API 1 failed')
+      const data = await res.json()
+      setCurrentFact({ text: data.text })
+    } catch {
+      try {
+        const res2 = await fetch('https://numbersapi.com/random/trivia?json')
+        if (!res2.ok) throw new Error('API 2 failed')
+        const data2 = await res2.json()
+        setCurrentFact({ text: data2.text })
+      } catch {
+        let pool = []
+        if (factCategory === 'All') {
+          Object.values(LOCAL_FACTS).forEach(arr => pool.push(...arr))
+        } else {
+          pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
+        }
+        const random = pool[Math.floor(Math.random() * pool.length)]
+        setCurrentFact(random)
+      }
+    }
+    setLoading(false)
+  }
+
+  return (
+    <>
+      <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
+        <div className="flex justify-between items-center mb-4">
+          <p className="font-bold">Explore Quotes</p>
+          <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>
+            {loading? 'Loading...' : 'New Quote'}
+          </button>
+        </div>
+        <div className="sub-tabs mb-4">
+          {QUOTE_CATEGORIES.map(cat => (
+            <button key={cat} className={`sub-tab ${quoteCategory === cat? 'active' : ''}`} onClick={() => setQuoteCategory(cat)}>
+              {cat}
+            </button>
+          ))}
+        </div>
+        {currentQuote && (
+          <div className="list-item">
+            <p className="font-bold mb-4">"{currentQuote.content}"</p>
+            <p className="text-sm text-muted mb-4">- {currentQuote.author}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
+              <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
+        <div className="flex justify-between items-center mb-4">
+          <p className="font-bold">Did You Know?</p>
+          <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
+            {loading? 'Loading...' : 'New Fact'}
+          </button>
+        </div>
+        <div className="sub-tabs mb-4">
+          {FACT_CATEGORIES.map(cat => (
+            <button key={cat} className={`sub-tab ${factCategory === cat? 'active' : ''}`} onClick={() => setFactCategory(cat)}>
+              {cat}
+            </button>
+          ))}
+        </div>
+        {currentFact && (
+          <div className="list-item">
+            <p className="font-bold mb-4">{currentFact.text}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button>
+              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+function SavedTab({ showToast, shareQuote }) {
+  const [savedQuotes, setSavedQuotes] = useState([])
+  const [savedFacts, setSavedFacts] = useState([])
+  const [activeSubTab, setActiveSubTab] = useState('quotes')
+
+  useEffect(() => {
+    loadSaved()
+  }, [])
+
+  const loadSaved = () => {
+    const quotes = JSON.parse(localStorage.getItem('zephye_saved_quotes') || '[]')
+    const facts = JSON.parse(localStorage.getItem('zephye_saved_facts') || '[]')
+    setSavedQuotes(quotes)
+    setSavedFacts(facts)
+  }
+
+  const deleteQuote = (id) => {
+    const updated = savedQuotes.filter(q => q.id!== id)
+    localStorage.setItem('zephye_saved_quotes', JSON.stringify(updated))
+    setSavedQuotes(updated)
+    showToast('Quote deleted')
+  }
+
+  const deleteFact = (id) => {
+    const updated = savedFacts.filter(f => f.id!== id)
+    localStorage.setItem('zephye_saved_facts', JSON.stringify(updated))
+    setSavedFacts(updated)
+    showToast('Fact deleted')
+  }
+
+  return (
+    <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
+      <div className="sub-tabs mb-4">
+        <button className={`sub-tab ${activeSubTab === 'quotes'? 'active' : ''}`} onClick={() => setActiveSubTab('quotes')}>
+          Quotes ({savedQuotes.length})
+        </button>
+        <button className={`sub-tab ${activeSubTab === 'facts'? 'active' : ''}`} onClick={() => setActiveSubTab('facts')}>
+          Facts ({savedFacts.length})
+        </button>
+      </div>
+      {activeSubTab === 'quotes' && (
+        savedQuotes.length === 0? (
+          <p className="text-center text-muted py-8">No saved quotes yet. Save some!</p>
+        ) : (
+          savedQuotes.map(quote => (
+            <div key={quote.id} className="list-item">
+              <p className="font-bold mb-2">"{quote.quote_text}"</p>
+              <p className="text-sm text-muted mb-3">- {quote.quote_author}</p>
+              <div className="flex gap-2">
+                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
+                <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
+              </div>
+            </div>
+          ))
+        )
+      )}
+      {activeSubTab === 'facts' && (
+        savedFacts.length === 0? (
+          <p className="text-center text-muted py-8">No saved facts yet. Save some!</p>
+        ) : (
+          savedFacts.map(fact => (
             <div key={fact.id} className="list-item">
               <p className="font-bold mb-3">{fact.fact_text}</p>
               <div className="flex gap-2">
@@ -891,4 +1120,3 @@ export default function App() {
     </AudioProvider>
   )
 }
-
