@@ -607,6 +607,7 @@ zh: {
     closing: '这里是Zephye。'
   }
 }
+}
   export default function WeatherManTab({ weather, location, todayStats, aqi }) {
   const { playGlobal, stopGlobal, isSpeaking } = useAudio()
 
