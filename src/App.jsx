@@ -89,7 +89,7 @@ function AppContent() {
   const [quoteOfDay, setQuoteOfDay] = useState(null)
   const [toast, setToast] = useState('')
   const [canRefresh, setCanRefresh] = useState(true)
-  const [location, setLocation] = useState({ lat: 6.5244, lon: 3.3792, name: 'Lagos, Nigeria' })
+  const [location, setLocation] = useState({ lat: 6.5244, lon: 3.3792, name: 'Lagos, Nigeria', country_code: 'NG' })
   const [locationPermission, setLocationPermission] = useState('prompt')
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showAirDropdown, setShowAirDropdown] = useState(false)
@@ -261,13 +261,14 @@ function AppContent() {
                   'Current Location'
       const state = data.address.state || 'State'
       const country = data.address.country || 'Country'
+      const countryCode = data.address.country_code?.toUpperCase() || 'US'
 
-      setLocation({ lat, lon, name: `${lga}, ${state}, ${country}` })
+      setLocation({ lat, lon, name: `${lga}, ${state}, ${country}`, country_code: countryCode })
       setIsManualLocation(false)
       localStorage.removeItem('zephye_location')
       localStorage.removeItem('zephye_isManual')
     } catch {
-      setLocation({ lat, lon, name: 'Current Location' })
+      setLocation({ lat, lon, name: 'Current Location', country_code: 'US' })
     }
   }
 
@@ -292,7 +293,8 @@ function AppContent() {
 
         const { lat, lon, name, state, country } = owData[0]
         const displayName = `${name}${state? ', ' + state : ''}, ${country}`
-        const newLocation = { lat, lon, name: displayName }
+        const countryCode = country?.slice(0,2)?.toUpperCase() || 'US'
+        const newLocation = { lat, lon, name: displayName, country_code: countryCode }
         setLocation(newLocation)
         setIsManualLocation(true)
         localStorage.setItem('zephye_location', JSON.stringify(newLocation))
@@ -304,9 +306,9 @@ function AppContent() {
         return
       }
 
-      const { latitude: lat, longitude: lon, name, country, admin1 } = data.results[0]
+      const { latitude: lat, longitude: lon, name, country, admin1, country_code } = data.results[0]
       const displayName = `${name}${admin1? ', ' + admin1 : ''}, ${country}`
-      const newLocation = { lat, lon, name: displayName }
+      const newLocation = { lat, lon, name: displayName, country_code: country_code?.toUpperCase() || 'US' }
       setLocation(newLocation)
       setIsManualLocation(true)
       localStorage.setItem('zephye_location', JSON.stringify(newLocation))
@@ -344,6 +346,7 @@ function AppContent() {
         const aqiJson = await aqiRes.json()
 
         weatherData = {
+          timezone: om.timezone || 'UTC',
           current: {
             temperature_2m: om.current_weather?.temperature?? null,
             weather_code: om.current_weather?.weathercode?? 0,
@@ -384,6 +387,7 @@ function AppContent() {
         const ow = await owRes.json()
 
         weatherData = {
+          timezone: ow.timezone || 'UTC',
           current: {
             temperature_2m: ow.current.temp,
             weather_code: ow.current.weather[0].id,
@@ -677,11 +681,10 @@ function AppContent() {
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
         </div>
-      </div>
       <div className="bottom-nav">
-        <button className={`nav-btn ${tab === 'weather'?         'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+        <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
-        <button className={`nav-btn ${tab === 'saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
+        <button className={`nav-btn ${tab ==='saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
       </div>
     </div>
   )
@@ -719,7 +722,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
     } else {
       pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
     }
-    const random = pool[Math.floor(Math.random() * pool.length)]
+    const random = pool[Math.floor(Math.random() _ pool.length)]
     setCurrentQuote(random)
     setLoading(false)
   }
@@ -744,7 +747,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
         } else {
           pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
         }
-        const random = pool[Math.floor(Math.random() * pool.length)]
+        const random = pool[Math.floor(Math.random() _ pool.length)]
         setCurrentFact(random)
       }
     }
@@ -847,15 +850,15 @@ function SavedTab({ showToast, shareQuote }) {
         </button>
       </div>
       {activeSubTab === 'quotes' && (
-        savedQuotes.length === 0? (
+        http://savedQuotes.length === 0? (
           <p className="text-center text-muted py-8">No saved quotes yet. Save some!</p>
         ) : (
-          savedQuotes.map(quote => (
+          http://savedQuotes.map(quote => (
             <div key={quote.id} className="list-item">
               <p className="font-bold mb-2">"{quote.quote_text}"</p>
               <p className="text-sm text-muted mb-3">- {quote.quote_author}</p>
               <div className="flex gap-2">
-                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
+                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, http://quote.quote_author)}>Share</button>
                 <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
               </div>
             </div>
@@ -863,10 +866,10 @@ function SavedTab({ showToast, shareQuote }) {
         )
       )}
       {activeSubTab === 'facts' && (
-        savedFacts.length === 0? (
+        http://savedFacts.length === 0? (
           <p className="text-center text-muted py-8">No saved facts yet. Save some!</p>
         ) : (
-          savedFacts.map(fact => (
+          http://savedFacts.map(fact => (
             <div key={fact.id} className="list-item">
               <p className="font-bold mb-3">{fact.fact_text}</p>
               <div className="flex gap-2">
@@ -887,4 +890,5 @@ export default function App() {
       <AppContent />
     </AudioProvider>
   )
-  }
+}
+
