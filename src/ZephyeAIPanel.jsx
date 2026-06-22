@@ -18,7 +18,13 @@ export default function ZephyeAIPanel({
   isSpeaking,
   speakScript,
   buildScript,
-  getAqiLevel
+  getAqiLevel,
+  // NEW
+  lang,
+  voiceToUse,
+  greeting,
+  askWeather,
+  isLoadingChat
 }) {
   const [mode, setMode] = useState('reporter')
   const [showNameModal, setShowNameModal] = useState(false)
@@ -112,8 +118,8 @@ export default function ZephyeAIPanel({
               }}
             >
               {userName
-               ? `Good day, ${userName}`
-                : `Monitoring ${location?.name}`}
+              ? `${greeting}, ${userName}`
+                : `${greeting}, ${location?.name?.split(',')[0]}`}
             </div>
           </div>
 
@@ -137,11 +143,11 @@ export default function ZephyeAIPanel({
               borderRadius: 14,
               border:
                 mode === 'reporter'
-                 ? '1px solid #3b82f6'
+                ? '1px solid #3b82f6'
                   : '1px solid rgba(255,255,255,.08)',
               background:
                 mode === 'reporter'
-                 ? 'rgba(59,130,246,.15)'
+                ? 'rgba(59,130,246,.15)'
                   : 'rgba(255,255,255,.03)',
               color: '#fff'
             }}
@@ -158,11 +164,11 @@ export default function ZephyeAIPanel({
               borderRadius: 14,
               border:
                 mode === 'assistant'
-                 ? '1px solid #8b5cf6'
+                ? '1px solid #8b5cf6'
                   : '1px solid rgba(255,255,255,.08)',
               background:
                 mode === 'assistant'
-                 ? 'rgba(139,92,246,.15)'
+                ? 'rgba(139,92,246,.15)'
                   : 'rgba(255,255,255,.03)',
               color: '#fff'
             }}
@@ -242,17 +248,23 @@ export default function ZephyeAIPanel({
           isSpeaking={isSpeaking}
         />
 
-        {/* Metrics */}
+        {/* Metrics + AI Chat */}
         <MetricGroup
           weather={weather}
           todayStats={todayStats}
           aqi={aqi}
           getAqiLevel={getAqiLevel}
+          lang={lang}
+          askWeather={askWeather}
+          isLoadingChat={isLoadingChat}
+          speakScript={speakScript}
+          voiceToUse={voiceToUse}
+          location={location}
         />
 
         {/* Button */}
         <button
-          onClick={speakScript}
+          onClick={() => speakScript()}
           style={{
             width: '100%',
             marginTop: 10,
@@ -260,7 +272,7 @@ export default function ZephyeAIPanel({
             borderRadius: 18,
             border: 'none',
             background: isSpeaking
-             ? 'rgba(239,68,68,.2)'
+            ? 'rgba(239,68,68,.2)'
               : 'linear-gradient(135deg,#3b82f6,#8b5cf6)',
             color: '#fff',
             fontWeight: 800,
@@ -269,10 +281,10 @@ export default function ZephyeAIPanel({
           }}
         >
           {isSpeaking
-           ? '🌬 Zephye is Speaking...'
+          ? '🌬 Zephye is Speaking...'
             : '🔊 Begin Weather Briefing'}
         </button>
       </div>
     </>
   )
-    }
+        }
