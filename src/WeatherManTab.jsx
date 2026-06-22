@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAudio } from './AudioContext'
 import ZephyeAIPanel from './ZephyeAIPanel'
+import { getLang, getVoiceForLocation, useWeatherChat, getGreeting } from './zephyeHelpers'
 
 const BACKEND_URL = 'https://hyezen.onrender.com'
 
@@ -18,18 +19,24 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
   const [selectedVoice, setSelectedVoice] = useState('en-US-GuyNeural')
   const [briefMode, setBriefMode] = useState(false)
   const [userName, setUserName] = useState(localStorage.getItem('weatherman_name') || '')
+  const { askWeather, isLoading } = useWeatherChat()
   const code = weather?.current?.weather_code
+
+  // NEW: Get language + voice from location
+  const countryCode = location?.country_code || location?.name?.split(', ').pop()?.slice(0,2)?.toUpperCase() || 'US'
+  const lang = getLang(countryCode)
+  const voiceToUse = getVoiceForLocation(selectedVoice, countryCode)
+  const timezone = weather?.timezone || 'UTC'
+  const greeting = getGreeting(timezone, lang)
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/api/voices/fair`)
-   .then(r => r.json())
-   .then(data => setVoices(data || []))
-   .catch(() => setVoices([]))
+  .then(r => r.json())
+  .then(data => setVoices(data || []))
+  .catch(() => setVoices([]))
   }, [])
 
   const buildScript = () => {
-    const time = new Date().getHours()
-    const greeting = time < 12? 'Good morning' : time < 17? 'Good afternoon' : 'Good evening'
     const name = userName || location.name.split(',')[0]
     const temp = Math.round(weather?.current?.temperature_2m || 0)
     const feels = Math.round(todayStats?.feelsLike || 0)
@@ -119,25 +126,28 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
     return script
   }
 
-  const speakScript = async () => {
+  const speakScript = async (customText = null, customVoice = null) => {
     if (isSpeaking) {
       stopGlobal()
       return
     }
+
+    const textToSpeak = customText || buildScript()
+    const voiceToSpeak = customVoice || voiceToUse
 
     try {
       const res = await fetch(`${BACKEND_URL}/api/tts`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          text: buildScript(),
-          voice: selectedVoice,
+          text: textToSpeak,
+          voice: voiceToSpeak,
           type: 'fair'
         })
       })
       const data = await res.json()
       if (data.success) {
-        playGlobal(`${BACKEND_URL}${data.url}`, selectedVoice)
+        playGlobal(`${BACKEND_URL}${data.url}`, voiceToSpeak)
       } else {
         console.error('TTS failed:', data.error)
       }
@@ -163,6 +173,12 @@ export default function WeatherManTab({ weather, location, todayStats, aqi }) {
       speakScript={speakScript}
       buildScript={buildScript}
       getAqiLevel={getAqiLevel}
+      // NEW PROPS
+      lang={lang}
+      voiceToUse={voiceToUse}
+      greeting={greeting}
+      askWeather={askWeather}
+      isLoadingChat={isLoading}
     />
   )
     }
