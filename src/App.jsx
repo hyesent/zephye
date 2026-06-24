@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { QUOTES } from './data/quotes.js'
 import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
+import ZephyeFullScreen from './ZephyeFullScreen.jsx'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
@@ -109,6 +110,7 @@ function AppContent() {
     pressureTrend: '→'
   })
   const [hasWelcomed, setHasWelcomed] = useState(false)
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
 
   useEffect(() => {
     fetch('https://hyezen.onrender.com/api/ping', {
@@ -568,6 +570,18 @@ function AppContent() {
           </div>
         </div>
       )}
+      <ZephyeFullScreen
+        isOpen={isAIChatOpen}
+        onClose={() => setIsAIChatOpen(false)}
+        weather={weather}
+        location={location}
+        todayStats={todayStats}
+        aqi={aqi}
+        userName={localStorage.getItem('weatherman_name')}
+        lang="en"
+        greeting="Hey"
+        voiceToUse={null}
+      />
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
           <>
@@ -660,16 +674,17 @@ function AppContent() {
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
         </div>
-      </div>
       <div className="bottom-nav">
         <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
         <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
         <button className={`nav-btn ${tab ==='saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
+        <button className={`nav-btn ${isAIChatOpen? 'active' : ''}`} onClick={() => setIsAIChatOpen(true)}>AI</button>
       </div>
     </div>
   )
-      }
-            function QuotesTab({ saveQuote, shareQuote, saveFact }) {
+}
+
+ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
   const [currentQuote, setCurrentQuote] = useState(null)
@@ -869,4 +884,4 @@ export default function App() {
       <AppContent />
     </AudioProvider>
   )
-         }
+      }
