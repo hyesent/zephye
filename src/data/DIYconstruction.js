@@ -4,7 +4,7 @@ import {
   getComfortScore,
   mapWeatherCode,
   random
-} from '../utils/calculations';
+} from './calculations';
 
 export const sampleQuestions = [
   "Can I paint outside today?",
