@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAudio } from './AudioContext'
-import { getMoonPhase, mapWeatherCode } from './calculations'
+import { getMoonPhase, mapWeatherCode } from '../data/calculations'
 
 // 15 QNA modules
 import { getClothingAdvice } from '../data/ClothingAdvice'
@@ -17,7 +17,6 @@ import { getHealthAdvice } from '../data/Health'
 import { getDIYConstructionAdvice } from '../data/DIYconstruction'
 import { getPetsAdvice } from '../data/Pets'
 import { getEnergyHomeAdvice } from '../data/EnergyHome'
-import { getAstroAdvice } from '../data/Astro'
 
 const GHOST_SUGGESTIONS = [
   'Ask "stargazing tonight" or "moon phase"',
