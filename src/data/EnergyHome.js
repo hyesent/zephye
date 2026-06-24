@@ -3,7 +3,7 @@ import {
   calcWindChill,
   getComfortScore,
   random
-} from '../utils/calculations';
+} from './calculations';
 
 export const sampleQuestions = [
   "Should I run AC today?",
