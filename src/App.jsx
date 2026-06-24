@@ -674,16 +674,40 @@ function AppContent() {
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
         </div>
+      </div>
+
       <div className="bottom-nav">
-        <button className={`nav-btn ${tab === 'weather'? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
-        <button className={`nav-btn ${tab === 'quotes'? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
-        <button className={`nav-btn ${tab ==='saved'? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
-        <button className={`nav-btn ${isAIChatOpen? 'active' : ''}`} onClick={() => setIsAIChatOpen(true)}>AI</button>
+        <button
+          className={`nav-btn ${tab === 'weather' ? 'active' : ''}`}
+          onClick={() => setTab('weather')}
+        >
+          Weather
+        </button>
+
+        <button
+          className={`nav-btn ${tab === 'quotes' ? 'active' : ''}`}
+          onClick={() => setTab('quotes')}
+        >
+          Quotes
+        </button>
+
+        <button
+          className={`nav-btn ${tab === 'saved' ? 'active' : ''}`}
+          onClick={() => setTab('saved')}
+        >
+          Saved
+        </button>
+
+        <button
+          className={`nav-btn ${isAIChatOpen ? 'active' : ''}`}
+          onClick={() => setIsAIChatOpen(true)}
+        >
+          AI
+        </button>
       </div>
     </div>
   )
 }
-
  function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
