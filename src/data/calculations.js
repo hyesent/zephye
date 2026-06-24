@@ -1,5 +1,5 @@
 // WMO Weather codes → condition string
-const WMO_CODES = {
+export const WMO_CODES = {
   0: 'clear', 1: 'clear', 2: 'partly-cloudy', 3: 'cloudy',
   45: 'fog', 48: 'fog', 51: 'drizzle', 53: 'drizzle', 55: 'drizzle',
   61: 'rain', 63: 'rain', 65: 'rain', 71: 'snow', 73: 'snow', 75: 'snow',
@@ -7,13 +7,13 @@ const WMO_CODES = {
 }
 
 // WMO codes → cloud cover %
-const WMO_CLOUD = {
+export const WMO_CLOUD = {
   0: 0, 1: 10, 2: 50, 3: 100, 45: 100, 48: 100, 51: 100, 53: 100, 55: 100,
   61: 100, 63: 100, 65: 100, 71: 100, 73: 100, 75: 100, 80: 100, 81: 100, 82: 100, 95: 100, 96: 100, 99: 100
 }
 
 // UV Index → burn time minutes for skin type II
-const UV_BURN_TIMES = [null, 60, 45, 30, 20, 15, 10, 10, 8, 6, 5, 5]
+export const UV_BURN_TIMES = [null, 60, 45, 30, 20, 15, 10, 10, 8, 6, 5, 5]
 
 // Cache for API calls to avoid spam
 const apiCache = new Map()
