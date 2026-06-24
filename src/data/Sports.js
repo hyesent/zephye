@@ -6,7 +6,7 @@ import {
   getComfortScore,
   mapWeatherCode,
   random
-} from '../utils/calculations';
+} from './calculations';
 
 export const sampleQuestions = [
   "Is it safe to play football today?",
