@@ -160,6 +160,7 @@ function AppContent() {
     setQuoteOfDay(pool[index])
   }
 
+  
   const getPressureTrend = (hourly) => {
     if (!hourly?.pressure_msl || hourly.pressure_msl.length < 3) return '→'
     const last3 = hourly.pressure_msl.slice(0, 3)
