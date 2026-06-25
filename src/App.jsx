@@ -110,7 +110,6 @@ function AppContent() {
     pressureTrend: '→'
   })
   const [hasWelcomed, setHasWelcomed] = useState(false)
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
 
   useEffect(() => {
     fetch('https://hyezen.onrender.com/api/ping', {
@@ -571,8 +570,8 @@ function AppContent() {
         </div>
       )}
       <ZephyeFullScreen
-        isOpen={isAIChatOpen}
-        onClose={() => setIsAIChatOpen(false)}
+        isOpen={tab === 'ai'}
+        onClose={() => setTab('weather')}
         weather={weather}
         location={location}
         todayStats={todayStats}
@@ -678,29 +677,29 @@ function AppContent() {
 
       <div className="bottom-nav">
         <button
-          className={`nav-btn ${tab === 'weather' ? 'active' : ''}`}
+          className={`nav-btn ${tab === 'weather'? 'active' : ''}`}
           onClick={() => setTab('weather')}
         >
           Weather
         </button>
 
         <button
-          className={`nav-btn ${tab === 'quotes' ? 'active' : ''}`}
+          className={`nav-btn ${tab === 'quotes'? 'active' : ''}`}
           onClick={() => setTab('quotes')}
         >
           Quotes
         </button>
 
         <button
-          className={`nav-btn ${tab === 'saved' ? 'active' : ''}`}
+          className={`nav-btn ${tab === 'saved'? 'active' : ''}`}
           onClick={() => setTab('saved')}
         >
           Saved
         </button>
 
         <button
-          className={`nav-btn ${isAIChatOpen ? 'active' : ''}`}
-          onClick={() => setIsAIChatOpen(true)}
+          className={`nav-btn ${tab === 'ai'? 'active' : ''}`}
+          onClick={() => setTab('ai')}
         >
           AI
         </button>
@@ -708,7 +707,8 @@ function AppContent() {
     </div>
   )
 }
- function QuotesTab({ saveQuote, shareQuote, saveFact }) {
+
+function QuotesTab({ saveQuote, shareQuote, saveFact }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
   const [currentQuote, setCurrentQuote] = useState(null)
@@ -908,4 +908,4 @@ export default function App() {
       <AppContent />
     </AudioProvider>
   )
-      }
+    }
