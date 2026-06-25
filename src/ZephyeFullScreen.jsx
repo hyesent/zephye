@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAudio } from './AudioContext'
-import { getMoonPhase, mapWeatherCode } from '../data/calculations.js'
+import { getMoonPhase, mapWeatherCode } from './data/calculations.js'
 
 // 15 QNA modules
 import { getClothingAdvice } from '../data/ClothingAdvice'
