@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useAudio } from './AudioContext'
 import { getMoonPhase, mapWeatherCode } from './data/calculations.js'
 
-// 15 QNA modules
 import { getClothingAdvice } from './data/ClothingAdvice.js'
 import { getLifestyleAdvice } from './data/Lifestyle.js'
 import { getSkinHairAdvice } from './data/SkinHair.js'
@@ -26,77 +25,20 @@ const GHOST_SUGGESTIONS = [
 ]
 
 const QNA_MAP = [
-  {
-    keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'cold', 'hot', 'layer'],
-    fn: getClothingAdvice,
-    name: 'Clothing'
-  },
-  {
-    keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation'],
-    fn: getLifestyleAdvice,
-    name: 'Lifestyle'
-  },
-  {
-    keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin'],
-    fn: getSkinHairAdvice,
-    name: 'SkinHair'
-  },
-  {
-    keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway'],
-    fn: getDrivingAdvice,
-    name: 'Driving'
-  },
-  {
-    keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist'],
-    fn: getTravelingAdvice,
-    name: 'Traveling'
-  },
-  {
-    keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed'],
-    fn: getFarmingAdvice,
-    name: 'Farming'
-  },
-  {
-    keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation'],
-    fn: getStargazingAdvice,
-    name: 'Stargazing'
-  },
-  {
-    keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting'],
-    fn: getPhotographyAdvice,
-    name: 'Photography'
-  },
-  {
-    keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering'],
-    fn: getEventsAdvice,
-    name: 'Events'
-  },
-  {
-    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog'],
-    fn: getSportsAdvice,
-    name: 'Sports'
-  },
-  {
-    keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical'],
-    fn: getHealthAdvice,
-    name: 'Health'
-  },
-  {
-    keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill'],
-    fn: getDIYConstructionAdvice,
-    name: 'DIY'
-  },
-  {
-    keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten'],
-    fn: getPetsAdvice,
-    name: 'Pets'
-  },
-  {
-    keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating'],
-    fn: getEnergyHomeAdvice,
-    name: 'EnergyHome'
-  },
-  
+  { keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'cold', 'hot', 'layer'], fn: getClothingAdvice, name: 'Clothing' },
+  { keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation'], fn: getLifestyleAdvice, name: 'Lifestyle' },
+  { keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin'], fn: getSkinHairAdvice, name: 'SkinHair' },
+  { keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway'], fn: getDrivingAdvice, name: 'Driving' },
+  { keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist'], fn: getTravelingAdvice, name: 'Traveling' },
+  { keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed'], fn: getFarmingAdvice, name: 'Farming' },
+  { keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation'], fn: getStargazingAdvice, name: 'Stargazing' },
+  { keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting'], fn: getPhotographyAdvice, name: 'Photography' },
+  { keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering'], fn: getEventsAdvice, name: 'Events' },
+  { keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog'], fn: getSportsAdvice, name: 'Sports' },
+  { keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical'], fn: getHealthAdvice, name: 'Health' },
+  { keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill'], fn: getDIYConstructionAdvice, name: 'DIY' },
+  { keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten'], fn: getPetsAdvice, name: 'Pets' },
+  { keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating'], fn: getEnergyHomeAdvice, name: 'EnergyHome' },
 ]
 
 export default function ZephyeFullScreen({
@@ -296,35 +238,34 @@ export default function ZephyeFullScreen({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col">
-      <div className="px-4 py-3 border-b border-zinc-800 flex items-center">
-        <button onClick={onClose} className="text-zinc-400 text-xl">←</button>
-        <div className="flex-1 text-center text-white font-semibold">Ask Zephye AI</div>
-        <button onClick={startListening} className="text-zinc-400 text-xl">🎤</button>
+    <div className="ai-fullscreen">
+      <div className="ai-header">
+        <button onClick={onClose} className="btn-ghost">←</button>
+        <div className="flex-1 text-center text-sm font-bold">Ask Zephye AI</div>
+        <button onClick={startListening} className="btn-ghost">🎤</button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+      <div className="ai-body">
+        <div style={{maxWidth: '768px', margin: '0 auto'}}>
           {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user'? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-3 rounded-2xl text-sm whitespace-pre-line max-w-[80%]
-                ${msg.role === 'user'? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-100'}`}>
+            <div key={i} className="flex mb-3" style={{justifyContent: msg.role === 'user'? 'flex-end' : 'flex-start'}}>
+              <div className={`chat-bubble ${msg.role}`}>
                 {msg.content}
               </div>
             </div>
           ))}
 
           {streamingText && (
-            <div className="flex justify-start">
-              <div className="bg-zinc-800 p-3 rounded-2xl text-sm text-zinc-100">
+            <div className="flex mb-3">
+              <div className="chat-bubble ai">
                 {streamingText}▋
               </div>
             </div>
           )}
 
           {isLoading &&!streamingText && (
-            <div className="flex justify-start">
-              <div className="bg-zinc-800 p-3 rounded-2xl text-sm text-white/60">
+            <div className="flex mb-3">
+              <div className="chat-bubble ai text-muted">
                 Thinking...
               </div>
             </div>
@@ -334,19 +275,19 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      <div className="border-t border-zinc-800 p-3">
-        <div className="flex gap-2 max-w-3xl mx-auto">
+      <div className="ai-input-wrap">
+        <div className="flex gap-2" style={{maxWidth: '768px', margin: '0 auto'}}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAsk(input)}
             placeholder={ghostText || "Ask Zephye..."}
-            className="flex-1 bg-zinc-900 text-white p-3 rounded-xl outline-none"
           />
           <button
             onClick={() => handleAsk(input)}
             disabled={!input.trim() || isLoading}
-            className="bg-blue-600 px-4 py-2 rounded-xl text-white disabled:bg-zinc-700 disabled:text-zinc-500"
+            className="btn-primary"
+            style={{width: 'auto', padding: '12px 20px'}}
           >
             Send
           </button>
@@ -354,4 +295,4 @@ export default function ZephyeFullScreen({
       </div>
     </div>
   )
-  }
+           }
