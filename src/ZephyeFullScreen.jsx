@@ -213,13 +213,17 @@ export default function ZephyeFullScreen({
       const res = await fetch('https://hyezen.onrender.com/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: voiceToUse })
+        body: JSON.stringify({ text, voice: voiceToUse, type: 'fair' })
       })
       const data = await res.json()
       if (data.success) {
-        playGlobal(`https://hyezen.onrender.com${data.url}`)
+        playGlobal(`https://hyezen.onrender.com${data.url}`, voiceToUse)
       }
     } catch {}
+  }
+
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text)
   }
 
   const startListening = () => {
@@ -250,7 +254,25 @@ export default function ZephyeFullScreen({
           {messages.map((msg, i) => (
             <div key={i} className="flex mb-3" style={{justifyContent: msg.role === 'user'? 'flex-end' : 'flex-start'}}>
               <div className={`chat-bubble ${msg.role}`}>
-                {msg.content}
+                {msg.role === 'assistant' && (
+                  <div className="msg-actions-top">
+                    <button
+                      className="speak-btn"
+                      onClick={() => speakText(msg.content)}
+                      title={isSpeaking? 'Stop' : 'Speak'}
+                    >
+                      {isSpeaking? '⏹️' : '🔊'}
+                    </button>
+                    <button
+                      className="speak-btn"
+                      onClick={() => copyText(msg.content)}
+                      title="Copy"
+                    >
+                      📋
+                    </button>
+                  </div>
+                )}
+                <div className="msg-content">{msg.content}</div>
               </div>
             </div>
           ))}
@@ -293,6 +315,37 @@ export default function ZephyeFullScreen({
           </button>
         </div>
       </div>
+
+      <style jsx>{`
+       .msg-actions-top {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 8px;
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+       .chat-bubble:hover.msg-actions-top {
+          opacity: 1;
+        }
+       .speak-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          border-radius: 6px;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
+          color: inherit;
+          font-size: 12px;
+          cursor: pointer;
+        }
+       .speak-btn:hover {
+          background: rgba(255,255,255,0.2);
+        }
+       .msg-content {
+          white-space: pre-wrap;
+        }
+      `}</style>
     </div>
   )
            }
