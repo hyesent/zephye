@@ -3,7 +3,7 @@ import { QUOTES } from './data/quotes.js'
 import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
 import ZephyeFullScreen from './ZephyeFullScreen.jsx'
-import { getLang, getVoiceForLocation } from './zephyeHelpers.js'
+import { getLang, getVoiceForLocation } from './zephyeHelpers'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
