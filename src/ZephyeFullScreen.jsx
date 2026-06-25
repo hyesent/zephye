@@ -15,7 +15,7 @@ import { getEventsAdvice } from './data/Events.js'
 import { getSportsAdvice } from './data/Sports.js'
 import { getHealthAdvice } from './data/Health.js'
 import { getDIYConstructionAdvice } from './data/DIYconstruction.js'
-import { getPetsAdvice } from './data/Pets'
+import { getPetsAdvice } from './data/Pets.js'
 import { getEnergyHomeAdvice } from './data/EnergyHome.js'
 
 const GHOST_SUGGESTIONS = [
@@ -96,11 +96,7 @@ const QNA_MAP = [
     fn: getEnergyHomeAdvice,
     name: 'EnergyHome'
   },
-  {
-    keys: ['space', 'nasa', 'satellite', 'iss'],
-    fn: getAstroAdvice,
-    name: 'Astro'
-  }
+  
 ]
 
 export default function ZephyeFullScreen({
