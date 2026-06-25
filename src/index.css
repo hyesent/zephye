@@ -496,3 +496,55 @@ input:focus {
 .status-badge > div.glass {
   z-index: 50 !important; /* force dropdown above other cards */
 }
+.ai-fullscreen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+}
+
+.ai-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.ai-input-wrap {
+  padding: 12px 16px;
+  border-top: 1px solid var(--glass-border);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+}
+
+.chat-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  white-space: pre-line;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.chat-bubble.user {
+  background: var(--accent);
+  color: var(--bg-deep);
+  margin-left: auto;
+}
+
+.chat-bubble.ai {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+}
