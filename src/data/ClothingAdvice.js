@@ -113,4 +113,5 @@ export const getClothingAdvice = (data) => {
   if (warnings.length) response += ` Warning: ${warnings.join(' ')}`;
 
   return response;
-};calculations'
+};
+
