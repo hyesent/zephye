@@ -3,6 +3,7 @@ import { QUOTES } from './data/quotes.js'
 import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
 import ZephyeFullScreen from './ZephyeFullScreen.jsx'
+import { getLang, getVoiceForLocation } from './zephyeHelpers.js'
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
@@ -110,6 +111,15 @@ function AppContent() {
     pressureTrend: '→'
   })
   const [hasWelcomed, setHasWelcomed] = useState(false)
+  const [voiceToUse, setVoiceToUse] = useState('en-US-JennyNeural')
+
+  // Auto-update voice when location changes
+  useEffect(() => {
+    const lang = getLang(location?.country_code || 'US')
+    const autoVoice = getVoiceForLocation(null, location?.country_code, 'female')
+    setVoiceToUse(autoVoice)
+    localStorage.setItem('weatherman_voice', autoVoice)
+  }, [location?.country_code])
 
   useEffect(() => {
     fetch('https://hyezen.onrender.com/api/ping', {
@@ -160,7 +170,6 @@ function AppContent() {
     setQuoteOfDay(pool[index])
   }
 
-  
   const getPressureTrend = (hourly) => {
     if (!hourly?.pressure_msl || hourly.pressure_msl.length < 3) return '→'
     const last3 = hourly.pressure_msl.slice(0, 3)
@@ -578,9 +587,9 @@ function AppContent() {
         todayStats={todayStats}
         aqi={aqi}
         userName={localStorage.getItem('weatherman_name')}
-        lang="en"
+        lang={getLang(location?.country_code)}
         greeting="Hey"
-        voiceToUse={null}
+        voiceToUse={voiceToUse}
       />
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
@@ -691,7 +700,7 @@ function AppContent() {
           Quotes
         </button>
 
-        <button
+                <button
           className={`nav-btn ${tab === 'saved'? 'active' : ''}`}
           onClick={() => setTab('saved')}
         >
@@ -909,4 +918,4 @@ export default function App() {
       <AppContent />
     </AudioProvider>
   )
-    }
+            }
