@@ -507,7 +507,7 @@ function AppContent() {
     return null
   }
 
-  const getAqiLevel = (aqi) => {
+const getAqiLevel = (aqi) => {
     if (aqi == null) return { label: 'Unknown', color: '#6b7280', status: 'N/A', desc: 'No data available' }
     if (aqi <= 50) return { label: 'Good', color: '#22c55e', status: 'Safe to breathe', desc: 'Air quality is satisfactory. No health risk.' }
     if (aqi <= 100) return { label: 'Moderate', color: '#eab308', status: 'Acceptable', desc: 'Acceptable for most. Sensitive groups limit prolonged outdoor activity.' }
@@ -642,7 +642,6 @@ function AppContent() {
               location={location}
               todayStats={todayStats}
               aqi={aqi}
-              quote={quoteOfDay}
               onRefresh={() => fetchWeatherData(location.lat, location.lon)}
             />
             <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
@@ -678,7 +677,14 @@ function AppContent() {
             </div>
           </>
         )}
-        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} />}
+        {tab === 'quotes' && (
+          <QuotesTab 
+            saveQuote={saveQuote} 
+            shareQuote={shareQuote} 
+            saveFact={saveFact} 
+            quoteOfDay={quoteOfDay} 
+          />
+        )}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
           <p className="text-sm text-muted">©️ hyesent.dev</p>
@@ -718,7 +724,7 @@ function AppContent() {
   )
 }
 
-function QuotesTab({ saveQuote, shareQuote, saveFact }) {
+function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
   const [currentQuote, setCurrentQuote] = useState(null)
@@ -784,6 +790,24 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
 
   return (
     <>
+           {/* ===== QUOTE OF THE DAY ===== */}
+      {quoteOfDay && (
+        <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px', border: '2px solid var(--accent)', background: 'rgba(56,189,248,0.05)'}}>
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-sm font-bold text-accent flex items-center gap-2">
+              <span>🌟</span> Quote of the Day
+            </p>
+          </div>
+          <p className="text-lg font-bold mb-3">“{quoteOfDay.content}”</p>
+          <p className="text-sm text-muted mb-4">— {quoteOfDay.author}</p>
+          <div className="flex gap-2">
+            <button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button>
+            <button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EXPLORE QUOTES ===== */}
       <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Explore Quotes</p>
@@ -800,8 +824,8 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
         </div>
         {currentQuote && (
           <div className="list-item">
-            <p className="font-bold mb-4">"{currentQuote.content}"</p>
-            <p className="text-sm text-muted mb-4">- {currentQuote.author}</p>
+            <p className="font-bold mb-4">“{currentQuote.content}”</p>
+            <p className="text-sm text-muted mb-4">— {currentQuote.author}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
               <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
@@ -809,6 +833,8 @@ function QuotesTab({ saveQuote, shareQuote, saveFact }) {
           </div>
         )}
       </div>
+
+      {/* ===== DID YOU KNOW? (FACTS) ===== */}
       <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Did You Know?</p>
@@ -883,8 +909,8 @@ function SavedTab({ showToast, shareQuote }) {
         ) : (
           savedQuotes.map(quote => (
             <div key={quote.id} className="list-item">
-              <p className="font-bold mb-2">"{quote.quote_text}"</p>
-              <p className="text-sm text-muted mb-3">- {quote.quote_author}</p>
+              <p className="font-bold mb-2">“{quote.quote_text}”</p>
+              <p className="text-sm text-muted mb-3">— {quote.quote_author}</p>
               <div className="flex gap-2">
                 <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
                 <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
