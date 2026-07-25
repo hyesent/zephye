@@ -1085,12 +1085,10 @@ export const getPhotographyAdvice = (data, question = '') => {
   return response;
 };
 
-// ============================================================================
+/// ============================================================================
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const predictSunsetQuality = predictSunsetQuality;
-export const getFoggingRisk = getFoggingRisk;
-export const getExposureRecommendations = getExposureRecommendations;
+export { predictSunsetQuality, getFoggingRisk, getExposureRecommendations };
 
 export default getPhotographyAdvice;
