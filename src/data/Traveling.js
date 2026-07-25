@@ -1155,8 +1155,7 @@ function estimateTimezoneDiff(city1, city2) {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getPackingList = getPackingList;
-export const getJetLagAdvice = getJetLagAdvice;
-export const getRouteWeather = getRouteWeather;
+export { getPackingList, getJetLagAdvice, getRouteWeather };
 
+export default getTravelingAdvice;
 export default getTravelingAdvice;
