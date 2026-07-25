@@ -1338,5 +1338,3 @@ export {
 };
 
 export default getSportsAdvice;
-
-export default getSportsAdvice;
