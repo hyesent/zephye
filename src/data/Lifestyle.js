@@ -1138,9 +1138,6 @@ function evalWarning(condition, data) {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getPetSafety = getPetSafety;
-export const getMentalWellnessAdvice = getMentalWellnessAdvice;
-export const getSleepQualityAdvice = getSleepQualityAdvice;
-export const getProductivityAdvice = getProductivityAdvice;
+export { getPetSafety, getMentalWellnessAdvice, getSleepQualityAdvice, getProductivityAdvice };
 
 export default getLifestyleAdvice;
