@@ -328,10 +328,10 @@ const SPORT_REQUIREMENTS = {
     lightningRisk: 10,
     equipmentWeight: 'moderate',
     special: [
-      'Infield becomes mud pit when wet',
-      'Wind: fly balls unpredictable',
-      'Batter's box: extreme sun exposure',
-      'Catcher's gear: heat trap, highest heat stroke risk'
+      "Infield becomes mud pit when wet",
+      "Wind: fly balls unpredictable",
+      "Batter's box: extreme sun exposure",
+      "Catcher's gear: heat trap, highest heat stroke risk"
     ],
     cancellationThresholds: {
       wbgt: 31.0,
