@@ -841,4 +841,3 @@ export {
 };
 
 export default getEnergyHomeAdvice;
-export default getEnergyHomeAdvice;
