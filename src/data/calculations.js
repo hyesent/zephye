@@ -467,6 +467,272 @@ export const getMoonIllumination = (phase) => {
   return Math.round(Math.sin(phase * Math.PI) * 100);
 };
 
+/**
+ * Get moon rise and set times (simplified)
+ */
+export const getMoonRiseSet = (data) => {
+  // In production, use actual ephemeris calculations
+  // For now, return approximate times based on date
+  const now = new Date();
+  const phase = data?.moonPhase || 0;
+  
+  // Approximate moon rise/set based on phase
+  const riseHour = (phase * 24 + 6) % 24;
+  const setHour = (riseHour + 12) % 24;
+  
+  return {
+    rise: `${Math.floor(riseHour).toString().padStart(2, '0')}:${Math.round((riseHour % 1) * 60).toString().padStart(2, '0')}`,
+    set: `${Math.floor(setHour).toString().padStart(2, '0')}:${Math.round((setHour % 1) * 60).toString().padStart(2, '0')}`
+  };
+};
+
+// ============================================================================
+// ASTRONOMY FUNCTIONS
+// ============================================================================
+
+/**
+ * Get planet visibility (simplified)
+ */
+export const getPlanetVisibility = (lat, lon, date) => {
+  // In production, use actual ephemeris
+  // For now, return simplified visibility data
+  const month = new Date().getMonth();
+  const planets = [];
+  
+  // Venus - visible most of year
+  planets.push({
+    name: 'Venus',
+    visible: month !== 5 && month !== 6,
+    magnitude: -4.2,
+    constellation: month < 6 ? 'Aries' : 'Pisces',
+    bestTime: month < 6 ? 'Evening' : 'Morning',
+    description: 'Brightest planet, easily visible to naked eye'
+  });
+  
+  // Jupiter - visible except when near conjunction
+  planets.push({
+    name: 'Jupiter',
+    visible: true,
+    magnitude: -2.5,
+    constellation: month < 6 ? 'Aquarius' : 'Capricornus',
+    bestTime: month < 6 ? 'Evening' : 'Night',
+    description: 'Bright, steady, cream-colored. 4 Galilean moons visible in binoculars'
+  });
+  
+  // Saturn
+  planets.push({
+    name: 'Saturn',
+    visible: true,
+    magnitude: 0.5,
+    constellation: month < 6 ? 'Aquarius' : 'Capricornus',
+    bestTime: month < 6 ? 'Evening' : 'Night',
+    description: 'Golden color. Rings visible in small telescope'
+  });
+  
+  // Mars - visible near opposition (every 26 months)
+  const marsOppositionMonths = [2, 4, 6, 8, 10, 12];
+  planets.push({
+    name: 'Mars',
+    visible: marsOppositionMonths.includes(month),
+    magnitude: 0.0,
+    constellation: 'Taurus',
+    bestTime: 'Night',
+    description: 'Red/orange color. Best during opposition'
+  });
+  
+  return planets;
+};
+
+/**
+ * Get ISS flyover times
+ */
+export const getISSFlyoverTimes = (lat, lon, date) => {
+  // In production, fetch from API or use calculations
+  // For now, return simulated flyovers
+  const now = new Date();
+  const hour = now.getHours();
+  
+  if (hour > 22 || hour < 5) {
+    return [
+      { time: `${Math.floor(hour + 1).toString().padStart(2, '0')}:${Math.round(Math.random() * 60).toString().padStart(2, '0')}`, duration: '4 min', magnitude: -3.5 },
+      { time: `${Math.floor(hour + 2).toString().padStart(2, '0')}:${Math.round(Math.random() * 60).toString().padStart(2, '0')}`, duration: '3 min', magnitude: -2.8 }
+    ];
+  }
+  return [];
+};
+
+/**
+ * Get satellite visibility
+ */
+export const getSatelliteVisibility = (lat, lon, date) => {
+  // Simulated satellite visibility
+  return [
+    { name: 'HST', time: 'Visible at 22:15', magnitude: 2.5 },
+    { name: 'GPS', time: 'Visible at 23:30', magnitude: 3.0 }
+  ];
+};
+
+/**
+ * Get aurora forecast
+ */
+export const getAuroraForecast = (lat, lon, date) => {
+  // Simulated aurora forecast based on latitude
+  const absLat = Math.abs(lat || 45);
+  const kp = Math.random() * 9;
+  
+  if (absLat > 60 && kp > 2) {
+    return { kp: Math.round(kp * 10) / 10, level: 'Visible', visibility: 'Likely visible' };
+  } else if (absLat > 45 && kp > 5) {
+    return { kp: Math.round(kp * 10) / 10, level: 'Moderate', visibility: 'Possible at high latitudes' };
+  } else if (kp > 7) {
+    return { kp: Math.round(kp * 10) / 10, level: 'Strong', visibility: 'May be visible at mid-latitudes' };
+  }
+  return { kp: Math.round(kp * 10) / 10, level: 'Low', visibility: 'Not visible at this latitude' };
+};
+
+/**
+ * Get zodiacal light visibility
+ */
+export const getZodiacalLightVisibility = (data) => {
+  const { lat, moonPhase, cloudCover } = data;
+  const moonIllum = getMoonIllumination(moonPhase || 0);
+  
+  // Zodiacal light visible in dark skies, moonless, around equinox
+  const month = new Date().getMonth();
+  const equinoxMonths = [2, 3, 8, 9]; // March and September
+  const isEquinox = equinoxMonths.includes(month);
+  
+  return moonIllum < 20 && cloudCover < 20 && isEquinox && Math.abs(lat || 45) < 45;
+};
+
+/**
+ * Get astronomical twilight
+ */
+export const getAstronomicalTwilight = (sunrise, sunset, lat) => {
+  if (!sunrise || !sunset) return { start: 'N/A', end: 'N/A' };
+  
+  const rise = new Date(sunrise);
+  const set = new Date(sunset);
+  
+  // Simplified: astronomical twilight is ~90 minutes before sunrise/after sunset
+  const start = new Date(rise.getTime() - 90 * 60000);
+  const end = new Date(set.getTime() + 90 * 60000);
+  
+  const fmt = (d) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  return {
+    start: fmt(start),
+    end: fmt(end)
+  };
+};
+
+/**
+ * Get constellation visibility
+ */
+export const getConstellationVisibility = (season, lat) => {
+  const constellations = {
+    winter: ['Orion', 'Taurus', 'Gemini', 'Canis Major', 'Perseus', 'Auriga'],
+    spring: ['Leo', 'Virgo', 'Bootes', 'Ursa Major', 'Hydra'],
+    summer: ['Cygnus', 'Lyra', 'Aquila', 'Scorpius', 'Sagittarius', 'Hercules'],
+    fall: ['Pegasus', 'Andromeda', 'Cassiopeia', 'Pisces', 'Aquarius']
+  };
+  
+  return constellations[season] || ['Ursa Major', 'Cassiopeia'];
+};
+
+/**
+ * Get dark sky rating (Bortle scale)
+ */
+export const getDarkSkyRating = (data) => {
+  // In production, use light pollution maps
+  // For now, simulate based on city/population
+  const population = data?.population || 100000;
+  if (population < 1000) return 1;
+  if (population < 10000) return 2;
+  if (population < 50000) return 3;
+  if (population < 100000) return 4;
+  if (population < 500000) return 5;
+  if (population < 1000000) return 6;
+  if (population < 5000000) return 7;
+  return 8;
+};
+
+/**
+ * Get seeing conditions (Pickering scale)
+ */
+export const getSeeingConditions = (data) => {
+  const { wind, temp, humidity, altitude } = data || {};
+  let seeing = 5; // Average (5 on Pickering scale, 1 = best, 10 = worst)
+  
+  // Wind degrades seeing
+  if (wind > 30) seeing += 2;
+  else if (wind > 20) seeing += 1;
+  else if (wind < 10) seeing -= 1;
+  
+  // Temperature stability (larger swings = worse)
+  if (Math.abs(temp - 20) > 15) seeing += 1;
+  
+  // High altitude = better seeing (usually)
+  if (altitude > 1500) seeing -= 1;
+  if (altitude > 2500) seeing -= 1;
+  
+  // Humidity affects seeing
+  if (humidity > 80) seeing += 1;
+  
+  return Math.max(1, Math.min(10, seeing));
+};
+
+/**
+ * Get transparency (1-10, higher = better)
+ */
+export const getTransparency = (data) => {
+  const { humidity, aqi, visibility, cloudCover } = data || {};
+  let transparency = 7; // Average
+  
+  if (humidity > 80) transparency -= 2;
+  else if (humidity > 60) transparency -= 1;
+  
+  if (aqi > 100) transparency -= 2;
+  else if (aqi > 50) transparency -= 1;
+  
+  if (visibility < 10) transparency -= 1;
+  if (visibility < 5) transparency -= 2;
+  
+  if (cloudCover > 30) transparency -= 1;
+  if (cloudCover > 60) transparency -= 2;
+  
+  return Math.max(1, Math.min(10, transparency));
+};
+
+/**
+ * Get meteor shower calendar
+ */
+export const getMeteorShowerCalendar = (date) => {
+  const month = date.getMonth();
+  const day = date.getDate();
+  const dateStr = `${month + 1}-${day}`;
+  
+  const showers = {
+    '1-3': { name: 'Quadrantids', peak: 'Jan 3-4', rate: 120, active: true, constellation: 'Bootes' },
+    '1-4': { name: 'Quadrantids', peak: 'Jan 3-4', rate: 120, active: true, constellation: 'Bootes' },
+    '4-22': { name: 'Lyrids', peak: 'Apr 22-23', rate: 18, active: true, constellation: 'Lyra' },
+    '4-23': { name: 'Lyrids', peak: 'Apr 22-23', rate: 18, active: true, constellation: 'Lyra' },
+    '5-6': { name: 'Eta Aquariids', peak: 'May 6-7', rate: 50, active: true, constellation: 'Aquarius' },
+    '5-7': { name: 'Eta Aquariids', peak: 'May 6-7', rate: 50, active: true, constellation: 'Aquarius' },
+    '8-12': { name: 'Perseids', peak: 'Aug 12-13', rate: 100, active: true, constellation: 'Perseus' },
+    '8-13': { name: 'Perseids', peak: 'Aug 12-13', rate: 100, active: true, constellation: 'Perseus' },
+    '10-8': { name: 'Draconids', peak: 'Oct 8-9', rate: 10, active: true, constellation: 'Draco' },
+    '10-9': { name: 'Draconids', peak: 'Oct 8-9', rate: 10, active: true, constellation: 'Draco' },
+    '10-21': { name: 'Orionids', peak: 'Oct 21-22', rate: 20, active: true, constellation: 'Orion' },
+    '10-22': { name: 'Orionids', peak: 'Oct 21-22', rate: 20, active: true, constellation: 'Orion' },
+    '11-17': { name: 'Leonids', peak: 'Nov 17-18', rate: 15, active: true, constellation: 'Leo' },
+    '11-18': { name: 'Leonids', peak: 'Nov 17-18', rate: 15, active: true, constellation: 'Leo' },
+    '12-13': { name: 'Geminids', peak: 'Dec 13-14', rate: 120, active: true, constellation: 'Gemini' },
+    '12-14': { name: 'Geminids', peak: 'Dec 13-14', rate: 120, active: true, constellation: 'Gemini' }
+  };
+  
+  return showers[dateStr] || { active: false };
+};
+
 // ============================================================================
 // GOLDEN HOUR & TWILIGHT
 // ============================================================================
@@ -620,34 +886,6 @@ export const getRoadCondition = (temp, condition, precipitation) => {
 };
 
 // ============================================================================
-// ASTRONOMY
-// ============================================================================
-
-/**
- * Planet visibility placeholder (would use ephemeris in production)
- */
-export const getPlanetVisibility = (cloudCover, moonPhase) => {
-  if (cloudCover > 70) return 'Too cloudy for planet viewing';
-  const moonIllum = getMoonIllumination(moonPhase);
-  if (moonIllum > 80) return 'Bright moon - only brightest planets visible';
-  if (cloudCover < 30) return 'Excellent - clear skies';
-  return 'Fair - some clouds';
-};
-
-/**
- * Milky Way visibility
- */
-export const getMilkyWayVisibility = (data) => {
-  const { cloudCover, moonPhase, season, bortleScale } = data;
-  if (cloudCover > 30) return 'Too cloudy';
-  const moonIllum = getMoonIllumination(moonPhase);
-  if (moonIllum > 30) return 'Moon too bright';
-  if (bortleScale > 5) return 'Too much light pollution';
-  if (season === 'winter') return 'Milky Way core below horizon (summer best)';
-  return 'Visible - Dark skies!';
-};
-
-// ============================================================================
 // ADDITIONAL UTILITY FUNCTIONS
 // ============================================================================
 
@@ -665,6 +903,10 @@ export const mmToInches = (mm) => Math.round(mm / 25.4 * 10) / 10;
 export const hPaToInHg = (hPa) => Math.round(hPa * 0.02953 * 100) / 100;
 export const mpsToMph = (mps) => Math.round(mps * 2.23694);
 export const mphToMps = (mph) => Math.round(mph / 2.23694);
+
+// ============================================================================
+// DEFAULT EXPORT
+// ============================================================================
 
 // Export all functions for modular use
 export default {
@@ -700,6 +942,18 @@ export default {
   getMoonPhase,
   getMoonPhaseName,
   getMoonIllumination,
+  getMoonRiseSet,
+  getPlanetVisibility,
+  getISSFlyoverTimes,
+  getSatelliteVisibility,
+  getAuroraForecast,
+  getZodiacalLightVisibility,
+  getAstronomicalTwilight,
+  getConstellationVisibility,
+  getDarkSkyRating,
+  getSeeingConditions,
+  getTransparency,
+  getMeteorShowerCalendar,
   calcGoldenHour,
   calcBlueHour,
   getPaintDryingTime,
@@ -710,7 +964,13 @@ export default {
   getPollenIndex,
   getStoppingDistance,
   getRoadCondition,
-  getPlanetVisibility,
-  getMilkyWayVisibility,
-  getCompassDirection
+  getCompassDirection,
+  celsiusToFahrenheit,
+  fahrenheitToCelsius,
+  kmToMiles,
+  milesToKm,
+  mmToInches,
+  hPaToInHg,
+  mpsToMph,
+  mphToMps
 };
