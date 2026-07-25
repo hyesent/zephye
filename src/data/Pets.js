@@ -885,8 +885,10 @@ export const getPetsAdvice = (data, question = '') => {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getPavementSafety = getPavementSafety;
-export const getCarSafety = getCarSafety;
-export const getParasiteRisk = getParasiteRisk;
+export { 
+  getPavementSafety, 
+  getCarSafety, 
+  getParasiteRisk 
+};
 
 export default getPetsAdvice;
