@@ -831,11 +831,14 @@ export const getEnergyHomeAdvice = (data, question = '') => {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getEnergyCostEstimate = getEnergyCostEstimate;
-export const getPipeFreezeRisk = getPipeFreezeRisk;
-export const getVentilationAdvice = getVentilationAdvice;
-export const getLaundryAdvice = getLaundryAdvice;
-export const getWateringAdvice = getWateringAdvice;
-export const getSmartHomeAdvice = getSmartHomeAdvice;
+export { 
+  getEnergyCostEstimate, 
+  getPipeFreezeRisk, 
+  getVentilationAdvice, 
+  getLaundryAdvice, 
+  getWateringAdvice, 
+  getSmartHomeAdvice 
+};
 
+export default getEnergyHomeAdvice;
 export default getEnergyHomeAdvice;
