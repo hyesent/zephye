@@ -981,11 +981,4 @@ export const getDrivingAdvice = (data, question = '') => {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getHydroplaningRisk = getHydroplaningRisk;
-export const getBlackIceRisk = getBlackIceRisk;
-export const getFogProtocol = getFogProtocol;
-export const getWinterDrivingAdvice = getWinterDrivingAdvice;
-export const getSunGlareWarning = getSunGlareWarning;
-export const getEmergencyKit = getEmergencyKit;
-
-export default getDrivingAdvice;
+export { getHydroplaningRisk, getBlackIceRisk, getFogProtocol, getWinterDrivingAdvice, getSunGlareWarning, getEmergencyKit };
