@@ -134,6 +134,9 @@ export const calcDewPoint = (temp, humidity) => {
   return Math.round(dp * 10) / 10;
 };
 
+// Alias for backward compatibility
+export const calculateDewPoint = calcDewPoint;
+
 /**
  * Wet Bulb Globe Temperature - Heat stress indicator for sports/military
  * Combines temp, humidity, wind, and solar radiation
@@ -594,7 +597,7 @@ export const getAuroraForecast = (lat, lon, date) => {
  * Get zodiacal light visibility
  */
 export const getZodiacalLightVisibility = (data) => {
-  const { lat, moonPhase, cloudCover } = data;
+  const { lat, moonPhase, cloudCover } = data || {};
   const moonIllum = getMoonIllumination(moonPhase || 0);
   
   // Zodiacal light visible in dark skies, moonless, around equinox
@@ -657,6 +660,22 @@ export const getDarkSkyRating = (data) => {
 };
 
 /**
+ * Get light pollution map (simplified)
+ */
+export const getLightPollutionMap = (data) => {
+  const { lat, lon, population } = data || {};
+  
+  // Simulate light pollution level based on population
+  const pop = population || 100000;
+  if (pop < 1000) return 'Excellent - No light pollution';
+  if (pop < 10000) return 'Good - Minimal light pollution';
+  if (pop < 50000) return 'Moderate - Some light pollution';
+  if (pop < 500000) return 'Poor - Significant light pollution';
+  if (pop < 5000000) return 'Very Poor - High light pollution';
+  return 'Severe - Extreme light pollution';
+};
+
+/**
  * Get seeing conditions (Pickering scale)
  */
 export const getSeeingConditions = (data) => {
@@ -701,6 +720,38 @@ export const getTransparency = (data) => {
   if (cloudCover > 60) transparency -= 2;
   
   return Math.max(1, Math.min(10, transparency));
+};
+
+/**
+ * Get Milky Way visibility
+ */
+export const getMilkyWayVisibility = (data) => {
+  const { cloudCover, moonPhase, season, bortleScale, lat, humidity } = data || {};
+  
+  // Check conditions
+  if (cloudCover > 30) return 'Too cloudy - Milky Way not visible';
+  
+  const moonIllum = getMoonIllumination(moonPhase || 0);
+  if (moonIllum > 30) return `Moon ${moonIllum}% illuminated - Too bright for Milky Way`;
+  
+  if (bortleScale > 5) return `Bortle ${bortleScale} - Too much light pollution for Milky Way`;
+  
+  // Season check - Milky Way core best in summer
+  if (season === 'winter') return 'Milky Way core below horizon (best in summer months)';
+  
+  // Lat check - Southern hemisphere has better view
+  const absLat = Math.abs(lat || 45);
+  if (absLat > 60) return 'Milky Way visible but low on horizon at high latitudes';
+  
+  // Check humidity/transparency
+  if (humidity > 80) return 'High humidity may reduce visibility';
+  
+  // All conditions good
+  if (bortleScale <= 3 && moonIllum < 10 && cloudCover < 10) {
+    return 'EXCELLENT - Milky Way casts shadows! Perfect viewing conditions.';
+  }
+  
+  return 'Visible - Dark skies with good transparency';
 };
 
 /**
@@ -920,6 +971,7 @@ export default {
   calcHeatIndex,
   calcWindChill,
   calcDewPoint,
+  calculateDewPoint,
   calcWetBulbGlobeTemp,
   calcApparentTemp,
   calcHumidex,
@@ -951,8 +1003,10 @@ export default {
   getAstronomicalTwilight,
   getConstellationVisibility,
   getDarkSkyRating,
+  getLightPollutionMap,
   getSeeingConditions,
   getTransparency,
+  getMilkyWayVisibility,
   getMeteorShowerCalendar,
   calcGoldenHour,
   calcBlueHour,
