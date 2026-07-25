@@ -1319,8 +1319,10 @@ export const getHealthAdvice = (data, question = '') => {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getAQIHealthEffects = getAQIHealthEffects;
-export const getThermalStress = getThermalStress;
-export const getPressureHealthEffects = getPressureHealthEffects;
+export { 
+  getAQIHealthEffects, 
+  getThermalStress, 
+  getPressureHealthEffects 
+};
 
 export default getHealthAdvice;
