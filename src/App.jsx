@@ -9,6 +9,44 @@ const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
 const OPENWEATHER_KEY = "576b156966c5789a1b3fd0074c8469f1"
 
+// SVG Icons
+const LocationIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+    <circle cx="12" cy="10" r="3"/>
+  </svg>
+)
+
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+)
+
+const DeleteIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+)
+
+const AddIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+)
+
+const SearchIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+)
+
 const getAllQuotesPool = () => {
   const pool = []
   Object.keys(QUOTES).forEach(cat => {
@@ -98,6 +136,19 @@ function AppContent() {
   const [citySearch, setCitySearch] = useState('')
   const [isManualLocation, setIsManualLocation] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  
+  // Multi-location state
+  const [savedLocations, setSavedLocations] = useState(() => {
+    const saved = localStorage.getItem('zephye_saved_locations')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [showSavedPanel, setShowSavedPanel] = useState(false)
+  const [editingLocId, setEditingLocId] = useState(null)
+  const [editLabel, setEditLabel] = useState('')
+  const [editCity, setEditCity] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+  
   const [todayStats, setTodayStats] = useState({
     sunHours: 0,
     rainHours: 0,
@@ -113,7 +164,11 @@ function AppContent() {
   const [hasWelcomed, setHasWelcomed] = useState(false)
   const [voiceToUse, setVoiceToUse] = useState('en-US-JennyNeural')
 
-  // Auto-update voice when location changes
+  // Persist saved locations to localStorage
+  useEffect(() => {
+    localStorage.setItem('zephye_saved_locations', JSON.stringify(savedLocations))
+  }, [savedLocations])
+
   useEffect(() => {
     const lang = getLang(location?.country_code || 'US')
     const autoVoice = getVoiceForLocation(null, location?.country_code, 'female')
@@ -150,8 +205,8 @@ function AppContent() {
   }, [])
 
   useEffect(() => {
-    if (!hasWelcomed && weather &&!isLoading) {
-      setTimeout(() => showToast('Welcome to Zephye 👋'), 1000)
+    if (!hasWelcomed && weather && !isLoading) {
+      setTimeout(() => showToast('Welcome to Zephye'), 1000)
       setHasWelcomed(true)
     }
   }, [weather, isLoading, hasWelcomed])
@@ -159,6 +214,137 @@ function AppContent() {
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 2500)
+  }
+
+  // ========================================================================
+  // MULTI-LOCATION FUNCTIONS
+  // ========================================================================
+
+  const addNewLocation = () => {
+    const newLoc = {
+      id: Date.now(),
+      label: '',
+      lat: location.lat,
+      lon: location.lon,
+      name: location.name,
+      country_code: location.country_code
+    }
+    setSavedLocations(prev => {
+      const updated = [...prev, newLoc]
+      localStorage.setItem('zephye_saved_locations', JSON.stringify(updated))
+      return updated
+    })
+    setEditingLocId(newLoc.id)
+    setEditLabel('')
+    setEditCity('')
+    setSearchResults([])
+  }
+
+  const searchPlaceForLocation = async (query) => {
+    if (!query || query.length < 2) {
+      setSearchResults([])
+      return
+    }
+    
+    setIsSearching(true)
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
+      )
+      const data = await res.json()
+      
+      if (data.results && data.results.length > 0) {
+        setSearchResults(data.results.map(r => ({
+          id: r.id,
+          name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
+          lat: r.latitude,
+          lon: r.longitude,
+          country_code: r.country_code?.toUpperCase() || 'US'
+        })))
+      } else {
+        setSearchResults([])
+      }
+    } catch {
+      setSearchResults([])
+    }
+    setIsSearching(false)
+  }
+
+  const selectPlaceForLocation = (locId, place) => {
+    setSavedLocations(prev => prev.map(loc => {
+      if (loc.id === locId) {
+        return {
+          ...loc,
+          lat: place.lat,
+          lon: place.lon,
+          name: place.name,
+          country_code: place.country_code
+        }
+      }
+      return loc
+    }))
+    setSearchResults([])
+    setEditCity('')
+  }
+
+  const updateLocationLabel = (locId, label) => {
+    setSavedLocations(prev => prev.map(loc => {
+      if (loc.id === locId) {
+        return { ...loc, label: label || 'Untitled Location' }
+      }
+      return loc
+    }))
+  }
+
+  const saveLocationEdits = (locId) => {
+    setEditingLocId(null)
+    setEditLabel('')
+    setEditCity('')
+    setSearchResults([])
+    showToast('Location updated')
+  }
+
+  const deleteLocation = (locId) => {
+    setSavedLocations(prev => {
+      const updated = prev.filter(loc => loc.id !== locId)
+      localStorage.setItem('zephye_saved_locations', JSON.stringify(updated))
+      return updated
+    })
+    if (editingLocId === locId) {
+      setEditingLocId(null)
+    }
+    showToast('Location removed')
+  }
+
+  const switchToSavedLocation = (savedLoc) => {
+    const newLocation = {
+      lat: savedLoc.lat,
+      lon: savedLoc.lon,
+      name: savedLoc.name,
+      country_code: savedLoc.country_code
+    }
+    setLocation(newLocation)
+    setIsManualLocation(true)
+    localStorage.setItem('zephye_location', JSON.stringify(newLocation))
+    localStorage.setItem('zephye_isManual', 'true')
+    fetchWeatherData(savedLoc.lat, savedLoc.lon)
+    setShowSavedPanel(false)
+    showToast(`Showing weather for ${savedLoc.label || savedLoc.name}`)
+  }
+
+  const saveCurrentLocation = () => {
+    const exists = savedLocations.find(loc => 
+      Math.abs(loc.lat - location.lat) < 0.01 && 
+      Math.abs(loc.lon - location.lon) < 0.01
+    )
+    
+    if (exists) {
+      showToast('This location is already saved')
+      return
+    }
+    
+    addNewLocation()
+    showToast('Location saved. Edit label to name it.')
   }
 
   const fetchQuoteOfDay = () => {
@@ -210,8 +396,8 @@ function AppContent() {
     })
     if (currentRainPeriod) rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
 
-    const sunrise = daily?.sunrise?.[0]? new Date(daily.sunrise[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
-    const sunset = daily?.sunset?.[0]? new Date(daily.sunset[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
+    const sunrise = daily?.sunrise?.[0] ? new Date(daily.sunrise[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
+    const sunset = daily?.sunset?.[0] ? new Date(daily.sunset[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
     const feelsLike = hourly?.apparent_temperature?.[0] || 0
     const windGust = hourly?.wind_gusts_10m?.[0] || 0
     const pressureTrend = getPressureTrend(hourly)
@@ -302,7 +488,7 @@ function AppContent() {
         }
 
         const { lat, lon, name, state, country } = owData[0]
-        const displayName = `${name}${state? ', ' + state : ''}, ${country}`
+        const displayName = `${name}${state ? ', ' + state : ''}, ${country}`
         const countryCode = country?.slice(0,2)?.toUpperCase() || 'US'
         const newLocation = { lat, lon, name: displayName, country_code: countryCode }
         setLocation(newLocation)
@@ -317,7 +503,7 @@ function AppContent() {
       }
 
       const { latitude: lat, longitude: lon, name, country, admin1, country_code } = data.results[0]
-      const displayName = `${name}${admin1? ', ' + admin1 : ''}, ${country}`
+      const displayName = `${name}${admin1 ? ', ' + admin1 : ''}, ${country}`
       const newLocation = { lat, lon, name: displayName, country_code: country_code?.toUpperCase() || 'US' }
       setLocation(newLocation)
       setIsManualLocation(true)
@@ -358,35 +544,35 @@ function AppContent() {
         weatherData = {
           timezone: om.timezone || 'UTC',
           current: {
-            temperature_2m: om.current_weather?.temperature?? null,
-            weather_code: om.current_weather?.weathercode?? 0,
-            wind_speed_10m: om.current_weather?.windspeed?? 0,
-            wind_direction_10m: om.current_weather?.winddirection?? 0,
+            temperature_2m: om.current_weather?.temperature ?? null,
+            weather_code: om.current_weather?.weathercode ?? 0,
+            wind_speed_10m: om.current_weather?.windspeed ?? 0,
+            wind_direction_10m: om.current_weather?.winddirection ?? 0,
             relative_humidity_2m: null,
             pressure_msl: null,
             visibility: null,
-            uv_index: om.daily?.uv_index_max?.[0]?? 0
+            uv_index: om.daily?.uv_index_max?.[0] ?? 0
           },
           hourly: {
-            time: om.hourly?.time?? [],
-            temperature_2m: om.hourly?.temperature_2m?? [],
-            weather_code: om.hourly?.weathercode?? [],
-            precipitation_probability: om.hourly?.precipitation_probability?? [],
-            precipitation: om.hourly?.precipitation?? [],
-            apparent_temperature: om.hourly?.apparent_temperature?? [],
-            wind_gusts_10m: om.hourly?.wind_gusts_10m?? [],
-            pressure_msl: om.hourly?.pressure_msl?? [],
-            wind_direction_10m: om.hourly?.winddirection?? [],
-            wind_speed_10m: om.hourly?.windspeed_10m?? []
+            time: om.hourly?.time ?? [],
+            temperature_2m: om.hourly?.temperature_2m ?? [],
+            weather_code: om.hourly?.weathercode ?? [],
+            precipitation_probability: om.hourly?.precipitation_probability ?? [],
+            precipitation: om.hourly?.precipitation ?? [],
+            apparent_temperature: om.hourly?.apparent_temperature ?? [],
+            wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [],
+            pressure_msl: om.hourly?.pressure_msl ?? [],
+            wind_direction_10m: om.hourly?.winddirection ?? [],
+            wind_speed_10m: om.hourly?.windspeed_10m ?? []
           },
           daily: {
-            time: om.daily?.time?? [],
-            temperature_2m_max: om.daily?.temperature_2m_max?? [],
-            temperature_2m_min: om.daily?.temperature_2m_min?? [],
-            weather_code: om.daily?.weathercode?? [],
-            uv_index_max: om.daily?.uv_index_max?? [],
-            sunrise: om.daily?.sunrise?? [],
-            sunset: om.daily?.sunset?? []
+            time: om.daily?.time ?? [],
+            temperature_2m_max: om.daily?.temperature_2m_max ?? [],
+            temperature_2m_min: om.daily?.temperature_2m_min ?? [],
+            weather_code: om.daily?.weathercode ?? [],
+            uv_index_max: om.daily?.uv_index_max ?? [],
+            sunrise: om.daily?.sunrise ?? [],
+            sunset: om.daily?.sunset ?? []
           }
         }
 
@@ -507,7 +693,7 @@ function AppContent() {
     return null
   }
 
-const getAqiLevel = (aqi) => {
+  const getAqiLevel = (aqi) => {
     if (aqi == null) return { label: 'Unknown', color: '#6b7280', status: 'N/A', desc: 'No data available' }
     if (aqi <= 50) return { label: 'Good', color: '#22c55e', status: 'Safe to breathe', desc: 'Air quality is satisfactory. No health risk.' }
     if (aqi <= 100) return { label: 'Moderate', color: '#eab308', status: 'Acceptable', desc: 'Acceptable for most. Sensitive groups limit prolonged outdoor activity.' }
@@ -526,18 +712,18 @@ const getAqiLevel = (aqi) => {
     return 'NW'
   }
 
-  const weatherCode = weather?.current?.weather_code?? 0
-  const windSpeed = weather?.current?.wind_speed_10m?? 0
-  const windDir = weather?.current?.wind_direction_10m?? 0
-  const humidity = weather?.current?.relative_humidity_2m?? 0
-  const pressure = weather?.current?.pressure_msl?? 0
-  const visibility = weather?.current?.visibility?? 0
-  const uvIndex = weather?.current?.uv_index?? weather?.daily?.uv_index_max?.[0]?? 0
+  const weatherCode = weather?.current?.weather_code ?? 0
+  const windSpeed = weather?.current?.wind_speed_10m ?? 0
+  const windDir = weather?.current?.wind_direction_10m ?? 0
+  const humidity = weather?.current?.relative_humidity_2m ?? 0
+  const pressure = weather?.current?.pressure_msl ?? 0
+  const visibility = weather?.current?.visibility ?? 0
+  const uvIndex = weather?.current?.uv_index ?? weather?.daily?.uv_index_max?.[0] ?? 0
   const bgClass = getWeatherClass(weatherCode)
   const aqiInfo = getAqiLevel(aqi?.us_aqi)
   const stormInfo = getStormLevel(weatherCode, windSpeed)
 
-  if (isLoading &&!weather) {
+  if (isLoading && !weather) {
     return (
       <div className="app">
         <div className="weather-bg cloudy"></div>
@@ -555,6 +741,8 @@ const getAqiLevel = (aqi) => {
     <div className="app">
       <div className={`weather-bg ${bgClass}`}></div>
       {toast && <div className="toast">{toast}</div>}
+      
+      {/* Location Search Modal */}
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px'}}>
@@ -579,6 +767,152 @@ const getAqiLevel = (aqi) => {
           </div>
         </div>
       )}
+
+      {/* Saved Locations Panel */}
+      {showSavedPanel && (
+        <div className="modal-overlay" onClick={() => setShowSavedPanel(false)}>
+          <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px', maxWidth: '480px', width: '90%', maxHeight: '80vh', overflow: 'auto'}}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg">My Locations</h3>
+              <button onClick={() => setShowSavedPanel(false)} className="btn-ghost" style={{fontSize: '24px', lineHeight: 1}}>
+                &times;
+              </button>
+            </div>
+
+            {/* Current Location */}
+            <div className="mb-4 p-3 rounded-xl" style={{background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)'}}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-white/50 font-medium mb-1">CURRENT LOCATION</p>
+                  <p className="font-bold text-sm">{location.name}</p>
+                  <p className="text-xs text-white/40">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</p>
+                </div>
+                <button 
+                  className="btn-primary text-xs flex items-center gap-1"
+                  onClick={saveCurrentLocation}
+                >
+                  <AddIcon />
+                  Save
+                </button>
+              </div>
+            </div>
+
+            {/* Saved Locations List */}
+            {savedLocations.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-white/40 mb-3">No saved locations yet</p>
+                <button onClick={addNewLocation} className="btn-primary">
+                  Add Location
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {savedLocations.map(loc => (
+                  <div key={loc.id} className="p-3 rounded-xl" style={{
+                    background: editingLocId === loc.id ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.03)', 
+                    border: editingLocId === loc.id ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent'
+                  }}>
+                    {editingLocId === loc.id ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs text-white/50 block mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={editLabel}
+                            onChange={e => setEditLabel(e.target.value)}
+                            onBlur={() => updateLocationLabel(loc.id, editLabel)}
+                            placeholder="Home, Work, etc..."
+                            className="w-full text-sm"
+                            autoFocus
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="text-xs text-white/50 block mb-1">Search place</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={editCity}
+                              onChange={e => {
+                                setEditCity(e.target.value)
+                                searchPlaceForLocation(e.target.value)
+                              }}
+                              placeholder="Search city..."
+                              className="text-sm flex-1"
+                            />
+                          </div>
+                          
+                          {isSearching && <p className="text-xs text-white/40">Searching...</p>}
+                          {searchResults.length > 0 && (
+                            <div className="mt-2 max-h-28 overflow-y-auto space-y-1 rounded-lg" style={{background: 'rgba(0,0,0,0.2)'}}>
+                              {searchResults.map(place => (
+                                <button
+                                  key={place.id}
+                                  onClick={() => selectPlaceForLocation(loc.id, place)}
+                                  className="w-full text-left p-2 text-xs hover:bg-white/10 transition-colors"
+                                >
+                                  {place.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="text-xs text-white/40">
+                          {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button onClick={() => saveLocationEdits(loc.id)} className="btn-primary text-xs flex-1">
+                            Done
+                          </button>
+                          <button onClick={() => deleteLocation(loc.id)} className="btn-ghost text-xs" style={{color: '#ef4444'}}>
+                            <DeleteIcon />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-start">
+                        <button
+                          onClick={() => switchToSavedLocation(loc)}
+                          className="text-left flex-1 hover:opacity-80 transition-opacity"
+                        >
+                          <p className="font-bold text-sm">{loc.label || 'Untitled Location'}</p>
+                          <p className="text-xs text-white/50 mt-1">{loc.name}</p>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingLocId(loc.id)
+                            setEditLabel(loc.label || '')
+                            setEditCity('')
+                            setSearchResults([])
+                          }}
+                          className="btn-ghost"
+                          title="Edit"
+                        >
+                          <EditIcon />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {savedLocations.length > 0 && !editingLocId && (
+              <button
+                onClick={addNewLocation}
+                className="w-full mt-4 p-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                style={{border: '1px dashed rgba(255,255,255,0.15)'}}
+              >
+                <AddIcon />
+                Add Another Location
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <ZephyeFullScreen
         isOpen={tab === 'ai'}
         onClose={() => setTab('weather')}
@@ -591,6 +925,7 @@ const getAqiLevel = (aqi) => {
         greeting="Hey"
         voiceToUse={voiceToUse}
       />
+      
       <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
         {tab === 'weather' && (
           <>
@@ -598,7 +933,8 @@ const getAqiLevel = (aqi) => {
               <div className="flex items-start justify-between mb-4">
                 <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
                   <div className="text-xs text-white/70 mb-1 flex items-center gap-1">
-                    📍 Location
+                    <LocationIcon />
+                    Location
                   </div>
                   <div className="text-lg font-bold">{location.name}</div>
                   <div className="text-xs text-white/70 mt-1">
@@ -607,9 +943,33 @@ const getAqiLevel = (aqi) => {
                 </button>
                 <div className="text-right">
                   <WeatherIcon code={weatherCode} />
-                  <h1 className="text-3xl font-bold mt-1">{weather?.current? Math.round(weather.current.temperature_2m) : '--'}°</h1>
+                  <h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1>
                 </div>
               </div>
+              
+              {/* Saved locations quick access */}
+              <div className="flex gap-2 flex-wrap mb-3">
+                <button 
+                  onClick={() => setShowSavedPanel(true)}
+                  className="btn-ghost text-xs flex items-center gap-1"
+                  style={{padding: '4px 10px'}}
+                >
+                  <LocationIcon />
+                  {savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}
+                </button>
+                {savedLocations.slice(0, 3).map(loc => (
+                  <button
+                    key={loc.id}
+                    onClick={() => switchToSavedLocation(loc)}
+                    className="btn-ghost text-xs"
+                    style={{padding: '4px 10px'}}
+                    title={loc.name}
+                  >
+                    {loc.label || 'Untitled'}
+                  </button>
+                ))}
+              </div>
+              
               <div className="flex gap-2 flex-wrap">
                 {stormInfo && (
                   <div className="status-badge" style={{background: stormInfo.color + '33', borderColor: stormInfo.color, color: stormInfo.color}}>
@@ -624,7 +984,7 @@ const getAqiLevel = (aqi) => {
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
                         <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi?? '--'}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
                         <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
@@ -687,43 +1047,21 @@ const getAqiLevel = (aqi) => {
         )}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
         <div className="text-center mt-4 mb-4">
-          <p className="text-sm text-muted">©️ hyesent.dev</p>
+          <p className="text-sm text-muted">hyesent.dev</p>
         </div>
       </div>
 
       <div className="bottom-nav">
-        <button
-          className={`nav-btn ${tab === 'weather'? 'active' : ''}`}
-          onClick={() => setTab('weather')}
-        >
-          Weather
-        </button>
-
-        <button
-          className={`nav-btn ${tab === 'quotes'? 'active' : ''}`}
-          onClick={() => setTab('quotes')}
-        >
-          Quotes
-        </button>
-
-                <button
-          className={`nav-btn ${tab === 'saved'? 'active' : ''}`}
-          onClick={() => setTab('saved')}
-        >
-          Saved
-        </button>
-
-        <button
-          className={`nav-btn ${tab === 'ai'? 'active' : ''}`}
-          onClick={() => setTab('ai')}
-        >
-          AI
-        </button>
+        <button className={`nav-btn ${tab === 'weather' ? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
+        <button className={`nav-btn ${tab === 'quotes' ? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
+        <button className={`nav-btn ${tab === 'saved' ? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
+        <button className={`nav-btn ${tab === 'ai' ? 'active' : ''}`} onClick={() => setTab('ai')}>AI</button>
       </div>
     </div>
   )
 }
 
+// QuotesTab and SavedTab remain the same...
 function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
@@ -790,7 +1128,6 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
 
   return (
     <>
-           {/* ===== QUOTE OF THE DAY ===== */}
       {quoteOfDay && (
         <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px', border: '2px solid var(--accent)', background: 'rgba(56,189,248,0.05)'}}>
           <div className="flex justify-between items-start mb-2">
@@ -798,8 +1135,8 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
               <span>🌟</span> Quote of the Day
             </p>
           </div>
-          <p className="text-lg font-bold mb-3">“{quoteOfDay.content}”</p>
-          <p className="text-sm text-muted mb-4">— {quoteOfDay.author}</p>
+          <p className="text-lg font-bold mb-3">{quoteOfDay.content}</p>
+          <p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p>
           <div className="flex gap-2">
             <button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button>
             <button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button>
@@ -807,25 +1144,24 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
         </div>
       )}
 
-      {/* ===== EXPLORE QUOTES ===== */}
       <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Explore Quotes</p>
           <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>
-            {loading? 'Loading...' : 'New Quote'}
+            {loading ? 'Loading...' : 'New Quote'}
           </button>
         </div>
         <div className="sub-tabs mb-4">
           {QUOTE_CATEGORIES.map(cat => (
-            <button key={cat} className={`sub-tab ${quoteCategory === cat? 'active' : ''}`} onClick={() => setQuoteCategory(cat)}>
+            <button key={cat} className={`sub-tab ${quoteCategory === cat ? 'active' : ''}`} onClick={() => setQuoteCategory(cat)}>
               {cat}
             </button>
           ))}
         </div>
         {currentQuote && (
           <div className="list-item">
-            <p className="font-bold mb-4">“{currentQuote.content}”</p>
-            <p className="text-sm text-muted mb-4">— {currentQuote.author}</p>
+            <p className="font-bold mb-4">{currentQuote.content}</p>
+            <p className="text-sm text-muted mb-4">-- {currentQuote.author}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
               <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
@@ -834,17 +1170,16 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
         )}
       </div>
 
-      {/* ===== DID YOU KNOW? (FACTS) ===== */}
       <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Did You Know?</p>
           <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
-            {loading? 'Loading...' : 'New Fact'}
+            {loading ? 'Loading...' : 'New Fact'}
           </button>
         </div>
         <div className="sub-tabs mb-4">
           {FACT_CATEGORIES.map(cat => (
-            <button key={cat} className={`sub-tab ${factCategory === cat? 'active' : ''}`} onClick={() => setFactCategory(cat)}>
+            <button key={cat} className={`sub-tab ${factCategory === cat ? 'active' : ''}`} onClick={() => setFactCategory(cat)}>
               {cat}
             </button>
           ))}
@@ -880,14 +1215,14 @@ function SavedTab({ showToast, shareQuote }) {
   }
 
   const deleteQuote = (id) => {
-    const updated = savedQuotes.filter(q => q.id!== id)
+    const updated = savedQuotes.filter(q => q.id !== id)
     localStorage.setItem('zephye_saved_quotes', JSON.stringify(updated))
     setSavedQuotes(updated)
     showToast('Quote deleted')
   }
 
   const deleteFact = (id) => {
-    const updated = savedFacts.filter(f => f.id!== id)
+    const updated = savedFacts.filter(f => f.id !== id)
     localStorage.setItem('zephye_saved_facts', JSON.stringify(updated))
     setSavedFacts(updated)
     showToast('Fact deleted')
@@ -896,21 +1231,21 @@ function SavedTab({ showToast, shareQuote }) {
   return (
     <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
       <div className="sub-tabs mb-4">
-        <button className={`sub-tab ${activeSubTab === 'quotes'? 'active' : ''}`} onClick={() => setActiveSubTab('quotes')}>
+        <button className={`sub-tab ${activeSubTab === 'quotes' ? 'active' : ''}`} onClick={() => setActiveSubTab('quotes')}>
           Quotes ({savedQuotes.length})
         </button>
-        <button className={`sub-tab ${activeSubTab === 'facts'? 'active' : ''}`} onClick={() => setActiveSubTab('facts')}>
+        <button className={`sub-tab ${activeSubTab === 'facts' ? 'active' : ''}`} onClick={() => setActiveSubTab('facts')}>
           Facts ({savedFacts.length})
         </button>
       </div>
       {activeSubTab === 'quotes' && (
-        savedQuotes.length === 0? (
+        savedQuotes.length === 0 ? (
           <p className="text-center text-muted py-8">No saved quotes yet. Save some!</p>
         ) : (
           savedQuotes.map(quote => (
             <div key={quote.id} className="list-item">
-              <p className="font-bold mb-2">“{quote.quote_text}”</p>
-              <p className="text-sm text-muted mb-3">— {quote.quote_author}</p>
+              <p className="font-bold mb-2">{quote.quote_text}</p>
+              <p className="text-sm text-muted mb-3">-- {quote.quote_author}</p>
               <div className="flex gap-2">
                 <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
                 <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
@@ -920,7 +1255,7 @@ function SavedTab({ showToast, shareQuote }) {
         )
       )}
       {activeSubTab === 'facts' && (
-        savedFacts.length === 0? (
+        savedFacts.length === 0 ? (
           <p className="text-center text-muted py-8">No saved facts yet. Save some!</p>
         ) : (
           savedFacts.map(fact => (
@@ -944,4 +1279,4 @@ export default function App() {
       <AppContent />
     </AudioProvider>
   )
-            }
+}
