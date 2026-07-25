@@ -25,20 +25,20 @@ const GHOST_SUGGESTIONS = [
 ]
 
 const QNA_MAP = [
-  { keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'cold', 'hot', 'layer'], fn: getClothingAdvice, name: 'Clothing' },
-  { keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation'], fn: getLifestyleAdvice, name: 'Lifestyle' },
-  { keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin'], fn: getSkinHairAdvice, name: 'SkinHair' },
-  { keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway'], fn: getDrivingAdvice, name: 'Driving' },
-  { keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist'], fn: getTravelingAdvice, name: 'Traveling' },
-  { keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed'], fn: getFarmingAdvice, name: 'Farming' },
-  { keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation'], fn: getStargazingAdvice, name: 'Stargazing' },
-  { keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting'], fn: getPhotographyAdvice, name: 'Photography' },
-  { keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering'], fn: getEventsAdvice, name: 'Events' },
-  { keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog'], fn: getSportsAdvice, name: 'Sports' },
-  { keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical'], fn: getHealthAdvice, name: 'Health' },
-  { keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill'], fn: getDIYConstructionAdvice, name: 'DIY' },
-  { keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten'], fn: getPetsAdvice, name: 'Pets' },
-  { keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating'], fn: getEnergyHomeAdvice, name: 'EnergyHome' },
+  { keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'cold', 'hot', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear'], fn: getClothingAdvice, name: 'Clothing' },
+  { keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga'], fn: getLifestyleAdvice, name: 'Lifestyle' },
+  { keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty'], fn: getSkinHairAdvice, name: 'SkinHair' },
+  { keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive'], fn: getDrivingAdvice, name: 'Driving' },
+  { keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey'], fn: getTravelingAdvice, name: 'Traveling' },
+  { keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse'], fn: getFarmingAdvice, name: 'Farming' },
+  { keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing'], fn: getStargazingAdvice, name: 'Stargazing' },
+  { keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos'], fn: getPhotographyAdvice, name: 'Photography' },
+  { keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue'], fn: getEventsAdvice, name: 'Events' },
+  { keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run'], fn: getSportsAdvice, name: 'Sports' },
+  { keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical', 'migraine', 'arthritis', 'heart', 'diabetes', 'copd', 'breathing', 'safe to go outside'], fn: getHealthAdvice, name: 'Health' },
+  { keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying'], fn: getDIYConstructionAdvice, name: 'DIY' },
+  { keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog'], fn: getPetsAdvice, name: 'Pets' },
+  { keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility'], fn: getEnergyHomeAdvice, name: 'EnergyHome' },
 ]
 
 export default function ZephyeFullScreen({
@@ -61,7 +61,7 @@ export default function ZephyeFullScreen({
   const [ghostText, setGhostText] = useState('')
   const [streamingText, setStreamingText] = useState('')
   const [moonPhase, setMoonPhase] = useState(0)
-  const [activeTab, setActiveTab] = useState('ask') // 'ask' | 'pro'
+  const [activeTab, setActiveTab] = useState('ask')
 
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -90,10 +90,11 @@ export default function ZephyeFullScreen({
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
+      const condition = mapWeatherCode(conditionCode)
       setMessages([
         {
           role: 'assistant',
-          content: `${greeting}, ${userName || location?.name?.split(',')[0] || 'there'}\n${location?.name || 'Your location'}\n${temp}°C • AQI ${aqiLevel.label}`
+          content: `${greeting}, ${userName || location?.name?.split(',')[0] || 'there'}\n${location?.name || 'Your location'}\n${temp}°C • ${condition} • AQI ${aqiLevel.label}`
         }
       ])
     }
@@ -127,8 +128,9 @@ export default function ZephyeFullScreen({
       windDir: weather?.current?.wind_direction_10m,
       uvIndex: uv,
       aqi: aqi?.us_aqi,
-      visibility: weather?.current?.visibility? weather.current.visibility / 1000 : 10,
+      visibility: weather?.current?.visibility ? weather.current.visibility / 1000 : 10,
       conditionCode,
+      condition: mapWeatherCode(conditionCode),
       pressure: weather?.current?.pressure_msl,
       precipitation: weather?.current?.precipitation || 0,
       city: location?.name,
@@ -139,7 +141,13 @@ export default function ZephyeFullScreen({
       solarRadiation: weather?.current?.shortwave_radiation,
       tempMax: weather?.daily?.temperature_2m_max?.[0],
       tempMin: weather?.daily?.temperature_2m_min?.[0],
-      moonPhase
+      moonPhase,
+      dewPoint: weather?.current?.dew_point,
+      windGust: weather?.current?.wind_gusts_10m || weather?.hourly?.wind_gusts_10m?.[0],
+      precipitationProbability: weather?.hourly?.precipitation_probability?.[0],
+      visibilityCategory: weather?.current?.visibility ? (weather.current.visibility / 1000 < 1 ? 'fog' : weather.current.visibility / 1000 < 5 ? 'poor' : 'good') : 'good',
+      timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
+      season: ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getMonth()],
     }
 
     let bestMatch = null
@@ -242,7 +250,16 @@ export default function ZephyeFullScreen({
 
   if (!isOpen) return null
 
-  // ─── RETURN USING GLOBAL CSS CLASSES ─────────────────────────────
+  if (!weather) {
+    return (
+      <div className="ai-fullscreen">
+        <div className="ai-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p className="text-muted">Loading weather data...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="ai-fullscreen">
       {/* HEADER with capsule switch + weather badge */}
@@ -277,6 +294,37 @@ export default function ZephyeFullScreen({
           </div>
         </div>
       </div>
+
+      {/* Quick Action Chips */}
+      {messages.length <= 1 && (
+        <div style={{ 
+          display: 'flex', 
+          gap: 8, 
+          padding: '10px 16px', 
+          overflowX: 'auto',
+          flexWrap: 'wrap',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          {['What should I wear?', 'Can I run today?', 'Stargazing tonight?', 'Will it rain?', 'Safe to drive?'].map((q, i) => (
+            <button
+              key={i}
+              onClick={() => handleAsk(q)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* BODY (messages) */}
       <div className="ai-body">
@@ -357,7 +405,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* ADD-ON STYLES for capsule, mic, actions (use your CSS variables) */}
+      {/* ADD-ON STYLES for capsule, mic, actions */}
       <style jsx>{`
         .capsule-switch {
           display: flex;
@@ -487,4 +535,4 @@ export default function ZephyeFullScreen({
       `}</style>
     </div>
   )
-           }
+}
