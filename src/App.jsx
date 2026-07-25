@@ -40,10 +40,10 @@ const AddIcon = () => (
   </svg>
 )
 
-const SearchIcon = () => (
+const BackIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/>
-    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    <line x1="19" y1="12" x2="5" y2="12"/>
+    <polyline points="12 19 5 12 12 5"/>
   </svg>
 )
 
@@ -142,6 +142,7 @@ function AppContent() {
     const saved = localStorage.getItem('zephye_saved_locations')
     return saved ? JSON.parse(saved) : []
   })
+  const [previousLocation, setPreviousLocation] = useState(null)
   const [showSavedPanel, setShowSavedPanel] = useState(false)
   const [editingLocId, setEditingLocId] = useState(null)
   const [editLabel, setEditLabel] = useState('')
@@ -229,11 +230,7 @@ function AppContent() {
       name: location.name,
       country_code: location.country_code
     }
-    setSavedLocations(prev => {
-      const updated = [...prev, newLoc]
-      localStorage.setItem('zephye_saved_locations', JSON.stringify(updated))
-      return updated
-    })
+    setSavedLocations(prev => [...prev, newLoc])
     setEditingLocId(newLoc.id)
     setEditLabel('')
     setEditCity('')
@@ -305,11 +302,7 @@ function AppContent() {
   }
 
   const deleteLocation = (locId) => {
-    setSavedLocations(prev => {
-      const updated = prev.filter(loc => loc.id !== locId)
-      localStorage.setItem('zephye_saved_locations', JSON.stringify(updated))
-      return updated
-    })
+    setSavedLocations(prev => prev.filter(loc => loc.id !== locId))
     if (editingLocId === locId) {
       setEditingLocId(null)
     }
@@ -317,6 +310,16 @@ function AppContent() {
   }
 
   const switchToSavedLocation = (savedLoc) => {
+    if (!previousLocation || (previousLocation.lat !== location.lat && previousLocation.lon !== location.lon)) {
+      setPreviousLocation({
+        lat: location.lat,
+        lon: location.lon,
+        name: location.name,
+        country_code: location.country_code,
+        isManual: isManualLocation
+      })
+    }
+    
     const newLocation = {
       lat: savedLoc.lat,
       lon: savedLoc.lon,
@@ -332,6 +335,29 @@ function AppContent() {
     showToast(`Showing weather for ${savedLoc.label || savedLoc.name}`)
   }
 
+  const goBackToOriginalLocation = () => {
+    if (previousLocation) {
+      const origLoc = {
+        lat: previousLocation.lat,
+        lon: previousLocation.lon,
+        name: previousLocation.name,
+        country_code: previousLocation.country_code
+      }
+      setLocation(origLoc)
+      setIsManualLocation(previousLocation.isManual || false)
+      if (previousLocation.isManual) {
+        localStorage.setItem('zephye_location', JSON.stringify(origLoc))
+        localStorage.setItem('zephye_isManual', 'true')
+      } else {
+        localStorage.removeItem('zephye_location')
+        localStorage.removeItem('zephye_isManual')
+      }
+      fetchWeatherData(previousLocation.lat, previousLocation.lon)
+      setPreviousLocation(null)
+      showToast('Back to original location')
+    }
+  }
+
   const saveCurrentLocation = () => {
     const exists = savedLocations.find(loc => 
       Math.abs(loc.lat - location.lat) < 0.01 && 
@@ -343,7 +369,19 @@ function AppContent() {
       return
     }
     
-    addNewLocation()
+    const newLoc = {
+      id: Date.now(),
+      label: '',
+      lat: location.lat,
+      lon: location.lon,
+      name: location.name,
+      country_code: location.country_code
+    }
+    setSavedLocations(prev => [...prev, newLoc])
+    setEditingLocId(newLoc.id)
+    setEditLabel('')
+    setEditCity('')
+    setSearchResults([])
     showToast('Location saved. Edit label to name it.')
   }
 
@@ -756,7 +794,7 @@ function AppContent() {
               className="mb-4 w-full"
               autoFocus
             />
-            <p className="text-xs text-white/60 mb-3">Type "London", "Ifo LGA", "Tokyo" - any real place</p>
+            <p className="text-xs text-muted mb-3">Type "London", "Ifo LGA", "Tokyo" - any real place</p>
             <div className="flex gap-2">
               <button className="btn-primary flex-1" onClick={searchCity}>Search</button>
               <button className="btn-ghost text-xs" onClick={() => {
@@ -783,9 +821,9 @@ function AppContent() {
             <div className="mb-4 p-3 rounded-xl" style={{background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)'}}>
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-white/50 font-medium mb-1">CURRENT LOCATION</p>
+                  <p className="text-xs text-muted font-medium mb-1">CURRENT LOCATION</p>
                   <p className="font-bold text-sm">{location.name}</p>
-                  <p className="text-xs text-white/40">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</p>
+                  <p className="text-xs text-muted">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</p>
                 </div>
                 <button 
                   className="btn-primary text-xs flex items-center gap-1"
@@ -800,7 +838,7 @@ function AppContent() {
             {/* Saved Locations List */}
             {savedLocations.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-white/40 mb-3">No saved locations yet</p>
+                <p className="text-muted mb-3">No saved locations yet</p>
                 <button onClick={addNewLocation} className="btn-primary">
                   Add Location
                 </button>
@@ -815,7 +853,7 @@ function AppContent() {
                     {editingLocId === loc.id ? (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-xs text-white/50 block mb-1">Name</label>
+                          <label className="text-xs text-muted block mb-1">Name</label>
                           <input
                             type="text"
                             value={editLabel}
@@ -828,7 +866,7 @@ function AppContent() {
                         </div>
                         
                         <div>
-                          <label className="text-xs text-white/50 block mb-1">Search place</label>
+                          <label className="text-xs text-muted block mb-1">Search place</label>
                           <div className="flex gap-2">
                             <input
                               type="text"
@@ -842,7 +880,7 @@ function AppContent() {
                             />
                           </div>
                           
-                          {isSearching && <p className="text-xs text-white/40">Searching...</p>}
+                          {isSearching && <p className="text-xs text-muted">Searching...</p>}
                           {searchResults.length > 0 && (
                             <div className="mt-2 max-h-28 overflow-y-auto space-y-1 rounded-lg" style={{background: 'rgba(0,0,0,0.2)'}}>
                               {searchResults.map(place => (
@@ -858,7 +896,7 @@ function AppContent() {
                           )}
                         </div>
                         
-                        <div className="text-xs text-white/40">
+                        <div className="text-xs text-muted">
                           {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
                         </div>
                         
@@ -878,7 +916,7 @@ function AppContent() {
                           className="text-left flex-1 hover:opacity-80 transition-opacity"
                         >
                           <p className="font-bold text-sm">{loc.label || 'Untitled Location'}</p>
-                          <p className="text-xs text-white/50 mt-1">{loc.name}</p>
+                          <p className="text-xs text-muted mt-1">{loc.name}</p>
                         </button>
                         <button
                           onClick={() => {
@@ -902,7 +940,7 @@ function AppContent() {
             {savedLocations.length > 0 && !editingLocId && (
               <button
                 onClick={addNewLocation}
-                className="w-full mt-4 p-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                className="w-full mt-4 p-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
                 style={{border: '1px dashed rgba(255,255,255,0.15)'}}
               >
                 <AddIcon />
@@ -932,12 +970,12 @@ function AppContent() {
             <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
               <div className="flex items-start justify-between mb-4">
                 <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
-                  <div className="text-xs text-white/70 mb-1 flex items-center gap-1">
+                  <div className="text-xs text-muted mb-1 flex items-center gap-1">
                     <LocationIcon />
                     Location
                   </div>
                   <div className="text-lg font-bold">{location.name}</div>
-                  <div className="text-xs text-white/70 mt-1">
+                  <div className="text-xs text-muted mt-1">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </div>
                 </button>
@@ -957,6 +995,18 @@ function AppContent() {
                   <LocationIcon />
                   {savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}
                 </button>
+                
+                {previousLocation && (
+                  <button
+                    onClick={goBackToOriginalLocation}
+                    className="btn-ghost text-xs flex items-center gap-1"
+                    style={{padding: '4px 10px', borderColor: 'var(--accent)', color: 'var(--accent)'}}
+                  >
+                    <BackIcon />
+                    Back to my location
+                  </button>
+                )}
+                
                 {savedLocations.slice(0, 3).map(loc => (
                   <button
                     key={loc.id}
@@ -984,12 +1034,12 @@ function AppContent() {
                     {showAirDropdown && (
                       <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
                         <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Humidity</span><span className="font-bold">{humidity}%</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-white/70">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-white/70">UV Index</span><span className="font-bold">{uvIndex}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Humidity</span><span className="font-bold">{humidity}%</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
+                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-muted">UV Index</span><span className="font-bold">{uvIndex}</span></div>
                       </div>
                     )}
                   </div>
@@ -1014,7 +1064,7 @@ function AppContent() {
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
                 {weather?.hourly?.time?.slice(0,24).map((time, i) => (
                   <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth: '72px', scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.05)'}}>
-                    <p className="text-xs text-white/70">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
+                    <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
                     <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
                     <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
                   </div>
@@ -1030,7 +1080,7 @@ function AppContent() {
                   <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
                   <div className="flex gap-3 text-sm">
                     <span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
-                    <span className="text-white/50">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                    <span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
                   </div>
                 </div>
               ))}
@@ -1061,7 +1111,6 @@ function AppContent() {
   )
 }
 
-// QuotesTab and SavedTab remain the same...
 function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
