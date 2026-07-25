@@ -825,8 +825,10 @@ export const getDIYConstructionAdvice = (data, question = '') => {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getPaintingConditions = getPaintingConditions;
-export const getConcreteConditions = getConcreteConditions;
-export const getWoodworkingConditions = getWoodworkingConditions;
+export { 
+  getPaintingConditions, 
+  getConcreteConditions, 
+  getWoodworkingConditions 
+};
 
 export default getDIYConstructionAdvice;
