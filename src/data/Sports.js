@@ -1330,9 +1330,13 @@ export const getSportsAdvice = (data, question = '') => {
 // SPECIALIZED EXPORT FUNCTIONS
 // ============================================================================
 
-export const getHydrationPlan = getHydrationPlan;
-export const getLightningProtocol = getLightningProtocol;
-export const getWBGTCategory = getWBGTCategory;
-export const getColdRiskCategory = getColdRiskCategory;
+export { 
+  getHydrationPlan, 
+  getLightningProtocol, 
+  getWBGTCategory, 
+  getColdRiskCategory 
+};
+
+export default getSportsAdvice;
 
 export default getSportsAdvice;
