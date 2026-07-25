@@ -1055,9 +1055,6 @@ export const getSkinHairAdvice = (data, question = '') => {
 // EXPORT HELPER FUNCTIONS
 // ============================================================================
 
-export const getDewPointHairBehavior = getDewPointHairBehavior;
-export const getUVSkinAdvice = getUVSkinAdvice;
-export const getBarrierHealth = getBarrierHealth;
-export const getMakeupAdvice = getMakeupAdvice;
+export { getDewPointHairBehavior, getUVSkinAdvice, getBarrierHealth, getMakeupAdvice };
 
 export default getSkinHairAdvice;
