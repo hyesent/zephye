@@ -1158,4 +1158,4 @@ function estimateTimezoneDiff(city1, city2) {
 export { getPackingList, getJetLagAdvice, getRouteWeather };
 
 export default getTravelingAdvice;
-export default getTravelingAdvice;
+
