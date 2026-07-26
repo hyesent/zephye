@@ -9,7 +9,6 @@ const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
 const OPENWEATHER_KEY = "576b156966c5789a1b3fd0074c8469f1"
 
-// SVG Icons
 const LocationIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -84,42 +83,12 @@ const LOCAL_FACTS = {
 }
 
 function WeatherIcon({ code }) {
-  const getAnimatedIcon = (code) => {
-    if (code === 0 || code === 1) {
-      return (
-        <div className="weather-icon sunny-icon">
-          <div className="sun">☀️</div>
-          <div className="sun-rays"></div>
-        </div>
-      )
-    }
-    if (code >= 95) {
-      return (
-        <div className="weather-icon storm-icon">
-          <div className="cloud">⛈️</div>
-          <div className="lightning">⚡</div>
-          <div className="rain-drop rain-1"></div>
-          <div className="rain-drop rain-2"></div>
-          <div className="rain-drop rain-3"></div>
-        </div>
-      )
-    }
-    if (code >= 51 && code <= 82) {
-      return (
-        <div className="weather-icon rainy-icon">
-          <div className="cloud">🌧️</div>
-          <div className="rain-drop rain-1"></div>
-          <div className="rain-drop rain-2"></div>
-          <div className="rain-drop rain-3"></div>
-          <div className="rain-drop rain-4"></div>
-        </div>
-      )
-    }
-    if (code === 2) return <div className="weather-icon">🌤️</div>
-    if (code === 3) return <div className="weather-icon">☁️</div>
-    return <div className="weather-icon">⛅</div>
-  }
-  return getAnimatedIcon(code)
+  if (code === 0 || code === 1) return <div className="weather-icon sunny-icon"><div className="sun">☀️</div><div className="sun-rays"></div></div>
+  if (code >= 95) return <div className="weather-icon storm-icon"><div className="cloud">⛈️</div><div className="lightning">⚡</div><div className="rain-drop rain-1"></div><div className="rain-drop rain-2"></div><div className="rain-drop rain-3"></div></div>
+  if (code >= 51 && code <= 82) return <div className="weather-icon rainy-icon"><div className="cloud">🌧️</div><div className="rain-drop rain-1"></div><div className="rain-drop rain-2"></div><div className="rain-drop rain-3"></div><div className="rain-drop rain-4"></div></div>
+  if (code === 2) return <div className="weather-icon">🌤️</div>
+  if (code === 3) return <div className="weather-icon">☁️</div>
+  return <div className="weather-icon">⛅</div>
 }
 
 function AppContent() {
@@ -128,16 +97,12 @@ function AppContent() {
   const [aqi, setAqi] = useState(null)
   const [quoteOfDay, setQuoteOfDay] = useState(null)
   const [toast, setToast] = useState('')
-  const [canRefresh, setCanRefresh] = useState(true)
   const [location, setLocation] = useState({ lat: 6.5244, lon: 3.3792, name: 'Lagos, Nigeria', country_code: 'NG' })
-  const [locationPermission, setLocationPermission] = useState('prompt')
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showAirDropdown, setShowAirDropdown] = useState(false)
   const [citySearch, setCitySearch] = useState('')
   const [isManualLocation, setIsManualLocation] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  
-  // Multi-location state
   const [savedLocations, setSavedLocations] = useState(() => {
     const saved = localStorage.getItem('zephye_saved_locations')
     return saved ? JSON.parse(saved) : []
@@ -149,87 +114,34 @@ function AppContent() {
   const [editCity, setEditCity] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
-  
-  const [todayStats, setTodayStats] = useState({
-    sunHours: 0,
-    rainHours: 0,
-    thunderHours: 0,
-    maxRainProb: 0,
-    rainPeriods: [],
-    sunrise: '--:--',
-    sunset: '--:--',
-    feelsLike: 0,
-    windGust: 0,
-    pressureTrend: '→'
-  })
+  const [todayStats, setTodayStats] = useState({ sunHours: 0, rainHours: 0, thunderHours: 0, maxRainProb: 0, rainPeriods: [], sunrise: '--:--', sunset: '--:--', feelsLike: 0, windGust: 0, pressureTrend: '→' })
   const [hasWelcomed, setHasWelcomed] = useState(false)
   const [voiceToUse, setVoiceToUse] = useState('en-US-JennyNeural')
 
-  // Persist saved locations to localStorage
-  useEffect(() => {
-    localStorage.setItem('zephye_saved_locations', JSON.stringify(savedLocations))
-  }, [savedLocations])
+  useEffect(() => { localStorage.setItem('zephye_saved_locations', JSON.stringify(savedLocations)) }, [savedLocations])
 
   useEffect(() => {
-    const lang = getLang(location?.country_code || 'US')
     const autoVoice = getVoiceForLocation(null, location?.country_code, 'female')
     setVoiceToUse(autoVoice)
     localStorage.setItem('weatherman_voice', autoVoice)
   }, [location?.country_code])
 
   useEffect(() => {
-    fetch('https://hyezen.onrender.com/api/ping', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        timestamp: Date.now(),
-        user: localStorage.getItem('weatherman_name') || 'anonymous',
-        location: location.name
-      })
-    }).catch(() => {})
-
+    fetch('https://hyezen.onrender.com/api/ping', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ timestamp: Date.now(), user: localStorage.getItem('weatherman_name') || 'anonymous', location: location.name }) }).catch(() => {})
     const savedLoc = localStorage.getItem('zephye_location')
     const savedManual = localStorage.getItem('zephye_isManual')
     if (savedLoc && savedManual === 'true') {
-      try {
-        const loc = JSON.parse(savedLoc)
-        setLocation(loc)
-        setIsManualLocation(true)
-        fetchWeatherData(loc.lat, loc.lon)
-      } catch {
-        initLocation()
-      }
-    } else {
-      initLocation()
-    }
+      try { const loc = JSON.parse(savedLoc); setLocation(loc); setIsManualLocation(true); fetchWeatherData(loc.lat, loc.lon) } catch { initLocation() }
+    } else { initLocation() }
     fetchQuoteOfDay()
   }, [])
 
-  useEffect(() => {
-    if (!hasWelcomed && weather && !isLoading) {
-      setTimeout(() => showToast('Welcome to Zephye'), 1000)
-      setHasWelcomed(true)
-    }
-  }, [weather, isLoading, hasWelcomed])
+  useEffect(() => { if (!hasWelcomed && weather && !isLoading) { setTimeout(() => showToast('Welcome to Zephye'), 1000); setHasWelcomed(true) } }, [weather, isLoading])
 
-  const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 2500)
-  }
-
-  // ========================================================================
-  // MULTI-LOCATION FUNCTIONS
-  // ========================================================================
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
   const addNewLocation = () => {
-    const newLoc = {
-      id: Date.now(),
-      label: '',
-      lat: location.lat,
-      lon: location.lon,
-      name: location.name,
-      country_code: location.country_code
-    }
+    const newLoc = { id: Date.now(), label: '', lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code }
     setSavedLocations(prev => [...prev, newLoc])
     setEditingLocId(newLoc.id)
     setEditLabel('')
@@ -238,874 +150,322 @@ function AppContent() {
   }
 
   const searchPlaceForLocation = async (query) => {
-    if (!query || query.length < 2) {
-      setSearchResults([])
-      return
-    }
-    
+    if (!query || query.length < 2) { setSearchResults([]); return }
     setIsSearching(true)
     try {
-      const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
-      )
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
       const data = await res.json()
-      
       if (data.results && data.results.length > 0) {
-        setSearchResults(data.results.map(r => ({
-          id: r.id,
-          name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
-          lat: r.latitude,
-          lon: r.longitude,
-          country_code: r.country_code?.toUpperCase() || 'US'
-        })))
-      } else {
-        setSearchResults([])
-      }
-    } catch {
-      setSearchResults([])
-    }
+        setSearchResults(data.results.map(r => ({ id: r.id, name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`, lat: r.latitude, lon: r.longitude, country_code: r.country_code?.toUpperCase() || 'US' })))
+      } else { setSearchResults([]) }
+    } catch { setSearchResults([]) }
     setIsSearching(false)
   }
 
   const selectPlaceForLocation = (locId, place) => {
-    setSavedLocations(prev => prev.map(loc => {
-      if (loc.id === locId) {
-        return {
-          ...loc,
-          lat: place.lat,
-          lon: place.lon,
-          name: place.name,
-          country_code: place.country_code
-        }
-      }
-      return loc
-    }))
+    setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code } : loc))
     setSearchResults([])
     setEditCity('')
   }
 
-  const updateLocationLabel = (locId, label) => {
-    setSavedLocations(prev => prev.map(loc => {
-      if (loc.id === locId) {
-        return { ...loc, label: label || 'Untitled Location' }
-      }
-      return loc
-    }))
-  }
-
-  const saveLocationEdits = (locId) => {
-    setEditingLocId(null)
-    setEditLabel('')
-    setEditCity('')
-    setSearchResults([])
-    showToast('Location updated')
-  }
-
-  const deleteLocation = (locId) => {
-    setSavedLocations(prev => prev.filter(loc => loc.id !== locId))
-    if (editingLocId === locId) {
-      setEditingLocId(null)
-    }
-    showToast('Location removed')
-  }
+  const updateLocationLabel = (locId, label) => { setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, label: label || 'Untitled Location' } : loc)) }
+  const saveLocationEdits = () => { setEditingLocId(null); setEditLabel(''); setEditCity(''); setSearchResults([]); showToast('Location updated') }
+  const deleteLocation = (locId) => { setSavedLocations(prev => prev.filter(loc => loc.id !== locId)); if (editingLocId === locId) setEditingLocId(null); showToast('Location removed') }
 
   const switchToSavedLocation = (savedLoc) => {
-    if (!previousLocation || (previousLocation.lat !== location.lat && previousLocation.lon !== location.lon)) {
-      setPreviousLocation({
-        lat: location.lat,
-        lon: location.lon,
-        name: location.name,
-        country_code: location.country_code,
-        isManual: isManualLocation
-      })
-    }
-    
-    const newLocation = {
-      lat: savedLoc.lat,
-      lon: savedLoc.lon,
-      name: savedLoc.name,
-      country_code: savedLoc.country_code
-    }
-    setLocation(newLocation)
-    setIsManualLocation(true)
-    localStorage.setItem('zephye_location', JSON.stringify(newLocation))
-    localStorage.setItem('zephye_isManual', 'true')
-    fetchWeatherData(savedLoc.lat, savedLoc.lon)
-    setShowSavedPanel(false)
+    if (!previousLocation) setPreviousLocation({ lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code, isManual: isManualLocation })
+    const nl = { lat: savedLoc.lat, lon: savedLoc.lon, name: savedLoc.name, country_code: savedLoc.country_code }
+    setLocation(nl); setIsManualLocation(true)
+    localStorage.setItem('zephye_location', JSON.stringify(nl)); localStorage.setItem('zephye_isManual', 'true')
+    fetchWeatherData(savedLoc.lat, savedLoc.lon); setShowSavedPanel(false)
     showToast(`Showing weather for ${savedLoc.label || savedLoc.name}`)
   }
 
   const goBackToOriginalLocation = () => {
-    if (previousLocation) {
-      const origLoc = {
-        lat: previousLocation.lat,
-        lon: previousLocation.lon,
-        name: previousLocation.name,
-        country_code: previousLocation.country_code
-      }
-      setLocation(origLoc)
-      setIsManualLocation(previousLocation.isManual || false)
-      if (previousLocation.isManual) {
-        localStorage.setItem('zephye_location', JSON.stringify(origLoc))
-        localStorage.setItem('zephye_isManual', 'true')
-      } else {
-        localStorage.removeItem('zephye_location')
-        localStorage.removeItem('zephye_isManual')
-      }
-      fetchWeatherData(previousLocation.lat, previousLocation.lon)
-      setPreviousLocation(null)
-      showToast('Back to original location')
-    }
+    if (!previousLocation) return
+    const ol = { lat: previousLocation.lat, lon: previousLocation.lon, name: previousLocation.name, country_code: previousLocation.country_code }
+    setLocation(ol); setIsManualLocation(previousLocation.isManual || false)
+    if (previousLocation.isManual) { localStorage.setItem('zephye_location', JSON.stringify(ol)); localStorage.setItem('zephye_isManual', 'true') }
+    else { localStorage.removeItem('zephye_location'); localStorage.removeItem('zephye_isManual') }
+    fetchWeatherData(ol.lat, ol.lon); setPreviousLocation(null)
+    showToast('Back to original location')
   }
 
   const saveCurrentLocation = () => {
-    const exists = savedLocations.find(loc => 
-      Math.abs(loc.lat - location.lat) < 0.01 && 
-      Math.abs(loc.lon - location.lon) < 0.01
-    )
-    
-    if (exists) {
-      showToast('This location is already saved')
-      return
-    }
-    
-    const newLoc = {
-      id: Date.now(),
-      label: '',
-      lat: location.lat,
-      lon: location.lon,
-      name: location.name,
-      country_code: location.country_code
-    }
-    setSavedLocations(prev => [...prev, newLoc])
-    setEditingLocId(newLoc.id)
-    setEditLabel('')
-    setEditCity('')
-    setSearchResults([])
+    if (savedLocations.find(loc => Math.abs(loc.lat - location.lat) < 0.01 && Math.abs(loc.lon - location.lon) < 0.01)) { showToast('Already saved'); return }
+    const nl = { id: Date.now(), label: '', lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code }
+    setSavedLocations(prev => [...prev, nl]); setEditingLocId(nl.id); setEditLabel(''); setEditCity(''); setSearchResults([])
     showToast('Location saved. Edit label to name it.')
   }
 
   const fetchQuoteOfDay = () => {
-    const pool = getAllQuotesPool()
-    const today = new Date().toISOString().split('T')[0]
-    const baseDate = new Date('2024-01-01').getTime()
-    const dayNumber = Math.floor((new Date(today).getTime() - baseDate) / 86400000)
-    const index = dayNumber % pool.length
-    setQuoteOfDay(pool[index])
-  }
-
-  const getPressureTrend = (hourly) => {
-    if (!hourly?.pressure_msl || hourly.pressure_msl.length < 3) return '→'
-    const last3 = hourly.pressure_msl.slice(0, 3)
-    const avg = last3.reduce((a,b) => a+b, 0) / 3
-    const current = hourly.pressure_msl[0]
-    if (current > avg + 1) return '↑'
-    if (current < avg - 1) return '↓'
-    return '→'
+    const pool = getAllQuotesPool(); const today = new Date().toISOString().split('T')[0]
+    const dn = Math.floor((new Date(today).getTime() - new Date('2024-01-01').getTime()) / 86400000)
+    setQuoteOfDay(pool[dn % pool.length])
   }
 
   const calculateTodayStats = (hourly, daily) => {
     if (!hourly?.time) return
-    let sunHours = 0, rainHours = 0, thunderHours = 0, maxRainProb = 0
-    let currentRainPeriod = null
+    let sunHours = 0, rainHours = 0, thunderHours = 0, maxRainProb = 0, currentRainPeriod = null
     const rainPeriods = []
-
     hourly.time.slice(0, 24).forEach((time, i) => {
-      const code = hourly.weather_code?.[i] || 0
-      const prob = hourly.precipitation_probability?.[i] || 0
-      const precip = hourly.precipitation?.[i] || 0
-
+      const code = hourly.weather_code?.[i] || 0, prob = hourly.precipitation_probability?.[i] || 0, precip = hourly.precipitation?.[i] || 0
       if (code === 0 || code === 1) sunHours++
       if (prob > 30 || precip > 0.1) {
-        rainHours++
-        const hour = new Date(time).getHours()
+        rainHours++; const hour = new Date(time).getHours()
         if (!currentRainPeriod) currentRainPeriod = { start: hour, end: hour }
         else if (hour === currentRainPeriod.end + 1) currentRainPeriod.end = hour
-        else {
-          rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
-          currentRainPeriod = { start: hour, end: hour }
-        }
-      } else if (currentRainPeriod) {
-        rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
-        currentRainPeriod = null
-      }
-      if (code >= 95) thunderHours++
-      if (prob > maxRainProb) maxRainProb = prob
+        else { rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`); currentRainPeriod = { start: hour, end: hour } }
+      } else if (currentRainPeriod) { rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`); currentRainPeriod = null }
+      if (code >= 95) thunderHours++; if (prob > maxRainProb) maxRainProb = prob
     })
     if (currentRainPeriod) rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
-
-    const sunrise = daily?.sunrise?.[0] ? new Date(daily.sunrise[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
-    const sunset = daily?.sunset?.[0] ? new Date(daily.sunset[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'
-    const feelsLike = hourly?.apparent_temperature?.[0] || 0
-    const windGust = hourly?.wind_gusts_10m?.[0] || 0
-    const pressureTrend = getPressureTrend(hourly)
-
-    setTodayStats({ sunHours, rainHours, thunderHours, maxRainProb, rainPeriods, sunrise, sunset, feelsLike, windGust, pressureTrend })
+    setTodayStats({
+      sunHours, rainHours, thunderHours, maxRainProb, rainPeriods,
+      sunrise: daily?.sunrise?.[0] ? new Date(daily.sunrise[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--',
+      sunset: daily?.sunset?.[0] ? new Date(daily.sunset[0]).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--',
+      feelsLike: hourly?.apparent_temperature?.[0] || 0,
+      windGust: hourly?.wind_gusts_10m?.[0] || 0,
+      pressureTrend: '→'
+    })
   }
 
   const initLocation = async () => {
-    if (!navigator.geolocation) {
-      fetchWeatherData(6.5244, 3.3792)
-      return
-    }
-    try {
-      const permission = await navigator.permissions.query({ name: 'geolocation' })
-      setLocationPermission(permission.state)
-      if (permission.state === 'granted' || permission.state === 'prompt') {
-        getCurrentLocation()
-      } else {
-        fetchWeatherData(6.5244, 3.3792)
-      }
-    } catch {
-      getCurrentLocation()
-    }
+    if (!navigator.geolocation) { fetchWeatherData(6.5244, 3.3792); return }
+    try { const p = await navigator.permissions.query({ name: 'geolocation' }); if (p.state === 'granted' || p.state === 'prompt') getCurrentLocation(); else fetchWeatherData(6.5244, 3.3792) } catch { getCurrentLocation() }
   }
 
   const getCurrentLocation = () => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords
-        reverseGeocode(latitude, longitude)
-        fetchWeatherData(latitude, longitude)
-        setLocationPermission('granted')
-        setIsManualLocation(false)
-        localStorage.removeItem('zephye_location')
-        localStorage.removeItem('zephye_isManual')
-      },
-      (err) => {
-        setLocationPermission('denied')
-        showToast('Location denied')
-        fetchWeatherData(6.5244, 3.3792)
-      },
+      (pos) => { reverseGeocode(pos.coords.latitude, pos.coords.longitude); fetchWeatherData(pos.coords.latitude, pos.coords.longitude); setIsManualLocation(false); localStorage.removeItem('zephye_location'); localStorage.removeItem('zephye_isManual') },
+      () => { showToast('Location denied'); fetchWeatherData(6.5244, 3.3792) },
       { enableHighAccuracy: true, timeout: 10000 }
     )
   }
 
   const reverseGeocode = async (lat, lon) => {
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`, {
-        headers: { 'User-Agent': 'Zephye-App/1.0' }
-      })
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`, { headers: { 'User-Agent': 'Zephye-App/1.0' } })
       const data = await res.json()
-
-      const lga = data.address.county?.replace(' Local Government Area','') ||
-                  data.address.town ||
-                  data.address.city ||
-                  data.address.village ||
-                  'Current Location'
-      const state = data.address.state || 'State'
-      const country = data.address.country || 'Country'
-      const countryCode = data.address.country_code?.toUpperCase() || 'US'
-
-      setLocation({ lat, lon, name: `${lga}, ${state}, ${country}`, country_code: countryCode })
-      setIsManualLocation(false)
-      localStorage.removeItem('zephye_location')
-      localStorage.removeItem('zephye_isManual')
-    } catch {
-      setLocation({ lat, lon, name: 'Current Location', country_code: 'US' })
-    }
+      const lga = data.address.county?.replace(' Local Government Area','') || data.address.town || data.address.city || data.address.village || 'Current Location'
+      setLocation({ lat, lon, name: `${lga}, ${data.address.state || 'State'}, ${data.address.country || 'Country'}`, country_code: data.address.country_code?.toUpperCase() || 'US' })
+      setIsManualLocation(false); localStorage.removeItem('zephye_location'); localStorage.removeItem('zephye_isManual')
+    } catch { setLocation({ lat, lon, name: 'Current Location', country_code: 'US' }) }
   }
 
   const searchCity = async () => {
-    if (!citySearch.trim()) {
-      showToast('Type a place name')
-      return
-    }
-
+    if (!citySearch.trim()) { showToast('Type a place name'); return }
     try {
       let res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(citySearch)}&count=5&language=en&format=json`)
       let data = await res.json()
-
-      if (!data.results || data.results.length === 0) {
+      if (!data.results?.length) {
         const owRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(citySearch)}&limit=5&appid=${OPENWEATHER_KEY}`)
         const owData = await owRes.json()
-
-        if (!owData || owData.length === 0) {
-          showToast('Place not found')
-          return
-        }
-
-        const { lat, lon, name, state, country } = owData[0]
-        const displayName = `${name}${state ? ', ' + state : ''}, ${country}`
-        const countryCode = country?.slice(0,2)?.toUpperCase() || 'US'
-        const newLocation = { lat, lon, name: displayName, country_code: countryCode }
-        setLocation(newLocation)
-        setIsManualLocation(true)
-        localStorage.setItem('zephye_location', JSON.stringify(newLocation))
-        localStorage.setItem('zephye_isManual', 'true')
-        fetchWeatherData(lat, lon)
-        setShowLocationModal(false)
-        setCitySearch('')
-        showToast(`Location: ${displayName}`)
-        return
+        if (!owData?.length) { showToast('Place not found'); return }
+        const r = owData[0]; const dn = `${r.name}${r.state ? ', ' + r.state : ''}, ${r.country}`
+        const nl = { lat: r.lat, lon: r.lon, name: dn, country_code: r.country?.slice(0,2)?.toUpperCase() || 'US' }
+        setLocation(nl); setIsManualLocation(true); localStorage.setItem('zephye_location', JSON.stringify(nl)); localStorage.setItem('zephye_isManual', 'true')
+        fetchWeatherData(r.lat, r.lon); setShowLocationModal(false); setCitySearch(''); showToast(`Location: ${dn}`); return
       }
-
-      const { latitude: lat, longitude: lon, name, country, admin1, country_code } = data.results[0]
-      const displayName = `${name}${admin1 ? ', ' + admin1 : ''}, ${country}`
-      const newLocation = { lat, lon, name: displayName, country_code: country_code?.toUpperCase() || 'US' }
-      setLocation(newLocation)
-      setIsManualLocation(true)
-      localStorage.setItem('zephye_location', JSON.stringify(newLocation))
-      localStorage.setItem('zephye_isManual', 'true')
-      fetchWeatherData(lat, lon)
-      setShowLocationModal(false)
-      setCitySearch('')
-      showToast(`Location: ${name}`)
-
-    } catch {
-      showToast('Search failed. Check internet')
-    }
+      const r = data.results[0]; const dn = `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`
+      const nl = { lat: r.latitude, lon: r.longitude, name: dn, country_code: r.country_code?.toUpperCase() || 'US' }
+      setLocation(nl); setIsManualLocation(true); localStorage.setItem('zephye_location', JSON.stringify(nl)); localStorage.setItem('zephye_isManual', 'true')
+      fetchWeatherData(r.latitude, r.longitude); setShowLocationModal(false); setCitySearch(''); showToast(`Location: ${r.name}`)
+    } catch { showToast('Search failed') }
   }
 
   const fetchWeatherData = async (lat, lon) => {
     try {
       setIsLoading(true)
-      setCanRefresh(false)
-      setTimeout(() => setCanRefresh(true), 30000)
-
-      let weatherData, aqiData
-
       const [weatherRes, aqiRes] = await Promise.all([
-        fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-          `&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,winddirection,windspeed_10m` +
-          `&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset` +
-          `&timezone=auto`
-        ),
-        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide`)
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset&timezone=auto`),
+        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`)
       ])
-
       if (weatherRes.ok) {
-        const om = await weatherRes.json()
-        const aqiJson = await aqiRes.json()
-
-        weatherData = {
+        const om = await weatherRes.json(); const aqiJson = await aqiRes.json()
+        const wd = {
           timezone: om.timezone || 'UTC',
-          current: {
-            temperature_2m: om.current_weather?.temperature ?? null,
-            weather_code: om.current_weather?.weathercode ?? 0,
-            wind_speed_10m: om.current_weather?.windspeed ?? 0,
-            wind_direction_10m: om.current_weather?.winddirection ?? 0,
-            relative_humidity_2m: null,
-            pressure_msl: null,
-            visibility: null,
-            uv_index: om.daily?.uv_index_max?.[0] ?? 0
-          },
-          hourly: {
-            time: om.hourly?.time ?? [],
-            temperature_2m: om.hourly?.temperature_2m ?? [],
-            weather_code: om.hourly?.weathercode ?? [],
-            precipitation_probability: om.hourly?.precipitation_probability ?? [],
-            precipitation: om.hourly?.precipitation ?? [],
-            apparent_temperature: om.hourly?.apparent_temperature ?? [],
-            wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [],
-            pressure_msl: om.hourly?.pressure_msl ?? [],
-            wind_direction_10m: om.hourly?.winddirection ?? [],
-            wind_speed_10m: om.hourly?.windspeed_10m ?? []
-          },
-          daily: {
-            time: om.daily?.time ?? [],
-            temperature_2m_max: om.daily?.temperature_2m_max ?? [],
-            temperature_2m_min: om.daily?.temperature_2m_min ?? [],
-            weather_code: om.daily?.weathercode ?? [],
-            uv_index_max: om.daily?.uv_index_max ?? [],
-            sunrise: om.daily?.sunrise ?? [],
-            sunset: om.daily?.sunset ?? []
-          }
+          current: { temperature_2m: om.current_weather?.temperature ?? null, weather_code: om.current_weather?.weathercode ?? 0, wind_speed_10m: om.current_weather?.windspeed ?? 0, wind_direction_10m: om.current_weather?.winddirection ?? 0, relative_humidity_2m: om.hourly?.relative_humidity_2m?.[0] ?? 50, pressure_msl: om.hourly?.pressure_msl?.[0] ?? null, visibility: null, uv_index: om.daily?.uv_index_max?.[0] ?? 0 },
+          hourly: { time: om.hourly?.time ?? [], temperature_2m: om.hourly?.temperature_2m ?? [], weather_code: om.hourly?.weathercode ?? [], precipitation_probability: om.hourly?.precipitation_probability ?? [], precipitation: om.hourly?.precipitation ?? [], apparent_temperature: om.hourly?.apparent_temperature ?? [], wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [], pressure_msl: om.hourly?.pressure_msl ?? [], relative_humidity_2m: om.hourly?.relative_humidity_2m ?? [] },
+          daily: { time: om.daily?.time ?? [], temperature_2m_max: om.daily?.temperature_2m_max ?? [], temperature_2m_min: om.daily?.temperature_2m_min ?? [], weather_code: om.daily?.weathercode ?? [], uv_index_max: om.daily?.uv_index_max ?? [], sunrise: om.daily?.sunrise ?? [], sunset: om.daily?.sunset ?? [] }
         }
-
-        aqiData = aqiJson
-      } else {
-        showToast('Using OpenWeather backup...')
-        const owRes = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_KEY}`)
-        const ow = await owRes.json()
-
-        weatherData = {
-          timezone: ow.timezone || 'UTC',
-          current: {
-            temperature_2m: ow.current.temp,
-            weather_code: ow.current.weather[0].id,
-            wind_speed_10m: ow.current.wind_speed * 3.6,
-            wind_direction_10m: ow.current.wind_deg,
-            relative_humidity_2m: ow.current.humidity,
-            pressure_msl: ow.current.pressure,
-            visibility: ow.current.visibility,
-            uv_index: ow.current.uvi
-          },
-          hourly: {
-            time: ow.hourly.slice(0,24).map(h => new Date(h.dt * 1000).toISOString()),
-            temperature_2m: ow.hourly.slice(0,24).map(h => h.temp),
-            weather_code: ow.hourly.slice(0,24).map(h => h.weather[0].id),
-            precipitation_probability: ow.hourly.slice(0,24).map(h => (h.pop || 0) * 100),
-            precipitation: ow.hourly.slice(0,24).map(h => h.rain?.['1h'] || 0),
-            apparent_temperature: ow.hourly.slice(0,24).map(h => h.feels_like),
-            wind_gusts_10m: ow.hourly.slice(0,24).map(h => (h.wind_gust || 0) * 3.6),
-            pressure_msl: ow.hourly.slice(0,24).map(h => h.pressure)
-          },
-          daily: {
-            time: ow.daily.slice(0,7).map(d => new Date(d.dt * 1000).toISOString().split('T')[0]),
-            temperature_2m_max: ow.daily.slice(0,7).map(d => d.temp.max),
-            temperature_2m_min: ow.daily.slice(0,7).map(d => d.temp.min),
-            weather_code: ow.daily.slice(0,7).map(d => d.weather[0].id),
-            uv_index_max: ow.daily.slice(0,7).map(d => d.uvi),
-            sunrise: ow.daily.slice(0,7).map(d => new Date(d.sunrise * 1000).toISOString()),
-            sunset: ow.daily.slice(0,7).map(d => new Date(d.sunset * 1000).toISOString())
-          }
-        }
-        aqiData = { current: { us_aqi: null } }
+        setWeather(wd); setAqi(aqiJson.current); calculateTodayStats(wd.hourly, wd.daily)
       }
-
-      setWeather(weatherData)
-      setAqi(aqiData.current)
-      calculateTodayStats(weatherData.hourly, weatherData.daily)
       setIsLoading(false)
-    } catch (err) {
-      console.error('Weather error:', err)
-      showToast('Weather failed. Try manual location')
-      setIsLoading(false)
-    }
+    } catch (err) { console.error(err); showToast('Weather failed'); setIsLoading(false) }
   }
 
   const saveQuote = (quote) => {
     if (!quote) return
     const saved = JSON.parse(localStorage.getItem('zephye_saved_quotes') || '[]')
-    const newQuote = {
-      id: Date.now(),
-      quote_text: quote.content || quote.text,
-      quote_author: quote.author || 'Unknown',
-      category: quote.tag || 'Motivational',
-      created_at: new Date().toISOString()
-    }
-    saved.unshift(newQuote)
-    localStorage.setItem('zephye_saved_quotes', JSON.stringify(saved))
-    showToast('Quote saved')
+    saved.unshift({ id: Date.now(), quote_text: quote.content || quote.text, quote_author: quote.author || 'Unknown', category: quote.tag || 'Motivational', created_at: new Date().toISOString() })
+    localStorage.setItem('zephye_saved_quotes', JSON.stringify(saved)); showToast('Quote saved')
   }
 
   const saveFact = (fact) => {
     if (!fact) return
     const saved = JSON.parse(localStorage.getItem('zephye_saved_facts') || '[]')
-    const newFact = {
-      id: Date.now(),
-      fact_text: fact.text,
-      created_at: new Date().toISOString()
-    }
-    saved.unshift(newFact)
-    localStorage.setItem('zephye_saved_facts', JSON.stringify(saved))
-    showToast('Fact saved')
+    saved.unshift({ id: Date.now(), fact_text: fact.text, created_at: new Date().toISOString() })
+    localStorage.setItem('zephye_saved_facts', JSON.stringify(saved)); showToast('Fact saved')
   }
 
   const shareQuote = async (text, author) => {
-    const shareText = `"${text}" - ${author}\n\nvia Zephye`
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: shareText })
-      } catch {}
-    } else {
-      navigator.clipboard.writeText(shareText)
-      showToast('Copied to clipboard')
-    }
+    const st = `"${text}" - ${author}\n\nvia Zephye`
+    if (navigator.share) { try { await navigator.share({ text: st }) } catch {} } else { navigator.clipboard.writeText(st); showToast('Copied') }
   }
 
-  const getWeatherClass = (code) => {
-    if (code === 0 || code === 1) return 'sunny'
-    if (code >= 95) return 'thunder'
-    if (code >= 51 && code <= 82) return 'rainy'
-    return 'cloudy'
-  }
+  const getWeatherClass = (c) => c === 0 || c === 1 ? 'sunny' : c >= 95 ? 'thunder' : c >= 51 && c <= 82 ? 'rainy' : 'cloudy'
+  const getWeatherIcon = (c) => c === 0 ? '☀️' : c === 1 ? '🌤️' : c === 2 ? '⛅' : c === 3 ? '☁️' : c >= 95 ? '⛈️' : c >= 51 ? '🌧️' : '☁️'
+  const getStormLevel = (c, w) => c >= 95 ? { level: 'Severe Thunderstorm', color: '#dc2626' } : c >= 65 || w > 50 ? { level: 'Heavy Storm', color: '#f97316' } : c >= 61 || w > 30 ? { level: 'Moderate Rain', color: '#eab308' } : c >= 51 ? { level: 'Light Rain', color: '#22c55e' } : null
+  const getAqiLevel = (a) => a == null ? { label: 'Unknown', color: '#6b7280' } : a <= 50 ? { label: 'Good', color: '#22c55e' } : a <= 100 ? { label: 'Moderate', color: '#eab308' } : a <= 150 ? { label: 'Unhealthy', color: '#f97316' } : { label: 'Hazardous', color: '#ef4444' }
+  const getWindDirection = (d) => d >= 337.5 || d < 22.5 ? 'N' : d < 67.5 ? 'NE' : d < 112.5 ? 'E' : d < 157.5 ? 'SE' : d < 202.5 ? 'S' : d < 247.5 ? 'SW' : d < 292.5 ? 'W' : 'NW'
 
-  const getWeatherIcon = (code) => {
-    if (code === 0) return '☀️'
-    if (code === 1) return '🌤️'
-    if (code === 2) return '⛅'
-    if (code === 3) return '☁️'
-    if (code >= 95) return '⛈️'
-    if (code >= 51) return '🌧️'
-    return '☁️'
-  }
-
-  const getStormLevel = (code, wind) => {
-    if (code >= 95) return { level: 'Severe Thunderstorm', color: '#dc2626', severity: 4 }
-    if (code >= 65 || wind > 50) return { level: 'Heavy Storm', color: '#f97316', severity: 3 }
-    if (code >= 61 || wind > 30) return { level: 'Moderate Rain', color: '#eab308', severity: 2 }
-    if (code >= 51) return { level: 'Light Rain', color: '#22c55e', severity: 1 }
-    return null
-  }
-
-  const getAqiLevel = (aqi) => {
-    if (aqi == null) return { label: 'Unknown', color: '#6b7280', status: 'N/A', desc: 'No data available' }
-    if (aqi <= 50) return { label: 'Good', color: '#22c55e', status: 'Safe to breathe', desc: 'Air quality is satisfactory. No health risk.' }
-    if (aqi <= 100) return { label: 'Moderate', color: '#eab308', status: 'Acceptable', desc: 'Acceptable for most. Sensitive groups limit prolonged outdoor activity.' }
-    if (aqi <= 150) return { label: 'Unhealthy', color: '#f97316', status: 'Caution', desc: 'Sensitive groups may experience effects. Everyone reduce prolonged exertion.' }
-    return { label: 'Hazardous', color: '#ef4444', status: 'Not Safe', desc: 'Health alert. Everyone may experience serious health effects.' }
-  }
-
-  const getWindDirection = (deg) => {
-    if (deg >= 337.5 || deg < 22.5) return 'N'
-    if (deg >= 22.5 && deg < 67.5) return 'NE'
-    if (deg >= 67.5 && deg < 112.5) return 'E'
-    if (deg >= 112.5 && deg < 157.5) return 'SE'
-    if (deg >= 157.5 && deg < 202.5) return 'S'
-    if (deg >= 202.5 && deg < 247.5) return 'SW'
-    if (deg >= 247.5 && deg < 292.5) return 'W'
-    return 'NW'
-  }
-
-  const weatherCode = weather?.current?.weather_code ?? 0
-  const windSpeed = weather?.current?.wind_speed_10m ?? 0
-  const windDir = weather?.current?.wind_direction_10m ?? 0
-  const humidity = weather?.current?.relative_humidity_2m ?? 0
-  const pressure = weather?.current?.pressure_msl ?? 0
-  const visibility = weather?.current?.visibility ?? 0
-  const uvIndex = weather?.current?.uv_index ?? weather?.daily?.uv_index_max?.[0] ?? 0
-  const bgClass = getWeatherClass(weatherCode)
+  const wc = weather?.current?.weather_code ?? 0
+  const ws = weather?.current?.wind_speed_10m ?? 0
+  const wd = weather?.current?.wind_direction_10m ?? 0
+  const hum = weather?.current?.relative_humidity_2m ?? 50
+  const pres = weather?.current?.pressure_msl ?? 0
+  const vis = weather?.current?.visibility ?? 0
+  const uv = weather?.current?.uv_index ?? weather?.daily?.uv_index_max?.[0] ?? 0
   const aqiInfo = getAqiLevel(aqi?.us_aqi)
-  const stormInfo = getStormLevel(weatherCode, windSpeed)
+  const stormInfo = getStormLevel(wc, ws)
 
-  if (isLoading && !weather) {
-    return (
-      <div className="app">
-        <div className="weather-bg cloudy"></div>
-        <div className="container" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh'}}>
-          <div className="glass" style={{padding: '40px', borderRadius: '20px', textAlign: 'center'}}>
-            <div className="text-4xl mb-4">🌤️</div>
-            <p className="text-xl font-bold">Loading Zephye...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading && !weather) return (
+    <div className="app"><div className="weather-bg cloudy"></div><div className="container" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}><div className="glass" style={{padding:'40px',borderRadius:'20px',textAlign:'center'}}><div className="text-4xl mb-4">🌤️</div><p className="text-xl font-bold">Loading Zephye...</p></div></div></div>
+  )
 
   return (
     <div className="app">
-      <div className={`weather-bg ${bgClass}`}></div>
+      <div className={`weather-bg ${getWeatherClass(wc)}`}></div>
       {toast && <div className="toast">{toast}</div>}
       
-      {/* Location Search Modal */}
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
-          <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px'}}>
+          <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding:'24px'}}>
             <h3 className="font-bold mb-4">Change Location</h3>
-            <input
-              type="text"
-              placeholder="Type any city, LGA, country..."
-              value={citySearch}
-              onChange={e => setCitySearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && searchCity()}
-              className="mb-4 w-full"
-              autoFocus
-            />
+            <input type="text" placeholder="Type any city, LGA, country..." value={citySearch} onChange={e => setCitySearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchCity()} className="mb-4 w-full" autoFocus />
             <p className="text-xs text-muted mb-3">Type "London", "Ifo LGA", "Tokyo" - any real place</p>
             <div className="flex gap-2">
               <button className="btn-primary flex-1" onClick={searchCity}>Search</button>
-              <button className="btn-ghost text-xs" onClick={() => {
-                setShowLocationModal(false)
-                setCitySearch('')
-              }}>Cancel</button>
+              <button className="btn-ghost text-xs" onClick={() => { setShowLocationModal(false); setCitySearch('') }}>Cancel</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Saved Locations Panel */}
       {showSavedPanel && (
         <div className="modal-overlay" onClick={() => setShowSavedPanel(false)}>
-          <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px', maxWidth: '480px', width: '90%', maxHeight: '80vh', overflow: 'auto'}}>
+          <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding:'24px',maxWidth:'480px',width:'90%',maxHeight:'80vh',overflow:'auto'}}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg">My Locations</h3>
-              <button onClick={() => setShowSavedPanel(false)} className="btn-ghost" style={{fontSize: '24px', lineHeight: 1}}>
-                &times;
-              </button>
+              <button onClick={() => setShowSavedPanel(false)} className="btn-ghost" style={{fontSize:'24px',lineHeight:1}}>&times;</button>
             </div>
-
-            {/* Current Location */}
-            <div className="mb-4 p-3 rounded-xl" style={{background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)'}}>
+            <div className="mb-4 p-3 rounded-xl" style={{background:'rgba(56,189,248,0.08)',border:'1px solid rgba(56,189,248,0.2)'}}>
               <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-muted font-medium mb-1">CURRENT LOCATION</p>
-                  <p className="font-bold text-sm">{location.name}</p>
-                  <p className="text-xs text-muted">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</p>
-                </div>
-                <button 
-                  className="btn-primary text-xs flex items-center gap-1"
-                  onClick={saveCurrentLocation}
-                >
-                  <AddIcon />
-                  Save
-                </button>
+                <div><p className="text-xs text-muted font-medium mb-1">CURRENT LOCATION</p><p className="font-bold text-sm">{location.name}</p><p className="text-xs text-muted">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</p></div>
+                <button className="btn-primary text-xs flex items-center gap-1" onClick={saveCurrentLocation}><AddIcon />Save</button>
               </div>
             </div>
-
-            {/* Saved Locations List */}
             {savedLocations.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted mb-3">No saved locations yet</p>
-                <button onClick={addNewLocation} className="btn-primary">
-                  Add Location
-                </button>
-              </div>
+              <div className="text-center py-8"><p className="text-muted mb-3">No saved locations yet</p><button onClick={addNewLocation} className="btn-primary">Add Location</button></div>
             ) : (
               <div className="space-y-2">
                 {savedLocations.map(loc => (
-                  <div key={loc.id} className="p-3 rounded-xl" style={{
-                    background: editingLocId === loc.id ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.03)', 
-                    border: editingLocId === loc.id ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent'
-                  }}>
+                  <div key={loc.id} className="p-3 rounded-xl" style={{background: editingLocId === loc.id ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.03)', border: editingLocId === loc.id ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent'}}>
                     {editingLocId === loc.id ? (
                       <div className="space-y-3">
-                        <div>
-                          <label className="text-xs text-muted block mb-1">Name</label>
-                          <input
-                            type="text"
-                            value={editLabel}
-                            onChange={e => setEditLabel(e.target.value)}
-                            onBlur={() => updateLocationLabel(loc.id, editLabel)}
-                            placeholder="Home, Work, etc..."
-                            className="w-full text-sm"
-                            autoFocus
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="text-xs text-muted block mb-1">Search place</label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={editCity}
-                              onChange={e => {
-                                setEditCity(e.target.value)
-                                searchPlaceForLocation(e.target.value)
-                              }}
-                              placeholder="Search city..."
-                              className="text-sm flex-1"
-                            />
-                          </div>
-                          
+                        <div><label className="text-xs text-muted block mb-1">Name</label><input type="text" value={editLabel} onChange={e => setEditLabel(e.target.value)} onBlur={() => updateLocationLabel(loc.id, editLabel)} placeholder="Home, Work, etc..." className="w-full text-sm" autoFocus /></div>
+                        <div><label className="text-xs text-muted block mb-1">Search place</label><div className="flex gap-2"><input type="text" value={editCity} onChange={e => { setEditCity(e.target.value); searchPlaceForLocation(e.target.value) }} placeholder="Search city..." className="text-sm flex-1" /></div>
                           {isSearching && <p className="text-xs text-muted">Searching...</p>}
-                          {searchResults.length > 0 && (
-                            <div className="mt-2 max-h-28 overflow-y-auto space-y-1 rounded-lg" style={{background: 'rgba(0,0,0,0.2)'}}>
-                              {searchResults.map(place => (
-                                <button
-                                  key={place.id}
-                                  onClick={() => selectPlaceForLocation(loc.id, place)}
-                                  className="w-full text-left p-2 text-xs hover:bg-white/10 transition-colors"
-                                >
-                                  {place.name}
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                          {searchResults.length > 0 && (<div className="mt-2 max-h-28 overflow-y-auto space-y-1 rounded-lg" style={{background:'rgba(0,0,0,0.3)'}}>{searchResults.map(place => (<button key={place.id} onClick={() => selectPlaceForLocation(loc.id, place)} className="w-full text-left p-2 text-xs hover:bg-white/10" style={{color:'var(--text)'}}>{place.name}</button>))}</div>)}
                         </div>
-                        
-                        <div className="text-xs text-muted">
-                          {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <button onClick={() => saveLocationEdits(loc.id)} className="btn-primary text-xs flex-1">
-                            Done
-                          </button>
-                          <button onClick={() => deleteLocation(loc.id)} className="btn-ghost text-xs" style={{color: '#ef4444'}}>
-                            <DeleteIcon />
-                          </button>
-                        </div>
+                        <div className="text-xs text-muted">{loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}</div>
+                        <div className="flex gap-2"><button onClick={() => saveLocationEdits(loc.id)} className="btn-primary text-xs flex-1">Done</button><button onClick={() => deleteLocation(loc.id)} className="btn-ghost text-xs" style={{color:'#ef4444'}}><DeleteIcon /></button></div>
                       </div>
                     ) : (
                       <div className="flex justify-between items-start">
-                        <button
-                          onClick={() => switchToSavedLocation(loc)}
-                          className="text-left flex-1 hover:opacity-80 transition-opacity"
-                        >
-                          <p className="font-bold text-sm">{loc.label || 'Untitled Location'}</p>
-                          <p className="text-xs text-muted mt-1">{loc.name}</p>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingLocId(loc.id)
-                            setEditLabel(loc.label || '')
-                            setEditCity('')
-                            setSearchResults([])
-                          }}
-                          className="btn-ghost"
-                          title="Edit"
-                        >
-                          <EditIcon />
-                        </button>
+                        <button onClick={() => switchToSavedLocation(loc)} className="text-left flex-1 hover:opacity-80"><p className="font-bold text-sm">{loc.label || 'Untitled Location'}</p><p className="text-xs text-muted mt-1">{loc.name}</p></button>
+                        <button onClick={() => { setEditingLocId(loc.id); setEditLabel(loc.label || ''); setEditCity(''); setSearchResults([]) }} className="btn-ghost" title="Edit"><EditIcon /></button>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
             )}
-
             {savedLocations.length > 0 && !editingLocId && (
-              <button
-                onClick={addNewLocation}
-                className="w-full mt-4 p-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-                style={{border: '1px dashed rgba(255,255,255,0.15)'}}
-              >
-                <AddIcon />
-                Add Another Location
-              </button>
+              <button onClick={addNewLocation} className="w-full mt-4 p-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2" style={{border:'1px dashed rgba(255,255,255,0.15)'}}><AddIcon />Add Another Location</button>
             )}
           </div>
         </div>
       )}
 
-      <ZephyeFullScreen
-        isOpen={tab === 'ai'}
-        onClose={() => setTab('weather')}
-        weather={weather}
-        location={location}
-        todayStats={todayStats}
-        aqi={aqi}
-        userName={localStorage.getItem('weatherman_name')}
-        lang={getLang(location?.country_code)}
-        greeting="Hey"
-        voiceToUse={voiceToUse}
-      />
+      <ZephyeFullScreen isOpen={tab === 'ai'} onClose={() => setTab('weather')} weather={weather} location={location} todayStats={todayStats} aqi={aqi} userName={localStorage.getItem('weatherman_name')} lang={getLang(location?.country_code)} greeting="Hey" voiceToUse={voiceToUse} />
       
-      <div className="container" style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-        {tab === 'weather' && (
-          <>
-            <div className="glass" style={{padding: '20px', borderRadius: '20px', position: 'relative', zIndex: 2}}>
-              <div className="flex items-start justify-between mb-4">
-                <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
-                  <div className="text-xs text-muted mb-1 flex items-center gap-1">
-                    <LocationIcon />
-                    Location
-                  </div>
-                  <div className="text-lg font-bold">{location.name}</div>
-                  <div className="text-xs text-muted mt-1">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </div>
-                </button>
-                <div className="text-right">
-                  <WeatherIcon code={weatherCode} />
-                  <h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1>
-                </div>
-              </div>
-              
-              {/* Saved locations quick access */}
-              <div className="flex gap-2 flex-wrap mb-3">
-                <button 
-                  onClick={() => setShowSavedPanel(true)}
-                  className="btn-ghost text-xs flex items-center gap-1"
-                  style={{padding: '4px 10px'}}
-                >
-                  <LocationIcon />
-                  {savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}
-                </button>
-                
-                {previousLocation && (
-                  <button
-                    onClick={goBackToOriginalLocation}
-                    className="btn-ghost text-xs flex items-center gap-1"
-                    style={{padding: '4px 10px', borderColor: 'var(--accent)', color: 'var(--accent)'}}
-                  >
-                    <BackIcon />
-                    Back to my location
-                  </button>
-                )}
-                
-                {savedLocations.slice(0, 3).map(loc => (
-                  <button
-                    key={loc.id}
-                    onClick={() => switchToSavedLocation(loc)}
-                    className="btn-ghost text-xs"
-                    style={{padding: '4px 10px'}}
-                    title={loc.name}
-                  >
-                    {loc.label || 'Untitled'}
-                  </button>
-                ))}
-              </div>
-              
-              <div className="flex gap-2 flex-wrap">
-                {stormInfo && (
-                  <div className="status-badge" style={{background: stormInfo.color + '33', borderColor: stormInfo.color, color: stormInfo.color}}>
-                    {stormInfo.level}
-                  </div>
-                )}
-                {aqiInfo && (
-                  <div style={{position: 'relative'}}>
-                    <button className="status-badge" style={{background: aqiInfo.color + '33', borderColor: aqiInfo.color, color: aqiInfo.color, cursor: 'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>
-                      Air: {aqiInfo.label} ▼
-                    </button>
-                    {showAirDropdown && (
-                      <div className="glass" style={{position: 'absolute', top: '110%', left: 0, minWidth: '300px', padding: '16px', zIndex: 999, borderRadius: '16px'}}>
-                        <p className="font-bold mb-3">Weather Details</p>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">AQI</span><span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Wind</span><span className="font-bold">{Math.round(windSpeed)} km/h {getWindDirection(windDir)}</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Humidity</span><span className="font-bold">{humidity}%</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Pressure</span><span className="font-bold">{pressure} hPa</span></div>
-                        <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Visibility</span><span className="font-bold">{(visibility/1000).toFixed(1)} km</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-muted">UV Index</span><span className="font-bold">{uvIndex}</span></div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+      <div className="container" style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+        {tab === 'weather' && (<>
+          <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+            <div className="flex items-start justify-between mb-4">
+              <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
+                <div className="text-xs text-muted mb-1 flex items-center gap-1"><LocationIcon />Location</div>
+                <div className="text-lg font-bold">{location.name}</div>
+                <div className="text-xs text-muted mt-1">{new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+              </button>
+              <div className="text-right"><WeatherIcon code={wc} /><h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1></div>
             </div>
-
-            <WeatherManTab
-              weather={weather}
-              location={location}
-              todayStats={todayStats}
-              aqi={aqi}
-              onRefresh={() => fetchWeatherData(location.lat, location.lon)}
-            />
-            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
-              <div className="flex justify-between items-center mb-3">
-                <p className="text-sm font-bold">Hourly Forecast</p>
-                <button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)}>
-                  Refresh
-                </button>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType: 'x mandatory'}}>
-                {weather?.hourly?.time?.slice(0,24).map((time, i) => (
-                  <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth: '72px', scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.05)'}}>
-                    <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</p>
-                    <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
-                    <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
-                  </div>
-                ))}
-              </div>
+            <div className="flex gap-2 flex-wrap mb-3">
+              <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}><LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}</button>
+              {previousLocation && <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}><BackIcon />Back to my location</button>}
+              {savedLocations.slice(0, 3).map(loc => <button key={loc.id} onClick={() => switchToSavedLocation(loc)} className="btn-ghost text-xs" style={{padding:'4px 10px',background:'rgba(255,255,255,0.08)',color:'var(--text)',border:'1px solid var(--glass-border)'}} title={loc.name}>{loc.label || 'Untitled'}</button>)}
             </div>
-
-            <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
-              <p className="text-sm font-bold mb-3">7-Day Forecast</p>
-              {weather?.daily?.time?.slice(0,7).map((day, i) => (
-                <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
-                  <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en', {weekday: 'short'})}</span>
-                  <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
-                  <div className="flex gap-3 text-sm">
-                    <span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
-                    <span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
-                  </div>
+            <div className="flex gap-2 flex-wrap">
+              {stormInfo && <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>{stormInfo.level}</div>}
+              {aqiInfo && (<div style={{position:'relative'}}>
+                <button className="status-badge" style={{background:aqiInfo.color+'33',borderColor:aqiInfo.color,color:aqiInfo.color,cursor:'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>Air: {aqiInfo.label} ▼</button>
+                {showAirDropdown && (<div className="glass" style={{position:'absolute',top:'110%',left:0,minWidth:'300px',padding:'16px',zIndex:999,borderRadius:'16px'}}>
+                  <p className="font-bold mb-3">Weather Details</p>
+                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">AQI</span><span className="font-bold" style={{color:aqiInfo.color}}>{aqi?.us_aqi??'--'}</span></div>
+                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Wind</span><span className="font-bold">{Math.round(ws)} km/h {getWindDirection(wd)}</span></div>
+                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Humidity</span><span className="font-bold">{hum}%</span></div>
+                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Pressure</span><span className="font-bold">{pres} hPa</span></div>
+                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Visibility</span><span className="font-bold">{(vis/1000).toFixed(1)} km</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted">UV Index</span><span className="font-bold">{uv}</span></div>
+                </div>)}
+              </div>)}
+            </div>
+          </div>
+          <WeatherManTab weather={weather} location={location} todayStats={todayStats} aqi={aqi} onRefresh={() => fetchWeatherData(location.lat, location.lon)} />
+          <div className="glass" style={{padding:'20px',borderRadius:'20px'}}>
+            <div className="flex justify-between items-center mb-3"><p className="text-sm font-bold">Hourly Forecast</p><button className="btn-ghost text-xs" onClick={() => fetchWeatherData(location.lat, location.lon)}>Refresh</button></div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType:'x mandatory'}}>
+              {weather?.hourly?.time?.slice(0,24).map((time, i) => (
+                <div key={time} className="glass text-center p-3 rounded-2xl flex-shrink-0" style={{minWidth:'72px',scrollSnapAlign:'start',background:'rgba(255,255,255,0.05)'}}>
+                  <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}</p>
+                  <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code[i])}</p>
+                  <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m[i])}°</p>
                 </div>
               ))}
             </div>
-          </>
-        )}
-        {tab === 'quotes' && (
-          <QuotesTab 
-            saveQuote={saveQuote} 
-            shareQuote={shareQuote} 
-            saveFact={saveFact} 
-            quoteOfDay={quoteOfDay} 
-          />
-        )}
+          </div>
+          <div className="glass" style={{padding:'20px',borderRadius:'20px'}}>
+            <p className="text-sm font-bold mb-3">7-Day Forecast</p>
+            {weather?.daily?.time?.slice(0,7).map((day, i) => (
+              <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
+                <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en',{weekday:'short'})}</span>
+                <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
+                <div className="flex gap-3 text-sm"><span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span><span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span></div>
+              </div>
+            ))}
+          </div>
+        </>)}
+        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} quoteOfDay={quoteOfDay} />}
         {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
-        <div className="text-center mt-4 mb-4">
-          <p className="text-sm text-muted">hyesent.dev</p>
-        </div>
+        <div className="text-center mt-4 mb-4"><p className="text-sm text-muted">hyesent.dev</p></div>
       </div>
-
       <div className="bottom-nav">
-        <button className={`nav-btn ${tab === 'weather' ? 'active' : ''}`} onClick={() => setTab('weather')}>Weather</button>
-        <button className={`nav-btn ${tab === 'quotes' ? 'active' : ''}`} onClick={() => setTab('quotes')}>Quotes</button>
-        <button className={`nav-btn ${tab === 'saved' ? 'active' : ''}`} onClick={() => setTab('saved')}>Saved</button>
-        <button className={`nav-btn ${tab === 'ai' ? 'active' : ''}`} onClick={() => setTab('ai')}>AI</button>
+        <button className={`nav-btn ${tab==='weather'?'active':''}`} onClick={()=>setTab('weather')}>Weather</button>
+        <button className={`nav-btn ${tab==='quotes'?'active':''}`} onClick={()=>setTab('quotes')}>Quotes</button>
+        <button className={`nav-btn ${tab==='saved'?'active':''}`} onClick={()=>setTab('saved')}>Saved</button>
+        <button className={`nav-btn ${tab==='ai'?'active':''}`} onClick={()=>setTab('ai')}>AI</button>
       </div>
     </div>
   )
@@ -1118,214 +478,35 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
   const [currentFact, setCurrentFact] = useState(null)
   const [loading, setLoading] = useState(false)
   const [lastFetch, setLastFetch] = useState(0)
-
-  useEffect(() => {
-    fetchQuote()
-    fetchFact()
-  }, [])
-
-  useEffect(() => {
-    fetchQuote()
-  }, [quoteCategory])
-
-  useEffect(() => {
-    fetchFact()
-  }, [factCategory])
-
+  useEffect(() => { fetchQuote(); fetchFact() }, [])
+  useEffect(() => { fetchQuote() }, [quoteCategory])
+  useEffect(() => { fetchFact() }, [factCategory])
   const fetchQuote = () => {
-    const now = Date.now()
-    if (now - lastFetch < 5000) return
-    setLastFetch(now)
-    setLoading(true)
-    let pool = []
-    if (quoteCategory === 'All') {
-      pool = getAllQuotesPool()
-    } else {
-      pool = QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || []
-    }
-    const random = pool[Math.floor(Math.random() * pool.length)]
-    setCurrentQuote(random)
-    setLoading(false)
+    if (Date.now() - lastFetch < 5000) return; setLastFetch(Date.now()); setLoading(true)
+    let pool = quoteCategory === 'All' ? getAllQuotesPool() : (QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || [])
+    setCurrentQuote(pool[Math.floor(Math.random() * pool.length)]); setLoading(false)
   }
-
   const fetchFact = async () => {
     setLoading(true)
-    try {
-      const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en')
-      if (!res.ok) throw new Error('API 1 failed')
-      const data = await res.json()
-      setCurrentFact({ text: data.text })
-    } catch {
-      try {
-        const res2 = await fetch('https://numbersapi.com/random/trivia?json')
-        if (!res2.ok) throw new Error('API 2 failed')
-        const data2 = await res2.json()
-        setCurrentFact({ text: data2.text })
-      } catch {
-        let pool = []
-        if (factCategory === 'All') {
-          Object.values(LOCAL_FACTS).forEach(arr => pool.push(...arr))
-        } else {
-          pool = LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science
-        }
-        const random = pool[Math.floor(Math.random() * pool.length)]
-        setCurrentFact(random)
-      }
-    }
+    try { const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en'); if (!res.ok) throw new Error(); setCurrentFact({ text: (await res.json()).text }) }
+    catch { try { const res2 = await fetch('https://numbersapi.com/random/trivia?json'); if (!res2.ok) throw new Error(); setCurrentFact({ text: (await res2.json()).text }) } catch { let pool = factCategory === 'All' ? Object.values(LOCAL_FACTS).flat() : (LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science); setCurrentFact(pool[Math.floor(Math.random() * pool.length)]) } }
     setLoading(false)
   }
-
-  return (
-    <>
-      {quoteOfDay && (
-        <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px', border: '2px solid var(--accent)', background: 'rgba(56,189,248,0.05)'}}>
-          <div className="flex justify-between items-start mb-2">
-            <p className="text-sm font-bold text-accent flex items-center gap-2">
-              <span>🌟</span> Quote of the Day
-            </p>
-          </div>
-          <p className="text-lg font-bold mb-3">{quoteOfDay.content}</p>
-          <p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p>
-          <div className="flex gap-2">
-            <button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button>
-            <button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button>
-          </div>
-        </div>
-      )}
-
-      <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
-        <div className="flex justify-between items-center mb-4">
-          <p className="font-bold">Explore Quotes</p>
-          <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>
-            {loading ? 'Loading...' : 'New Quote'}
-          </button>
-        </div>
-        <div className="sub-tabs mb-4">
-          {QUOTE_CATEGORIES.map(cat => (
-            <button key={cat} className={`sub-tab ${quoteCategory === cat ? 'active' : ''}`} onClick={() => setQuoteCategory(cat)}>
-              {cat}
-            </button>
-          ))}
-        </div>
-        {currentQuote && (
-          <div className="list-item">
-            <p className="font-bold mb-4">{currentQuote.content}</p>
-            <p className="text-sm text-muted mb-4">-- {currentQuote.author}</p>
-            <div className="flex gap-2">
-              <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
-              <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="glass mb-4" style={{padding: '20px', borderRadius: '20px'}}>
-        <div className="flex justify-between items-center mb-4">
-          <p className="font-bold">Did You Know?</p>
-          <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
-            {loading ? 'Loading...' : 'New Fact'}
-          </button>
-        </div>
-        <div className="sub-tabs mb-4">
-          {FACT_CATEGORIES.map(cat => (
-            <button key={cat} className={`sub-tab ${factCategory === cat ? 'active' : ''}`} onClick={() => setFactCategory(cat)}>
-              {cat}
-            </button>
-          ))}
-        </div>
-        {currentFact && (
-          <div className="list-item">
-            <p className="font-bold mb-4">{currentFact.text}</p>
-            <div className="flex gap-2">
-              <button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button>
-              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  )
+  return (<>
+    {quoteOfDay && (<div className="glass mb-4" style={{padding:'20px',borderRadius:'20px',border:'2px solid var(--accent)',background:'rgba(56,189,248,0.05)'}}><div className="flex justify-between items-start mb-2"><p className="text-sm font-bold text-accent flex items-center gap-2"><span>🌟</span> Quote of the Day</p></div><p className="text-lg font-bold mb-3">{quoteOfDay.content}</p><p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button></div></div>)}
+    <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Explore Quotes</p><button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>{loading?'Loading...':'New Quote'}</button></div><div className="sub-tabs mb-4">{QUOTE_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${quoteCategory===cat?'active':''}`} onClick={()=>setQuoteCategory(cat)}>{cat}</button>)}</div>{currentQuote && <div className="list-item"><p className="font-bold mb-4">{currentQuote.content}</p><p className="text-sm text-muted mb-4">-- {currentQuote.author}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button></div></div>}</div>
+    <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Did You Know?</p><button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>{loading?'Loading...':'New Fact'}</button></div><div className="sub-tabs mb-4">{FACT_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>)}</div>{currentFact && <div className="list-item"><p className="font-bold mb-4">{currentFact.text}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button><button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button></div></div>}</div>
+  </>)
 }
 
 function SavedTab({ showToast, shareQuote }) {
   const [savedQuotes, setSavedQuotes] = useState([])
   const [savedFacts, setSavedFacts] = useState([])
   const [activeSubTab, setActiveSubTab] = useState('quotes')
-
-  useEffect(() => {
-    loadSaved()
-  }, [])
-
-  const loadSaved = () => {
-    const quotes = JSON.parse(localStorage.getItem('zephye_saved_quotes') || '[]')
-    const facts = JSON.parse(localStorage.getItem('zephye_saved_facts') || '[]')
-    setSavedQuotes(quotes)
-    setSavedFacts(facts)
-  }
-
-  const deleteQuote = (id) => {
-    const updated = savedQuotes.filter(q => q.id !== id)
-    localStorage.setItem('zephye_saved_quotes', JSON.stringify(updated))
-    setSavedQuotes(updated)
-    showToast('Quote deleted')
-  }
-
-  const deleteFact = (id) => {
-    const updated = savedFacts.filter(f => f.id !== id)
-    localStorage.setItem('zephye_saved_facts', JSON.stringify(updated))
-    setSavedFacts(updated)
-    showToast('Fact deleted')
-  }
-
-  return (
-    <div className="glass" style={{padding: '20px', borderRadius: '20px'}}>
-      <div className="sub-tabs mb-4">
-        <button className={`sub-tab ${activeSubTab === 'quotes' ? 'active' : ''}`} onClick={() => setActiveSubTab('quotes')}>
-          Quotes ({savedQuotes.length})
-        </button>
-        <button className={`sub-tab ${activeSubTab === 'facts' ? 'active' : ''}`} onClick={() => setActiveSubTab('facts')}>
-          Facts ({savedFacts.length})
-        </button>
-      </div>
-      {activeSubTab === 'quotes' && (
-        savedQuotes.length === 0 ? (
-          <p className="text-center text-muted py-8">No saved quotes yet. Save some!</p>
-        ) : (
-          savedQuotes.map(quote => (
-            <div key={quote.id} className="list-item">
-              <p className="font-bold mb-2">{quote.quote_text}</p>
-              <p className="text-sm text-muted mb-3">-- {quote.quote_author}</p>
-              <div className="flex gap-2">
-                <button className="btn-share text-xs" onClick={() => shareQuote(quote.quote_text, quote.quote_author)}>Share</button>
-                <button className="btn-ghost text-xs" onClick={() => deleteQuote(quote.id)}>Delete</button>
-              </div>
-            </div>
-          ))
-        )
-      )}
-      {activeSubTab === 'facts' && (
-        savedFacts.length === 0 ? (
-          <p className="text-center text-muted py-8">No saved facts yet. Save some!</p>
-        ) : (
-          savedFacts.map(fact => (
-            <div key={fact.id} className="list-item">
-              <p className="font-bold mb-3">{fact.fact_text}</p>
-              <div className="flex gap-2">
-                <button className="btn-share text-xs" onClick={() => shareQuote(fact.fact_text, 'Fact')}>Share</button>
-                <button className="btn-ghost text-xs" onClick={() => deleteFact(fact.id)}>Delete</button>
-              </div>
-            </div>
-          ))
-        )
-      )}
-    </div>
-  )
+  useEffect(() => { setSavedQuotes(JSON.parse(localStorage.getItem('zephye_saved_quotes')||'[]')); setSavedFacts(JSON.parse(localStorage.getItem('zephye_saved_facts')||'[]')) }, [])
+  const deleteQuote = (id) => { const u = savedQuotes.filter(q => q.id!==id); localStorage.setItem('zephye_saved_quotes',JSON.stringify(u)); setSavedQuotes(u); showToast('Quote deleted') }
+  const deleteFact = (id) => { const u = savedFacts.filter(f => f.id!==id); localStorage.setItem('zephye_saved_facts',JSON.stringify(u)); setSavedFacts(u); showToast('Fact deleted') }
+  return (<div className="glass" style={{padding:'20px',borderRadius:'20px'}}><div className="sub-tabs mb-4"><button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>Quotes ({savedQuotes.length})</button><button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>Facts ({savedFacts.length})</button></div>{activeSubTab==='quotes'&&(savedQuotes.length===0?<p className="text-center text-muted py-8">No saved quotes yet.</p>:savedQuotes.map(q=>(<div key={q.id} className="list-item"><p className="font-bold mb-2">{q.quote_text}</p><p className="text-sm text-muted mb-3">-- {q.quote_author}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text,q.quote_author)}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteQuote(q.id)}>Delete</button></div></div>)))}{activeSubTab==='facts'&&(savedFacts.length===0?<p className="text-center text-muted py-8">No saved facts yet.</p>:savedFacts.map(f=>(<div key={f.id} className="list-item"><p className="font-bold mb-3">{f.fact_text}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareQuote(f.fact_text,'Fact')}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteFact(f.id)}>Delete</button></div></div>)))}</div>)
 }
 
-export default function App() {
-  return (
-    <AudioProvider>
-      <AppContent />
-    </AudioProvider>
-  )
-}
+export default function App() { return (<AudioProvider><AppContent /></AudioProvider>) }
