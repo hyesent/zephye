@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 
 // ============================================================================
-// AVAILABLE COUNTRIES FOR POLLEN/TRAFFIC
+// SUPPORTED COUNTRIES
 // ============================================================================
 
-const AVAILABLE_COUNTRIES = [
+const SUPPORTED_COUNTRIES = [
   { code: 'NG', name: 'Nigeria', lat: 9.082, lon: 8.675, flag: '🇳🇬' },
   { code: 'US', name: 'United States', lat: 37.090, lon: -95.713, flag: '🇺🇸' },
   { code: 'GB', name: 'United Kingdom', lat: 55.378, lon: -3.436, flag: '🇬🇧' },
@@ -32,173 +32,402 @@ const AVAILABLE_COUNTRIES = [
 ]
 
 // ============================================================================
-// MAP TAB COMPONENT
+// MAP TAB
 // ============================================================================
 
 export default function MapTab({ weather, location, aqi }) {
-  // ========================================================================
-  // STATE
-  // ========================================================================
+  // ─── State ────────────────────────────────────────────────────────────────
 
-  const [mapMode, setMapMode] = useState('traffic')
+  const [mode, setMode] = useState('weather')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapData, setMapData] = useState(null)
-  const [isInitialized, setIsInitialized] = useState(false)
-
-  // Get default location — NIGERIA as fallback
-  const getDefaultLocation = () => {
-    const defaultLoc = AVAILABLE_COUNTRIES.find(c => c.code === 'NG') || AVAILABLE_COUNTRIES[0]
-    return {
-      ...defaultLoc,
-      lat: defaultLoc.lat || 9.082,
-      lon: defaultLoc.lon || 8.675
-    }
-  }
-
   const [selectedLocation, setSelectedLocation] = useState(() => {
     const saved = localStorage.getItem('zephye_map_location')
-
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        const exists = AVAILABLE_COUNTRIES.find(c => c.code === parsed.code)
-
-        if (exists) {
-          return {
-            ...exists,
-            lat: parsed.lat || exists.lat,
-            lon: parsed.lon || exists.lon,
-            name: parsed.name || exists.name
-          }
-        }
+        const exists = SUPPORTED_COUNTRIES.find(c => c.code === parsed.code)
+        if (exists) return parsed
       } catch {}
     }
-
-    return getDefaultLocation()
+    return SUPPORTED_COUNTRIES.find(c => c.code === 'NG') || SUPPORTED_COUNTRIES[0]
   })
 
-  const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef([])
   const overlayRef = useRef(null)
 
-  // ========================================================================
-  // EFFECTS
-  // ========================================================================
+  // ─── Effects ──────────────────────────────────────────────────────────────
 
-  // Save map location to localStorage
   useEffect(() => {
-    if (selectedLocation && selectedLocation.code) {
-      localStorage.setItem(
-        'zephye_map_location',
-        JSON.stringify({
-          code: selectedLocation.code,
-          name: selectedLocation.name,
-          lat: selectedLocation.lat,
-          lon: selectedLocation.lon
-        })
-      )
-    }
+    localStorage.setItem(
+      'zephye_map_location',
+      JSON.stringify({ code: selectedLocation.code, name: selectedLocation.name })
+    )
   }, [selectedLocation])
 
-  // Fetch map data when location or mode changes
   useEffect(() => {
-    if (selectedLocation && selectedLocation.lat && selectedLocation.lon) {
+    if (selectedLocation) {
       fetchMapData(selectedLocation.lat, selectedLocation.lon)
     }
-  }, [selectedLocation, mapMode])
+  }, [selectedLocation, mode])
 
-  // Load Leaflet map — ONLY ONCE
   useEffect(() => {
-    if (!mapContainerRef.current || isInitialized) return
+    if (!mapRef.current && mapContainerRef.current) {
+      loadMap()
+    }
+  }, [])
 
-    const loadMap = async () => {
-      // Check if Leaflet is already loaded
-      if (typeof L !== 'undefined') {
-        initMap()
-        return
-      }
+  // ─── DOM Ref ──────────────────────────────────────────────────────────────
 
-      // Load Leaflet CSS
+  const mapContainerRef = useRef(null)
+
+  // ─── Load Map ─────────────────────────────────────────────────────────────
+
+  const loadMap = () => {
+    if (typeof L === 'undefined') {
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      script.onload = initMap
+      document.body.appendChild(script)
+
       const css = document.createElement('link')
       css.rel = 'stylesheet'
       css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
       document.head.appendChild(css)
-
-      // Load Leaflet JS
-      const script = document.createElement('script')
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-      script.onload = () => {
-        // Small delay to ensure L is fully loaded
-        setTimeout(initMap, 100)
-      }
-      document.body.appendChild(script)
+    } else {
+      initMap()
     }
+  }
 
-    loadMap()
-  }, [mapContainerRef.current])
+  const initMap = () => {
+    const map = L.map(mapContainerRef.current, {
+      center: [selectedLocation.lat, selectedLocation.lon],
+      zoom: 6,
+      zoomControl: false,
+      attributionControl: false
+    })
 
-  // ========================================================================
-  // FETCH MAP DATA
-  // ========================================================================
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map)
+
+    mapRef.current = map
+    setMapLoaded(true)
+
+    fetchMapData(selectedLocation.lat, selectedLocation.lon)
+  }
+
+  // ─── Fetch Data ──────────────────────────────────────────────────────────
 
   const fetchMapData = async (lat, lon) => {
-    if (!lat || !lon) {
-      console.warn('Invalid coordinates for map data fetch')
-      return
-    }
-
     try {
       let data = {}
 
-      if (mapMode === 'pollen') {
-        const pollenRes = await fetch(
+      if (mode === 'pollen') {
+        const res = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=pollen&timezone=auto`
         )
-
-        if (pollenRes.ok) {
-          data.pollen = await pollenRes.json()
-        } else {
-          console.warn('Pollen API returned:', pollenRes.status)
-          data.pollen = null
-        }
+        data = await res.json()
       }
 
-      if (mapMode === 'weather') {
-        const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`
+      if (mode === 'weather') {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min,uv_index_max&timezone=auto`
         )
-
-        if (weatherRes.ok) {
-          data.weather = await weatherRes.json()
-        } else {
-          console.warn('Weather API returned:', weatherRes.status)
-          data.weather = null
-        }
-      }
-
-      // Traffic mode — just mark as ready
-      if (mapMode === 'traffic') {
-        data.traffic = { status: 'ready' }
+        data = await res.json()
       }
 
       setMapData(data)
-
-      // Update map overlay if map is ready
-      if (mapRef.current && mapLoaded) {
-        updateMapOverlay(mapRef.current, mapMode, selectedLocation, data)
-      }
+      updateMap(data)
     } catch (error) {
       console.error('Map data fetch failed:', error)
     }
   }
 
-  // ========================================================================
-  // SEARCH FUNCTIONALITY
-  // ========================================================================
+  // ─── Update Map ──────────────────────────────────────────────────────────
+
+  const updateMap = (data) => {
+    const map = mapRef.current
+    if (!map || !mapLoaded) return
+
+    // Clear markers
+    markersRef.current.forEach(m => map.removeLayer(m))
+    markersRef.current = []
+
+    if (overlayRef.current) {
+      map.removeLayer(overlayRef.current)
+      overlayRef.current = null
+    }
+
+    const lat = selectedLocation.lat
+    const lon = selectedLocation.lon
+
+    // ─── Home SVG Icon ────────────────────────────────────────────────────
+
+    const homeIcon = L.divIcon({
+      className: 'home-marker',
+      html: `
+        <div style="
+          background: rgba(56, 189, 248, 0.15);
+          backdrop-filter: blur(12px);
+          padding: 12px 16px;
+          border-radius: 16px;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          box-shadow: 0 4px 24px rgba(56, 189, 248, 0.2);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #f8fafc;
+          font-size: 13px;
+        ">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
+          </svg>
+          <div>
+            <div style="font-weight: 600; font-size: 14px;">${selectedLocation.name}</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.5);">${selectedLocation.flag} ${selectedLocation.code}</div>
+          </div>
+        </div>
+      `,
+      iconSize: [200, 50],
+      iconAnchor: [100, 25]
+    })
+
+    const homeMarker = L.marker([lat, lon], { icon: homeIcon })
+    markersRef.current.push(homeMarker)
+    map.addLayer(homeMarker)
+
+    // ─── Mode-specific overlay ────────────────────────────────────────────
+
+    if (mode === 'weather' && data?.current_weather) {
+      const w = data.current_weather
+      const code = w.weather_code || 0
+      const temp = Math.round(w.temperature || 0)
+
+      const emojis = {
+        0: '☀️', 1: '☀️', 2: '⛅', 3: '☁️',
+        45: '🌫️', 48: '🌫️',
+        51: '🌦️', 53: '🌦️', 55: '🌦️',
+        61: '🌧️', 63: '🌧️', 65: '🌧️',
+        71: '❄️', 73: '❄️', 75: '❄️',
+        80: '🌧️', 81: '🌧️', 82: '🌧️',
+        95: '⛈️', 96: '⛈️', 99: '⛈️'
+      }
+
+      const names = {
+        0: 'Clear', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+        45: 'Fog', 48: 'Fog',
+        51: 'Light Drizzle', 53: 'Moderate Drizzle', 55: 'Heavy Drizzle',
+        61: 'Light Rain', 63: 'Moderate Rain', 65: 'Heavy Rain',
+        71: 'Light Snow', 73: 'Moderate Snow', 75: 'Heavy Snow',
+        80: 'Rain Showers', 81: 'Heavy Showers', 82: 'Violent Showers',
+        95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Heavy Thunderstorm'
+      }
+
+      const emoji = emojis[code] || '🌤️'
+      const name = names[code] || 'Unknown'
+
+      const weatherIcon = L.divIcon({
+        className: 'weather-marker',
+        html: `
+          <div style="
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(16px);
+            padding: 16px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            text-align: center;
+            min-width: 100px;
+          ">
+            <div style="font-size: 40px; margin-bottom: 4px;">${emoji}</div>
+            <div style="font-size: 28px; font-weight: 700; color: #f8fafc;">${temp}°C</div>
+            <div style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 2px;">${name}</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 6px;">
+              ${selectedLocation.name}
+            </div>
+          </div>
+        `,
+        iconSize: [140, 120],
+        iconAnchor: [70, 60]
+      })
+
+      const marker = L.marker([lat + 0.15, lon + 0.15], { icon: weatherIcon })
+      markersRef.current.push(marker)
+      map.addLayer(marker)
+
+      // ─── Weather Details Popup ──────────────────────────────────────────
+
+      const daily = data.daily
+      if (daily) {
+        const high = daily.temperature_2m_max?.[0]
+        const low = daily.temperature_2m_min?.[0]
+        const uv = daily.uv_index_max?.[0]
+
+        let details = ``
+        if (high) details += `⬆ ${Math.round(high)}°C`
+        if (low) details += ` ⬇ ${Math.round(low)}°C`
+        if (uv) details += ` · UV ${Math.round(uv)}`
+
+        if (details) {
+          const detailIcon = L.divIcon({
+            className: 'detail-marker',
+            html: `
+              <div style="
+                background: rgba(15,23,42,0.7);
+                backdrop-filter: blur(8px);
+                padding: 6px 14px;
+                border-radius: 12px;
+                border: 1px solid rgba(255,255,255,0.06);
+                font-size: 12px;
+                color: rgba(255,255,255,0.7);
+              ">
+                ${details}
+              </div>
+            `,
+            iconSize: [160, 30],
+            iconAnchor: [80, 15]
+          })
+
+          const detailMarker = L.marker([lat - 0.15, lon - 0.1], { icon: detailIcon })
+          markersRef.current.push(detailMarker)
+          map.addLayer(detailMarker)
+        }
+      }
+    }
+
+    // ─── Pollen Mode ──────────────────────────────────────────────────────
+
+    if (mode === 'pollen' && data?.daily?.pollen) {
+      const pollen = data.daily.pollen
+      const types = ['alder', 'birch', 'grass', 'mugwort', 'ragweed', 'tree']
+      const colors = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#dc2626']
+      const labels = ['Very Low', 'Low', 'Moderate', 'High', 'Very High', 'Extreme']
+
+      types.forEach((type, i) => {
+        const value = pollen[type]?.[0] || 0
+        const idx = Math.min(Math.floor(value / 2), colors.length - 1)
+        const color = colors[idx] || colors[0]
+        const label = labels[idx] || labels[0]
+
+        const radius = 15000 + value * 4000
+
+        const circle = L.circle(
+          [lat + (i - 2.5) * 0.12, lon + ((i % 3) - 1) * 0.15],
+          {
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.2,
+            weight: 2,
+            opacity: 0.6
+          }
+        )
+
+        circle.bindPopup(`
+          <div style="font-size: 14px; color: #1a1a2e; font-weight: 500;">
+            <strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong><br>
+            Level: ${label}<br>
+            Count: ${value}/10
+          </div>
+        `)
+
+        markersRef.current.push(circle)
+        map.addLayer(circle)
+      })
+
+      // ─── Pollen Summary ──────────────────────────────────────────────────
+
+      const totalPollen = types.reduce((sum, t) => sum + (pollen[t]?.[0] || 0), 0)
+      const avgPollen = Math.round(totalPollen / types.length)
+
+      const summaryIcon = L.divIcon({
+        className: 'pollen-summary',
+        html: `
+          <div style="
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(16px);
+            padding: 12px 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            text-align: center;
+          ">
+            <div style="font-size: 14px; font-weight: 600; color: #f8fafc;">🌿 Pollen Forecast</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px;">
+              Average: ${avgPollen}/10 · ${selectedLocation.name}
+            </div>
+          </div>
+        `,
+        iconSize: [180, 50],
+        iconAnchor: [90, 25]
+      })
+
+      const summaryMarker = L.marker([lat + 0.2, lon + 0.2], { icon: summaryIcon })
+      markersRef.current.push(summaryMarker)
+      map.addLayer(summaryMarker)
+    }
+
+    // ─── Traffic Mode ──────────────────────────────────────────────────────
+
+    if (mode === 'traffic') {
+      // Traffic overlay using TomTom (free tier)
+      const trafficLayer = L.tileLayer(
+        'https://api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=YOUR_TOMTOM_KEY',
+        {
+          opacity: 0.6,
+          attribution: '© TomTom',
+          _isOverlay: true
+        }
+      )
+
+      overlayRef.current = trafficLayer
+      map.addLayer(trafficLayer)
+
+      const trafficIcon = L.divIcon({
+        className: 'traffic-info',
+        html: `
+          <div style="
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(16px);
+            padding: 12px 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            text-align: center;
+          ">
+            <div style="font-size: 14px; font-weight: 600; color: #f8fafc;">🚦 Traffic Layer</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px;">
+              ${selectedLocation.name}
+            </div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 4px;">
+              Real-time flow data
+            </div>
+          </div>
+        `,
+        iconSize: [160, 60],
+        iconAnchor: [80, 30]
+      })
+
+      const trafficMarker = L.marker([lat + 0.1, lon + 0.1], { icon: trafficIcon })
+      markersRef.current.push(trafficMarker)
+      map.addLayer(trafficMarker)
+    }
+
+    // ─── Zoom to show all markers ──────────────────────────────────────────
+
+    if (markersRef.current.length > 0) {
+      const group = L.featureGroup(markersRef.current)
+      map.fitBounds(group.getBounds(), { padding: [50, 50], maxZoom: 8 })
+    }
+  }
+
+  // ─── Search ──────────────────────────────────────────────────────────────
 
   const handleSearch = async (query) => {
     if (!query || query.length < 2) {
@@ -209,39 +438,36 @@ export default function MapTab({ weather, location, aqi }) {
     setIsSearching(true)
 
     try {
-      // Search using Open-Meteo geocoding API
       const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json`
       )
 
       const data = await res.json()
 
-      if (data.results && data.results.length > 0) {
-        // Filter to only include countries in our supported list
+      if (data.results?.length) {
         const results = data.results
           .map(r => {
-            const countryCode = r.country_code?.toUpperCase() || 'US'
-            const isSupported = AVAILABLE_COUNTRIES.some(c => c.code === countryCode)
+            const code = r.country_code?.toUpperCase() || 'US'
+            const supported = SUPPORTED_COUNTRIES.some(c => c.code === code)
 
             return {
               id: r.id,
-              name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
+              name: `${r.name}${r.admin1 ? `, ${r.admin1}` : ''}`,
+              fullName: `${r.name}${r.admin1 ? `, ${r.admin1}` : ''}, ${r.country}`,
               lat: r.latitude,
               lon: r.longitude,
-              country_code: countryCode,
-              admin1: r.admin1,
-              admin2: r.admin2,
-              supported: isSupported
+              country_code: code,
+              supported,
+              flag: SUPPORTED_COUNTRIES.find(c => c.code === code)?.flag || '🌍'
             }
           })
-          .filter(r => r.supported && r.lat && r.lon) // Only supported with valid coords
+          .filter(r => r.supported)
 
         setSearchResults(results)
       } else {
         setSearchResults([])
       }
-    } catch (error) {
-      console.error('Search failed:', error)
+    } catch {
       setSearchResults([])
     }
 
@@ -249,21 +475,19 @@ export default function MapTab({ weather, location, aqi }) {
   }
 
   const selectLocation = (result) => {
-    const country = AVAILABLE_COUNTRIES.find(c => c.code === result.country_code)
+    const country = SUPPORTED_COUNTRIES.find(c => c.code === result.country_code)
 
     if (country) {
-      const newLocation = {
+      setSelectedLocation({
         ...country,
         lat: result.lat,
         lon: result.lon,
-        name: result.name
-      }
+        name: result.fullName
+      })
 
-      setSelectedLocation(newLocation)
-
-      // Center map on selected location
       if (mapRef.current && mapLoaded) {
         mapRef.current.setView([result.lat, result.lon], 8)
+        setTimeout(() => fetchMapData(result.lat, result.lon), 300)
       }
     }
 
@@ -271,472 +495,61 @@ export default function MapTab({ weather, location, aqi }) {
     setSearchResults([])
   }
 
-  // ========================================================================
-  // MAP INITIALIZATION
-  // ========================================================================
+  // ─── Switch Mode ─────────────────────────────────────────────────────────
 
-  const initMap = () => {
-    // Prevent double initialization
-    if (isInitialized || mapRef.current) return
-
-    // Ensure we have valid coordinates
-    const lat = selectedLocation?.lat || 9.082
-    const lon = selectedLocation?.lon || 8.675
-
-    try {
-      const map = L.map(mapContainerRef.current, {
-        center: [lat, lon],
-        zoom: 6,
-        zoomControl: false,
-        attributionControl: false
-      })
-
-      // Base tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-      }).addTo(map)
-
-      mapRef.current = map
-      setMapLoaded(true)
-      setIsInitialized(true)
-
-      // Fetch initial data
-      fetchMapData(lat, lon)
-    } catch (error) {
-      console.error('Map initialization failed:', error)
-
-      // Retry after a delay
-      setTimeout(() => {
-        if (!isInitialized) {
-          initMap()
-        }
-      }, 1000)
+  const switchMode = (newMode) => {
+    setMode(newMode)
+    if (mapRef.current && mapLoaded) {
+      setTimeout(() => fetchMapData(selectedLocation.lat, selectedLocation.lon), 300)
     }
   }
 
-  // ========================================================================
-  // UPDATE MAP OVERLAY
-  // ========================================================================
-
-  const updateMapOverlay = (map, mode, location, data) => {
-    if (!map) return
-
-    // Clear existing overlays
-    markersRef.current.forEach(marker => {
-      try {
-        if (map.hasLayer(marker)) {
-          map.removeLayer(marker)
-        }
-      } catch (e) {}
-    })
-    markersRef.current = []
-
-    if (overlayRef.current) {
-      try {
-        if (map.hasLayer(overlayRef.current)) {
-          map.removeLayer(overlayRef.current)
-        }
-      } catch (e) {}
-      overlayRef.current = null
-    }
-
-    // Ensure we have valid coordinates
-    const lat = location?.lat || 9.082
-    const lon = location?.lon || 8.675
-
-    // ======================================================================
-    // TRAFFIC MODE
-    // ======================================================================
-
-    if (mode === 'traffic') {
-      // Show traffic info marker
-      const infoMarker = L.marker([lat, lon], {
-        icon: L.divIcon({
-          className: 'map-info-marker',
-          html: `<div style="
-            background: rgba(15,23,42,0.85);
-            backdrop-filter: blur(10px);
-            padding: 8px 14px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #f8fafc;
-            font-size: 13px;
-            font-weight: 500;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          ">
-            🚦 Traffic Layer
-            <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-              ${location?.name || 'Current Location'}
-            </div>
-          </div>`,
-          iconSize: [180, 60],
-          iconAnchor: [90, 30]
-        })
-      })
-
-      markersRef.current.push(infoMarker)
-
-      try {
-        map.addLayer(infoMarker)
-      } catch (e) {
-        console.warn('Could not add traffic marker:', e)
-      }
-    }
-
-    // ======================================================================
-    // POLLEN MODE
-    // ======================================================================
-
-    else if (mode === 'pollen') {
-      const pollenData = data?.pollen?.daily?.pollen
-
-      if (pollenData) {
-        const pollenTypes = ['alder', 'birch', 'grass', 'mugwort', 'ragweed', 'tree']
-        const colors = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#dc2626']
-
-        pollenTypes.forEach((type, i) => {
-          const value = pollenData[type]?.[0] || 0
-
-          if (value > 0) {
-            const colorIndex = Math.min(Math.floor(value / 2), colors.length - 1)
-            const color = colors[colorIndex] || colors[0]
-            const radius = 20000 + value * 5000
-
-            const circle = L.circle(
-              [lat + (i - 2.5) * 0.15, lon + ((i % 3) - 1) * 0.2],
-              {
-                radius: radius,
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.25,
-                weight: 2,
-                _isOverlay: true
-              }
-            )
-
-            const level = value > 7 ? 'Very High' : value > 5 ? 'High' : value > 3 ? 'Medium' : 'Low'
-            const emoji = value > 7 ? '🔴' : value > 5 ? '🟠' : value > 3 ? '🟡' : '🟢'
-
-            circle.bindPopup(`
-              <div style="font-size: 14px;">
-                <strong>${type.charAt(0).toUpperCase() + type.slice(1)} Pollen</strong><br>
-                Level: ${emoji} ${level}<br>
-                Count: ${value}/10
-              </div>
-            `)
-
-            markersRef.current.push(circle)
-
-            try {
-              map.addLayer(circle)
-            } catch (e) {
-              console.warn('Could not add pollen circle:', e)
-            }
-          }
-        })
-
-        // Add summary marker
-        const summaryMarker = L.marker([lat, lon], {
-          icon: L.divIcon({
-            className: 'map-info-marker',
-            html: `<div style="
-              background: rgba(15,23,42,0.85);
-              backdrop-filter: blur(10px);
-              padding: 8px 14px;
-              border-radius: 12px;
-              border: 1px solid rgba(255,255,255,0.1);
-              color: #f8fafc;
-              font-size: 13px;
-              font-weight: 500;
-              text-align: center;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            ">
-              🌿 Pollen Forecast
-              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                ${location?.name || 'Current Location'}
-              </div>
-            </div>`,
-            iconSize: [180, 60],
-            iconAnchor: [90, 30]
-          })
-        })
-
-        markersRef.current.push(summaryMarker)
-
-        try {
-          map.addLayer(summaryMarker)
-        } catch (e) {
-          console.warn('Could not add pollen summary:', e)
-        }
-      } else {
-        // Fallback if no pollen data
-        const fallbackMarker = L.marker([lat, lon], {
-          icon: L.divIcon({
-            className: 'map-info-marker',
-            html: `<div style="
-              background: rgba(15,23,42,0.85);
-              backdrop-filter: blur(10px);
-              padding: 8px 14px;
-              border-radius: 12px;
-              border: 1px solid rgba(255,255,255,0.1);
-              color: #f8fafc;
-              font-size: 13px;
-              font-weight: 500;
-              text-align: center;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            ">
-              🌿 Pollen Data Unavailable
-              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                ${location?.name || 'Current Location'}
-              </div>
-            </div>`,
-            iconSize: [200, 60],
-            iconAnchor: [100, 30]
-          })
-        })
-
-        markersRef.current.push(fallbackMarker)
-
-        try {
-          map.addLayer(fallbackMarker)
-        } catch (e) {
-          console.warn('Could not add pollen fallback:', e)
-        }
-      }
-    }
-
-    // ======================================================================
-    // WEATHER MODE
-    // ======================================================================
-
-    else if (mode === 'weather') {
-      const currentWeather = data?.weather?.current_weather
-
-      if (currentWeather) {
-        const code = currentWeather.weather_code || 0
-        const temp = currentWeather.temperature || 0
-
-        const getWeatherEmoji = (c) => {
-          if (c === 0 || c === 1) return '☀️'
-          if (c === 2) return '⛅'
-          if (c === 3) return '☁️'
-          if (c >= 95) return '⛈️'
-          if (c >= 61 && c <= 82) return '🌧️'
-          if (c >= 51 && c <= 57) return '🌦️'
-          if (c >= 71 && c <= 77) return '❄️'
-          if (c === 45 || c === 48) return '🌫️'
-          return '🌤️'
-        }
-
-        const getConditionName = (c) => {
-          const map = {
-            0: 'Clear Sky',
-            1: 'Mainly Clear',
-            2: 'Partly Cloudy',
-            3: 'Overcast',
-            45: 'Fog',
-            48: 'Fog',
-            51: 'Light Drizzle',
-            53: 'Moderate Drizzle',
-            55: 'Heavy Drizzle',
-            61: 'Light Rain',
-            63: 'Moderate Rain',
-            65: 'Heavy Rain',
-            71: 'Light Snow',
-            73: 'Moderate Snow',
-            75: 'Heavy Snow',
-            80: 'Rain Showers',
-            81: 'Heavy Rain Showers',
-            82: 'Violent Rain Showers',
-            95: 'Thunderstorm',
-            96: 'Thunderstorm with Hail',
-            99: 'Heavy Thunderstorm'
-          }
-          return map[c] || 'Unknown'
-        }
-
-        // Create main weather marker
-        const weatherMarker = L.marker([lat, lon], {
-          icon: L.divIcon({
-            className: 'map-info-marker',
-            html: `<div style="
-              background: rgba(15,23,42,0.85);
-              backdrop-filter: blur(10px);
-              padding: 12px 18px;
-              border-radius: 16px;
-              border: 1px solid rgba(255,255,255,0.1);
-              color: #f8fafc;
-              font-size: 14px;
-              font-weight: 500;
-              text-align: center;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-              min-width: 120px;
-            ">
-              <div style="font-size: 36px; margin-bottom: 4px;">${getWeatherEmoji(code)}</div>
-              <div style="font-size: 20px; font-weight: 700;">${Math.round(temp)}°C</div>
-              <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px;">
-                ${getConditionName(code)}
-              </div>
-              <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px;">
-                ${location?.name || 'Current Location'}
-              </div>
-            </div>`,
-            iconSize: [140, 110],
-            iconAnchor: [70, 55]
-          })
-        })
-
-        markersRef.current.push(weatherMarker)
-
-        try {
-          map.addLayer(weatherMarker)
-        } catch (e) {
-          console.warn('Could not add weather marker:', e)
-        }
-
-        // Add temperature range if available
-        if (data.weather?.daily) {
-          const daily = data.weather.daily
-          const todayHigh = daily.temperature_2m_max?.[0]
-          const todayLow = daily.temperature_2m_min?.[0]
-
-          if (todayHigh || todayLow) {
-            const infoMarker = L.marker(
-              [lat + 0.2, lon],
-              {
-                icon: L.divIcon({
-                  className: 'map-info-marker',
-                  html: `<div style="
-                    background: rgba(15,23,42,0.8);
-                    backdrop-filter: blur(10px);
-                    padding: 6px 12px;
-                    border-radius: 10px;
-                    border: 1px solid rgba(255,255,255,0.08);
-                    color: #f8fafc;
-                    font-size: 12px;
-                    font-weight: 400;
-                    text-align: center;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                  ">
-                    📊 ${todayHigh ? Math.round(todayHigh) + '°' : '--'} / ${todayLow ? Math.round(todayLow) + '°' : '--'}
-                  </div>`,
-                  iconSize: [80, 30],
-                  iconAnchor: [40, 15]
-                })
-              }
-            )
-
-            markersRef.current.push(infoMarker)
-
-            try {
-              map.addLayer(infoMarker)
-            } catch (e) {
-              console.warn('Could not add temp range marker:', e)
-            }
-          }
-        }
-      } else {
-        // Fallback if no weather data
-        const fallbackMarker = L.marker([lat, lon], {
-          icon: L.divIcon({
-            className: 'map-info-marker',
-            html: `<div style="
-              background: rgba(15,23,42,0.85);
-              backdrop-filter: blur(10px);
-              padding: 8px 14px;
-              border-radius: 12px;
-              border: 1px solid rgba(255,255,255,0.1);
-              color: #f8fafc;
-              font-size: 13px;
-              font-weight: 500;
-              text-align: center;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            ">
-              ⛅ Weather Data Unavailable
-              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                ${location?.name || 'Current Location'}
-              </div>
-            </div>`,
-            iconSize: [200, 60],
-            iconAnchor: [100, 30]
-          })
-        })
-
-        markersRef.current.push(fallbackMarker)
-
-        try {
-          map.addLayer(fallbackMarker)
-        } catch (e) {
-          console.warn('Could not add weather fallback:', e)
-        }
-      }
-    }
-  }
-
-  // ========================================================================
-  // HANDLE MODE SWITCH
-  // ========================================================================
-
-  const handleModeSwitch = (mode) => {
-    setMapMode(mode)
-
-    if (mapRef.current && mapLoaded && selectedLocation) {
-      const lat = selectedLocation.lat || 9.082
-      const lon = selectedLocation.lon || 8.675
-      fetchMapData(lat, lon)
-    }
-  }
-
-  // ========================================================================
-  // RENDER
-  // ========================================================================
+  // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className="map-tab-container glass" style={{ padding: '16px' }}>
-      {/* Header with capsule and search */}
+      {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '16px',
         flexWrap: 'wrap',
-        gap: '10px'
+        gap: '12px'
       }}>
-        <div className="map-capsule-switch" style={{
+        {/* Capsule Switch */}
+        <div style={{
           display: 'flex',
           background: 'rgba(10,22,40,0.8)',
           borderRadius: '40px',
           padding: '4px',
-          border: '1px solid rgba(100,150,255,0.2)',
-          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(100,150,255,0.15)',
           gap: '2px'
         }}>
-          {['traffic', 'pollen', 'weather'].map((mode) => (
+          {['weather', 'pollen', 'traffic'].map((m) => (
             <button
-              key={mode}
-              onClick={() => handleModeSwitch(mode)}
-              className={`map-capsule-btn ${mapMode === mode ? 'active' : ''}`}
+              key={m}
+              onClick={() => switchMode(m)}
               style={{
-                padding: '6px 16px',
+                padding: '7px 18px',
                 borderRadius: '30px',
                 fontSize: '12px',
                 fontWeight: '600',
                 border: 'none',
                 cursor: 'pointer',
-                background: mapMode === mode ? 'rgba(56,189,248,0.2)' : 'transparent',
-                color: mapMode === mode ? '#7dd3fc' : 'rgba(255,255,255,0.5)',
+                background: mode === m ? 'rgba(56,189,248,0.2)' : 'transparent',
+                color: mode === m ? '#7dd3fc' : 'rgba(255,255,255,0.4)',
                 transition: 'all 0.3s ease',
                 whiteSpace: 'nowrap'
               }}
             >
-              {mode === 'traffic' ? '🚦 Traffic' : mode === 'pollen' ? '🌿 Pollen' : '⛅ Weather'}
+              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🚦 Traffic'}
             </button>
           ))}
         </div>
 
-        <div style={{ position: 'relative', flex: 1, maxWidth: '300px', minWidth: '150px' }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1, maxWidth: '320px', minWidth: '160px' }}>
           <input
             type="text"
             value={searchQuery}
@@ -745,43 +558,30 @@ export default function MapTab({ weather, location, aqi }) {
               handleSearch(e.target.value)
             }}
             placeholder="Search city, state, LGA..."
-            className="map-search-input"
             style={{
               width: '100%',
-              padding: '8px 14px',
+              padding: '8px 16px',
               borderRadius: '30px',
               background: 'rgba(10,22,40,0.8)',
-              border: '1px solid rgba(100,150,255,0.2)',
+              border: '1px solid rgba(100,150,255,0.15)',
               color: '#e2e8f0',
               fontSize: '13px',
               outline: 'none'
             }}
           />
 
-          {isSearching && (
-            <span style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              fontSize: '14px'
-            }}>
-              ⏳
-            </span>
-          )}
-
           {searchResults.length > 0 && (
             <div style={{
               position: 'absolute',
-              top: '110%',
+              top: 'calc(100% + 6px)',
               left: 0,
               right: 0,
               maxHeight: '200px',
               overflowY: 'auto',
-              background: 'rgba(10,22,40,0.95)',
+              background: 'rgba(10,22,40,0.96)',
               backdropFilter: 'blur(20px)',
-              borderRadius: '16px',
-              border: '1px solid rgba(100,150,255,0.15)',
+              borderRadius: '14px',
+              border: '1px solid rgba(100,150,255,0.1)',
               padding: '6px',
               zIndex: 50,
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
@@ -802,13 +602,13 @@ export default function MapTab({ weather, location, aqi }) {
                     color: '#e2e8f0',
                     fontSize: '13px',
                     cursor: 'pointer',
-                    transition: 'background 0.2s'
+                    transition: 'background 0.15s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(56,189,248,0.1)'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(56,189,248,0.08)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <span>📍</span>
-                  <span style={{ flex: 1 }}>{result.name}</span>
+                  <span style={{ fontSize: '16px' }}>{result.flag}</span>
+                  <span style={{ flex: 1, textAlign: 'left' }}>{result.fullName}</span>
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
                     {result.country_code}
                   </span>
@@ -819,17 +619,16 @@ export default function MapTab({ weather, location, aqi }) {
         </div>
       </div>
 
-      {/* Map Container */}
+      {/* Map */}
       <div
         ref={mapContainerRef}
-        className="map-wrapper"
         style={{
           width: '100%',
-          height: '400px',
+          height: '420px',
           borderRadius: '16px',
           overflow: 'hidden',
           background: '#0a1628',
-          border: '1px solid rgba(100,150,255,0.1)',
+          border: '1px solid rgba(100,150,255,0.08)',
           position: 'relative'
         }}
       >
@@ -841,50 +640,46 @@ export default function MapTab({ weather, location, aqi }) {
             height: '100%',
             flexDirection: 'column',
             gap: '12px',
-            color: 'rgba(255,255,255,0.3)',
+            color: 'rgba(255,255,255,0.25)',
             fontSize: '14px'
           }}>
-            <span style={{ fontSize: '32px' }}>🗺️</span>
+            <span style={{ fontSize: '36px' }}>🗺️</span>
             <div>Loading map...</div>
           </div>
         )}
       </div>
 
-      {/* Map Legend */}
+      {/* Legend */}
       <div style={{
         marginTop: '12px',
         display: 'flex',
         gap: '20px',
         justifyContent: 'center',
         fontSize: '11px',
-        color: 'rgba(255,255,255,0.4)',
+        color: 'rgba(255,255,255,0.35)',
         flexWrap: 'wrap'
       }}>
-        {mapMode === 'traffic' && (
+        {mode === 'weather' && (
           <>
-            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> Heavy</span>
-            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Moderate</span>
-            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Light</span>
+            <span>📍 {selectedLocation.flag} {selectedLocation.name}</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Traffic Data</span>
+            <span>Open-Meteo</span>
           </>
         )}
-
-        {mapMode === 'pollen' && (
+        {mode === 'pollen' && (
           <>
-            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> High</span>
-            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Medium</span>
-            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Low</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Low</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Medium</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> High</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Pollen Data</span>
+            <span>Open-Meteo</span>
           </>
         )}
-
-        {mapMode === 'weather' && (
+        {mode === 'traffic' && (
           <>
-            <span>📍 {selectedLocation?.flag || '📍'} {selectedLocation?.name || 'Current Location'}</span>
+            <span>🚦 TomTom Traffic</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Weather Data</span>
+            <span>Real-time flow</span>
           </>
         )}
       </div>
