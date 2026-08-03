@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 // ============================================================================
-// AVAILABLE COUNTRIES FOR POLLEN/TRAFFIC (Open-Meteo supported)
+// AVAILABLE COUNTRIES FOR POLLEN/TRAFFIC
 // ============================================================================
 
 const AVAILABLE_COUNTRIES = [
@@ -28,84 +28,73 @@ const AVAILABLE_COUNTRIES = [
   { code: 'ZA', name: 'South Africa', lat: -30.559, lon: 22.938, flag: '🇿🇦' },
   { code: 'EG', name: 'Egypt', lat: 26.821, lon: 30.802, flag: '🇪🇬' },
   { code: 'KE', name: 'Kenya', lat: -1.292, lon: 36.822, flag: '🇰🇪' },
-  { code: 'GH', name: 'Ghana', lat: 7.946, lon: -1.023, flag: '🇬🇭' },
-  { code: 'ZA', name: 'South Africa', lat: -30.559, lon: 22.938, flag: '🇿🇦' },
+  { code: 'GH', name: 'Ghana', lat: 7.946, lon: -1.023, flag: '🇬🇭' }
 ]
 
+// ============================================================================
+// MAP TAB COMPONENT
+// ============================================================================
+
 export default function MapTab({ weather, location, aqi }) {
+  // ========================================================================
+  // STATE
+  // ========================================================================
+
   const [mapMode, setMapMode] = useState('traffic')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
-  const [selectedCountry, setSelectedCountry] = useState(
-    () => {
-      const saved = localStorage.getItem('zephye_map_location')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          // Verify it's still a valid country
-          const exists = AVAILABLE_COUNTRIES.find(c => c.code === parsed.code)
-          if (exists) return parsed.code
-        } catch {}
-      }
-      return 'NG'
-    }
-  )
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [pollenData, setPollenData] = useState(null)
-  const [weatherMapData, setWeatherMapData] = useState(null)
-  
+  const [mapData, setMapData] = useState(null)
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    const saved = localStorage.getItem('zephye_map_location')
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        const exists = AVAILABLE_COUNTRIES.find(c => c.code === parsed.code)
+
+        if (exists) return parsed
+      } catch {}
+    }
+
+    return AVAILABLE_COUNTRIES.find(c => c.code === 'NG') || AVAILABLE_COUNTRIES[0]
+  })
+
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const markersRef = useRef([])
   const overlayRef = useRef(null)
 
-  const country = AVAILABLE_COUNTRIES.find(c => c.code === selectedCountry) || AVAILABLE_COUNTRIES[0]
+  // ========================================================================
+  // EFFECTS
+  // ========================================================================
 
   // Save map location to localStorage
   useEffect(() => {
-    localStorage.setItem('zephye_map_location', JSON.stringify({ code: selectedCountry, name: country.name }))
-  }, [selectedCountry, country])
-
-  // Search for countries
-  const handleSearch = async (query) => {
-    if (!query || query.length < 2) {
-      setSearchResults([])
-      return
-    }
-
-    setIsSearching(true)
-    const q = query.toLowerCase()
-    const results = AVAILABLE_COUNTRIES.filter(c => 
-      c.name.toLowerCase().includes(q) || 
-      c.code.toLowerCase().includes(q)
+    localStorage.setItem(
+      'zephye_map_location',
+      JSON.stringify({ code: selectedLocation.code, name: selectedLocation.name })
     )
-    setSearchResults(results)
-    setIsSearching(false)
-  }
+  }, [selectedLocation])
 
-  const selectCountry = (code) => {
-    setSelectedCountry(code)
-    setSearchQuery('')
-    setSearchResults([])
-    if (mapRef.current && mapLoaded) {
-      const c = AVAILABLE_COUNTRIES.find(c => c.code === code) || AVAILABLE_COUNTRIES[0]
-      mapRef.current.setView([c.lat, c.lon], 6)
-      applyOverlay(mapRef.current, mapMode, c)
+  // Fetch map data when location or mode changes
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchMapData(selectedLocation.lat, selectedLocation.lon)
     }
-  }
+  }, [selectedLocation, mapMode])
 
   // Load Leaflet map
   useEffect(() => {
     if (!mapContainerRef.current || mapLoaded) return
 
     const loadMap = async () => {
-      // Check if Leaflet is already loaded
       if (typeof L !== 'undefined') {
         initMap()
         return
       }
 
-      // Load Leaflet CSS and JS
       const css = document.createElement('link')
       css.rel = 'stylesheet'
       css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
@@ -120,263 +109,617 @@ export default function MapTab({ weather, location, aqi }) {
     loadMap()
   }, [mapContainerRef.current])
 
+  // ========================================================================
+  // FETCH MAP DATA
+  // ========================================================================
+
+  const fetchMapData = async (lat, lon) => {
+    try {
+      let data = {}
+
+      if (mapMode === 'pollen') {
+        const pollenRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=pollen&timezone=auto`
+        )
+
+        data.pollen = await pollenRes.json()
+      }
+
+      if (mapMode === 'weather') {
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`
+        )
+
+        data.weather = await weatherRes.json()
+      }
+
+      // Traffic data is handled via tile overlay
+      if (mapMode === 'traffic') {
+        data.traffic = { status: 'ready' }
+      }
+
+      setMapData(data)
+
+      // Update map overlay
+      if (mapRef.current && mapLoaded) {
+        updateMapOverlay(mapRef.current, mapMode, selectedLocation, data)
+      }
+    } catch (error) {
+      console.error('Map data fetch failed:', error)
+    }
+  }
+
+  // ========================================================================
+  // SEARCH FUNCTIONALITY
+  // ========================================================================
+
+  const handleSearch = async (query) => {
+    if (!query || query.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+
+    try {
+      // Search using Open-Meteo geocoding API
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`
+      )
+
+      const data = await res.json()
+
+      if (data.results && data.results.length > 0) {
+        // Filter to only include countries in our supported list
+        const results = data.results
+          .map(r => {
+            const countryCode = r.country_code?.toUpperCase() || 'US'
+            const isSupported = AVAILABLE_COUNTRIES.some(c => c.code === countryCode)
+
+            return {
+              id: r.id,
+              name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
+              lat: r.latitude,
+              lon: r.longitude,
+              country_code: countryCode,
+              admin1: r.admin1,
+              admin2: r.admin2,
+              supported: isSupported
+            }
+          })
+          .filter(r => r.supported) // Only show supported countries
+
+        setSearchResults(results)
+      } else {
+        setSearchResults([])
+      }
+    } catch (error) {
+      console.error('Search failed:', error)
+      setSearchResults([])
+    }
+
+    setIsSearching(false)
+  }
+
+  const selectLocation = (result) => {
+    const country = AVAILABLE_COUNTRIES.find(c => c.code === result.country_code)
+
+    if (country) {
+      setSelectedLocation({
+        ...country,
+        lat: result.lat,
+        lon: result.lon,
+        name: result.name
+      })
+    }
+
+    setSearchQuery('')
+    setSearchResults([])
+
+    // Center map on selected location
+    if (mapRef.current && mapLoaded) {
+      mapRef.current.setView([result.lat, result.lon], 8)
+    }
+  }
+
+  // ========================================================================
+  // MAP INITIALIZATION
+  // ========================================================================
+
   const initMap = () => {
     const map = L.map(mapContainerRef.current, {
-      center: [country.lat, country.lon],
+      center: [selectedLocation.lat, selectedLocation.lon],
       zoom: 6,
       zoomControl: false,
       attributionControl: false
     })
 
-    // Base tile layer (OpenStreetMap - free, no key)
+    // Base tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
     }).addTo(map)
 
-    // Add a marker for the selected location
-    const marker = L.marker([country.lat, country.lon], {
-      title: country.name
-    }).addTo(map)
-    marker.bindPopup(`<b>${country.flag} ${country.name}</b><br>Map location`)
-
     mapRef.current = map
     setMapLoaded(true)
 
-    // Apply initial overlay
-    applyOverlay(map, mapMode, country)
-    
-    // Fetch pollen data for this location
-    fetchPollenData(country.lat, country.lon)
-    fetchWeatherMapData(country.lat, country.lon)
+    // Fetch initial data
+    fetchMapData(selectedLocation.lat, selectedLocation.lon)
   }
 
-  const fetchPollenData = async (lat, lon) => {
-    try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=pollen&timezone=auto`
-      )
-      const data = await res.json()
-      setPollenData(data)
-    } catch (e) {
-      console.error('Pollen fetch failed:', e)
-    }
-  }
+  // ========================================================================
+  // UPDATE MAP OVERLAY
+  // ========================================================================
 
-  const fetchWeatherMapData = async (lat, lon) => {
-    try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
-      )
-      const data = await res.json()
-      setWeatherMapData(data)
-    } catch (e) {
-      console.error('Weather fetch failed:', e)
-    }
-  }
-
-  const applyOverlay = (map, mode, country) => {
+  const updateMapOverlay = (map, mode, location, data) => {
     if (!map) return
 
-    // Remove existing overlay layers
-    map.eachLayer((layer) => {
-      if (layer._isOverlay) {
-        map.removeLayer(layer)
+    // Clear existing overlays
+    markersRef.current.forEach(marker => {
+      if (map.hasLayer(marker)) {
+        map.removeLayer(marker)
       }
     })
+    markersRef.current = []
+
+    if (overlayRef.current) {
+      if (map.hasLayer(overlayRef.current)) {
+        map.removeLayer(overlayRef.current)
+      }
+      overlayRef.current = null
+    }
+
+    // ======================================================================
+    // TRAFFIC MODE
+    // ======================================================================
 
     if (mode === 'traffic') {
-      // Traffic overlay — use TomTom traffic tiles (free tier)
-      // Note: TomTom requires a key, but the free tier is 50k/day
-      // For no-key option, we use OSM with traffic simulation styling
-      
-      // Option 1: TomTom (recommended, needs free key)
-      // const trafficLayer = L.tileLayer(
-      //   'https://api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=YOUR_TOMTOM_KEY',
-      //   { opacity: 0.6, attribution: '© TomTom', _isOverlay: true }
-      // )
-      
-      // Option 2: No-key solution — use OSM with a traffic-style overlay (simulated)
-      // For MVP, we'll show a semi-transparent OSM layer with traffic-colored markers
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        opacity: 0.3,
-        attribution: '© OpenStreetMap',
-        _isOverlay: true
-      }).addTo(map)
-
-      // Add some simulated traffic markers (in production, use real traffic API)
-      const trafficPoints = [
-        { lat: country.lat + 0.5, lon: country.lon - 0.3, level: 'heavy' },
-        { lat: country.lat - 0.3, lon: country.lon + 0.4, level: 'moderate' },
-        { lat: country.lat + 0.1, lon: country.lon - 0.5, level: 'light' },
-      ]
-
-      trafficPoints.forEach(p => {
-        const color = p.level === 'heavy' ? '#ef4444' : p.level === 'moderate' ? '#eab308' : '#22c55e'
-        const circle = L.circle([p.lat, p.lon], {
-          radius: 50000,
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.3,
-          weight: 2,
+      // For traffic, we use TomTom traffic tiles (free tier)
+      // Note: This requires a free TomTom API key
+      const trafficLayer = L.tileLayer(
+        'https://api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=YOUR_TOMTOM_KEY',
+        {
+          opacity: 0.7,
+          attribution: '© TomTom',
           _isOverlay: true
+        }
+      )
+
+      overlayRef.current = trafficLayer
+      map.addLayer(trafficLayer)
+
+      // Add a popup with traffic info
+      const infoMarker = L.marker([location.lat, location.lon], {
+        icon: L.divIcon({
+          className: 'map-info-marker',
+          html: `<div style="
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(10px);
+            padding: 8px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #f8fafc;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          ">
+            🚦 Traffic Layer Active
+            <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
+              ${location.name}
+            </div>
+          </div>`,
+          iconSize: [200, 60],
+          iconAnchor: [100, 30]
         })
-        circle.addTo(map)
-        circle.bindPopup(`Traffic: ${p.level}`)
       })
 
-    } else if (mode === 'pollen') {
-      // Pollen overlay — use Open-Meteo pollen data
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        opacity: 0.2,
-        attribution: '© OpenStreetMap',
-        _isOverlay: true
-      }).addTo(map)
+      markersRef.current.push(infoMarker)
+      map.addLayer(infoMarker)
+    }
 
-      if (pollenData?.daily?.pollen) {
-        const pollen = pollenData.daily.pollen
+    // ======================================================================
+    // POLLEN MODE
+    // ======================================================================
+
+    else if (mode === 'pollen') {
+      if (data?.pollen?.daily?.pollen) {
+        const pollen = data.pollen.daily.pollen
         const pollenTypes = ['alder', 'birch', 'grass', 'mugwort', 'ragweed', 'tree']
-        
-        // Show pollen as colored circles
+
+        // Create a heatmap-style overlay with circles
+        const colors = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#dc2626']
+
         pollenTypes.forEach((type, i) => {
           const value = pollen[type]?.[0] || 0
+
           if (value > 0) {
-            const color = value > 5 ? '#ef4444' : value > 3 ? '#eab308' : '#22c55e'
+            const colorIndex = Math.min(Math.floor(value / 2), colors.length - 1)
+            const color = colors[colorIndex] || colors[0]
             const radius = 20000 + value * 5000
+
             const circle = L.circle(
-              [country.lat + (i - 2) * 0.2, country.lon + (i % 3 - 1) * 0.3],
+              [location.lat + (i - 2.5) * 0.15, location.lon + ((i % 3) - 1) * 0.2],
               {
                 radius: radius,
                 color: color,
                 fillColor: color,
                 fillOpacity: 0.25,
-                weight: 1,
+                weight: 2,
                 _isOverlay: true
               }
             )
-            circle.addTo(map)
-            circle.bindPopup(`${type}: ${value}/10`)
+
+            // Add popup with pollen info
+            const level = value > 7 ? 'Very High' : value > 5 ? 'High' : value > 3 ? 'Medium' : 'Low'
+            const emoji = value > 7 ? '🔴' : value > 5 ? '🟠' : value > 3 ? '🟡' : '🟢'
+
+            circle.bindPopup(`
+              <div style="font-size: 14px;">
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)} Pollen</strong><br>
+                Level: ${emoji} ${level}<br>
+                Count: ${value}/10
+              </div>
+            `)
+
+            markersRef.current.push(circle)
+            map.addLayer(circle)
           }
         })
+
+        // Add summary marker
+        const summaryMarker = L.marker([location.lat, location.lon], {
+          icon: L.divIcon({
+            className: 'map-info-marker',
+            html: `<div style="
+              background: rgba(15,23,42,0.85);
+              backdrop-filter: blur(10px);
+              padding: 8px 14px;
+              border-radius: 12px;
+              border: 1px solid rgba(255,255,255,0.1);
+              color: #f8fafc;
+              font-size: 13px;
+              font-weight: 500;
+              text-align: center;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            ">
+              🌿 Pollen Forecast
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
+                ${location.name}
+              </div>
+            </div>`,
+            iconSize: [180, 60],
+            iconAnchor: [90, 30]
+          })
+        })
+
+        markersRef.current.push(summaryMarker)
+        map.addLayer(summaryMarker)
       } else {
-        // Fallback: show a message on the map
-        L.marker([country.lat, country.lon], {
-          _isOverlay: true
-        }).addTo(map)
-        .bindPopup('Pollen data loading...')
+        // Fallback if no pollen data
+        const fallbackMarker = L.marker([location.lat, location.lon], {
+          icon: L.divIcon({
+            className: 'map-info-marker',
+            html: `<div style="
+              background: rgba(15,23,42,0.85);
+              backdrop-filter: blur(10px);
+              padding: 8px 14px;
+              border-radius: 12px;
+              border: 1px solid rgba(255,255,255,0.1);
+              color: #f8fafc;
+              font-size: 13px;
+              font-weight: 500;
+              text-align: center;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            ">
+              🌿 Pollen Data Unavailable
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
+                No pollen data for this location
+              </div>
+            </div>`,
+            iconSize: [220, 60],
+            iconAnchor: [110, 30]
+          })
+        })
+
+        markersRef.current.push(fallbackMarker)
+        map.addLayer(fallbackMarker)
       }
+    }
 
-    } else if (mode === 'weather') {
-      // Weather overlay — show current weather animation
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        opacity: 0.2,
-        attribution: '© OpenStreetMap',
-        _isOverlay: true
-      }).addTo(map)
+    // ======================================================================
+    // WEATHER MODE
+    // ======================================================================
 
-      const currentWeather = weatherMapData?.current_weather
+    else if (mode === 'weather') {
+      const currentWeather = data?.weather?.current_weather
+
       if (currentWeather) {
         const code = currentWeather.weather_code || 0
         const temp = currentWeather.temperature || 0
-        const emoji = getWeatherEmoji(code)
-        
-        // Create a custom div icon with weather emoji
-        const icon = L.divIcon({
-          className: 'weather-map-icon',
-          html: `<div style="font-size: 48px; text-align: center; filter: drop-shadow(0 0 20px rgba(56,189,248,0.3));">${emoji}</div>`,
-          iconSize: [48, 48],
-          iconAnchor: [24, 24]
+
+        // Weather emoji based on code
+        const getWeatherEmoji = (c) => {
+          if (c === 0 || c === 1) return '☀️'
+          if (c === 2) return '⛅'
+          if (c === 3) return '☁️'
+          if (c >= 95) return '⛈️'
+          if (c >= 61 && c <= 82) return '🌧️'
+          if (c >= 51 && c <= 57) return '🌦️'
+          if (c >= 71 && c <= 77) return '❄️'
+          if (c === 45 || c === 48) return '🌫️'
+          return '🌤️'
+        }
+
+        // Get condition name
+        const getConditionName = (c) => {
+          const map = {
+            0: 'Clear Sky',
+            1: 'Mainly Clear',
+            2: 'Partly Cloudy',
+            3: 'Overcast',
+            45: 'Fog',
+            48: 'Fog',
+            51: 'Light Drizzle',
+            53: 'Moderate Drizzle',
+            55: 'Heavy Drizzle',
+            61: 'Light Rain',
+            63: 'Moderate Rain',
+            65: 'Heavy Rain',
+            71: 'Light Snow',
+            73: 'Moderate Snow',
+            75: 'Heavy Snow',
+            80: 'Rain Showers',
+            81: 'Heavy Rain Showers',
+            82: 'Violent Rain Showers',
+            95: 'Thunderstorm',
+            96: 'Thunderstorm with Hail',
+            99: 'Heavy Thunderstorm'
+          }
+          return map[c] || 'Unknown'
+        }
+
+        // Create main weather marker
+        const weatherMarker = L.marker([location.lat, location.lon], {
+          icon: L.divIcon({
+            className: 'map-info-marker',
+            html: `<div style="
+              background: rgba(15,23,42,0.85);
+              backdrop-filter: blur(10px);
+              padding: 12px 18px;
+              border-radius: 16px;
+              border: 1px solid rgba(255,255,255,0.1);
+              color: #f8fafc;
+              font-size: 14px;
+              font-weight: 500;
+              text-align: center;
+              box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+              min-width: 120px;
+            ">
+              <div style="font-size: 36px; margin-bottom: 4px;">${getWeatherEmoji(code)}</div>
+              <div style="font-size: 20px; font-weight: 700;">${Math.round(temp)}°C</div>
+              <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px;">
+                ${getConditionName(code)}
+              </div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px;">
+                ${location.name}
+              </div>
+            </div>`,
+            iconSize: [140, 110],
+            iconAnchor: [70, 55]
+          })
         })
-        
-        const marker = L.marker([country.lat, country.lon], { icon, _isOverlay: true })
-        marker.addTo(map)
-        marker.bindPopup(`<b>${country.flag} ${country.name}</b><br>${emoji} ${temp}°C`)
-        
-        // Add temperature label
-        const tempIcon = L.divIcon({
-          className: 'temp-label',
-          html: `<div style="font-size: 16px; font-weight: bold; color: #f8fafc; text-shadow: 0 0 10px rgba(0,0,0,0.8); background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">${Math.round(temp)}°C</div>`,
-          iconSize: [60, 32],
-          iconAnchor: [30, 50]
+
+        markersRef.current.push(weatherMarker)
+        map.addLayer(weatherMarker)
+
+        // Add additional weather info if available
+        if (data.weather?.daily) {
+          const daily = data.weather.daily
+
+          // Get today's forecast
+          const todayHigh = daily.temperature_2m_max?.[0]
+          const todayLow = daily.temperature_2m_min?.[0]
+
+          if (todayHigh || todayLow) {
+            const infoMarker = L.marker(
+              [location.lat + 0.2, location.lon],
+              {
+                icon: L.divIcon({
+                  className: 'map-info-marker',
+                  html: `<div style="
+                    background: rgba(15,23,42,0.8);
+                    backdrop-filter: blur(10px);
+                    padding: 6px 12px;
+                    border-radius: 10px;
+                    border: 1px solid rgba(255,255,255,0.08);
+                    color: #f8fafc;
+                    font-size: 12px;
+                    font-weight: 400;
+                    text-align: center;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                  ">
+                    📊 ${todayHigh ? Math.round(todayHigh) + '°' : '--'} / ${todayLow ? Math.round(todayLow) + '°' : '--'}
+                  </div>`,
+                  iconSize: [80, 30],
+                  iconAnchor: [40, 15]
+                })
+              }
+            )
+
+            markersRef.current.push(infoMarker)
+            map.addLayer(infoMarker)
+          }
+        }
+      } else {
+        // Fallback if no weather data
+        const fallbackMarker = L.marker([location.lat, location.lon], {
+          icon: L.divIcon({
+            className: 'map-info-marker',
+            html: `<div style="
+              background: rgba(15,23,42,0.85);
+              backdrop-filter: blur(10px);
+              padding: 8px 14px;
+              border-radius: 12px;
+              border: 1px solid rgba(255,255,255,0.1);
+              color: #f8fafc;
+              font-size: 13px;
+              font-weight: 500;
+              text-align: center;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            ">
+              ⛅ Weather Data Unavailable
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
+                ${location.name}
+              </div>
+            </div>`,
+            iconSize: [200, 60],
+            iconAnchor: [100, 30]
+          })
         })
-        
-        const tempMarker = L.marker([country.lat + 0.25, country.lon], { icon: tempIcon, _isOverlay: true })
-        tempMarker.addTo(map)
+
+        markersRef.current.push(fallbackMarker)
+        map.addLayer(fallbackMarker)
       }
     }
   }
 
-  const getWeatherEmoji = (code) => {
-    if (code === 0 || code === 1) return '☀️'
-    if (code === 2) return '⛅'
-    if (code === 3) return '☁️'
-    if (code >= 95) return '⛈️'
-    if (code >= 61 && code <= 82) return '🌧️'
-    if (code >= 51 && code <= 57) return '🌦️'
-    if (code >= 71 && code <= 77) return '❄️'
-    if (code === 45 || code === 48) return '🌫️'
-    return '🌤️'
-  }
+  // ========================================================================
+  // HANDLE MODE SWITCH
+  // ========================================================================
 
-  // Handle mode switch
   const handleModeSwitch = (mode) => {
     setMapMode(mode)
-    if (mapRef.current && mapLoaded) {
-      const c = AVAILABLE_COUNTRIES.find(c => c.code === selectedCountry) || AVAILABLE_COUNTRIES[0]
-      applyOverlay(mapRef.current, mode, c)
+
+    if (mapRef.current && mapLoaded && selectedLocation) {
+      fetchMapData(selectedLocation.lat, selectedLocation.lon)
     }
   }
 
+  // ========================================================================
+  // RENDER
+  // ========================================================================
+
   return (
-    <div className="map-tab-container">
-      {/* Header */}
-      <div className="map-header">
-        <div className="map-capsule-switch">
-          <button
-            className={`capsule-btn ${mapMode === 'traffic' ? 'active' : ''}`}
-            onClick={() => handleModeSwitch('traffic')}
-          >
-            🚦 Traffic
-          </button>
-          <button
-            className={`capsule-btn ${mapMode === 'pollen' ? 'active' : ''}`}
-            onClick={() => handleModeSwitch('pollen')}
-          >
-            🌿 Pollen
-          </button>
-          <button
-            className={`capsule-btn ${mapMode === 'weather' ? 'active' : ''}`}
-            onClick={() => handleModeSwitch('weather')}
-          >
-            ⛅ Weather
-          </button>
+    <div className="map-tab-container glass" style={{ padding: '16px' }}>
+      {/* Header with capsule and search */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '16px',
+        flexWrap: 'wrap',
+        gap: '10px'
+      }}>
+        <div className="map-capsule-switch" style={{
+          display: 'flex',
+          background: 'rgba(10,22,40,0.8)',
+          borderRadius: '40px',
+          padding: '4px',
+          border: '1px solid rgba(100,150,255,0.2)',
+          backdropFilter: 'blur(10px)',
+          gap: '2px'
+        }}>
+          {['traffic', 'pollen', 'weather'].map((mode) => (
+            <button
+              key={mode}
+              onClick={() => handleModeSwitch(mode)}
+              className={`map-capsule-btn ${mapMode === mode ? 'active' : ''}`}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '30px',
+                fontSize: '12px',
+                fontWeight: '600',
+                border: 'none',
+                cursor: 'pointer',
+                background: mapMode === mode ? 'rgba(56,189,248,0.2)' : 'transparent',
+                color: mapMode === mode ? '#7dd3fc' : 'rgba(255,255,255,0.5)',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {mode === 'traffic' ? '🚦 Traffic' : mode === 'pollen' ? '🌿 Pollen' : '⛅ Weather'}
+            </button>
+          ))}
         </div>
 
-        <div className="map-search-area">
-          <div className="map-search-wrapper">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                handleSearch(e.target.value)
-              }}
-              placeholder="Search country..."
-              className="map-search-input"
-            />
-            {isSearching && <span className="search-spinner">⏳</span>}
-          </div>
+        <div style={{ position: 'relative', flex: 1, maxWidth: '300px', minWidth: '150px' }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              handleSearch(e.target.value)
+            }}
+            placeholder="Search city, state, LGA..."
+            className="map-search-input"
+            style={{
+              width: '100%',
+              padding: '8px 14px',
+              borderRadius: '30px',
+              background: 'rgba(10,22,40,0.8)',
+              border: '1px solid rgba(100,150,255,0.2)',
+              color: '#e2e8f0',
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+
+          {isSearching && (
+            <span style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: '14px',
+              animation: 'spin 1s linear infinite'
+            }}>
+              ⏳
+            </span>
+          )}
+
           {searchResults.length > 0 && (
-            <div className="map-search-results">
-              {searchResults.map(c => (
+            <div style={{
+              position: 'absolute',
+              top: '110%',
+              left: 0,
+              right: 0,
+              maxHeight: '200px',
+              overflowY: 'auto',
+              background: 'rgba(10,22,40,0.95)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '16px',
+              border: '1px solid rgba(100,150,255,0.15)',
+              padding: '6px',
+              zIndex: 50,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+            }}>
+              {searchResults.map(result => (
                 <button
-                  key={c.code}
-                  onClick={() => selectCountry(c.code)}
-                  className="search-result-item"
+                  key={result.id}
+                  onClick={() => selectLocation(result)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e2e8f0',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(56,189,248,0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <span>{c.flag}</span>
-                  <span>{c.name}</span>
-                  <span className="result-code">{c.code}</span>
+                  <span>📍</span>
+                  <span style={{ flex: 1 }}>{result.name}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
+                    {result.country_code}
+                  </span>
                 </button>
               ))}
             </div>
@@ -385,33 +728,72 @@ export default function MapTab({ weather, location, aqi }) {
       </div>
 
       {/* Map Container */}
-      <div className="map-wrapper" ref={mapContainerRef}>
+      <div
+        ref={mapContainerRef}
+        className="map-wrapper"
+        style={{
+          width: '100%',
+          height: '400px',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          background: '#0a1628',
+          border: '1px solid rgba(100,150,255,0.1)',
+          position: 'relative'
+        }}
+      >
         {!mapLoaded && (
-          <div className="map-loading">
-            <span>🗺️</span>
-            <p>Loading map...</p>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            flexDirection: 'column',
+            gap: '12px',
+            color: 'rgba(255,255,255,0.3)',
+            fontSize: '14px'
+          }}>
+            <span style={{ fontSize: '32px' }}>🗺️</span>
+            <div>Loading map...</div>
           </div>
         )}
       </div>
 
       {/* Map Legend */}
-      <div className="map-legend">
+      <div style={{
+        marginTop: '12px',
+        display: 'flex',
+        gap: '20px',
+        justifyContent: 'center',
+        fontSize: '11px',
+        color: 'rgba(255,255,255,0.4)',
+        flexWrap: 'wrap'
+      }}>
         {mapMode === 'traffic' && (
           <>
-            <span><span className="legend-dot heavy"></span> Heavy</span>
-            <span><span className="legend-dot moderate"></span> Moderate</span>
-            <span><span className="legend-dot light"></span> Light</span>
+            <span><span className="legend-dot heavy" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> Heavy</span>
+            <span><span className="legend-dot moderate" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Moderate</span>
+            <span><span className="legend-dot light" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Light</span>
+            <span style={{ opacity: 0.3 }}>•</span>
+            <span>Data: TomTom</span>
           </>
         )}
+
         {mapMode === 'pollen' && (
           <>
-            <span><span className="legend-dot high"></span> High</span>
-            <span><span className="legend-dot medium"></span> Medium</span>
-            <span><span className="legend-dot low"></span> Low</span>
+            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> High</span>
+            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Medium</span>
+            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Low</span>
+            <span style={{ opacity: 0.3 }}>•</span>
+            <span>Data: Open-Meteo</span>
           </>
         )}
+
         {mapMode === 'weather' && (
-          <span>📍 {country.flag} {country.name}</span>
+          <>
+            <span>📍 {selectedLocation.flag} {selectedLocation.name}</span>
+            <span style={{ opacity: 0.3 }}>•</span>
+            <span>Data: Open-Meteo</span>
+          </>
         )}
       </div>
     </div>
