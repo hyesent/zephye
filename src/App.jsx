@@ -100,37 +100,119 @@ function WeatherIcon({ code }) {
 }
 
 // ============================================================================
-// HOURLY MODAL
+// HOURLY MODAL — PROPERLY DESIGNED
 // ============================================================================
 
 function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
   if (!isOpen || !hourlyData) return null
 
   const getIcon = (code) => {
-    if (code === 0 || code === 1) return '☀️'
-    if (code === 2) return '⛅'
-    if (code === 3) return '☁️'
-    if (code >= 95) return '⛈️'
-    if (code >= 61 && code <= 82) return '🌧️'
-    if (code >= 51 && code <= 57) return '🌦️'
-    if (code >= 71 && code <= 77) return '❄️'
-    if (code === 45 || code === 48) return '🌫️'
-    return '🌤️'
+    const map = {
+      0: '☀️', 1: '☀️', 2: '⛅', 3: '☁️',
+      45: '🌫️', 48: '🌫️',
+      51: '🌦️', 53: '🌦️', 55: '🌦️',
+      61: '🌧️', 63: '🌧️', 65: '🌧️',
+      71: '❄️', 73: '❄️', 75: '❄️',
+      80: '🌧️', 81: '🌧️', 82: '🌧️',
+      95: '⛈️', 96: '⛈️', 99: '⛈️'
+    }
+    return map[code] || '🌤️'
+  }
+
+  const getConditionName = (code) => {
+    const map = {
+      0: 'Clear', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+      45: 'Fog', 48: 'Fog',
+      51: 'Light Drizzle', 53: 'Moderate Drizzle', 55: 'Heavy Drizzle',
+      61: 'Light Rain', 63: 'Moderate Rain', 65: 'Heavy Rain',
+      71: 'Light Snow', 73: 'Moderate Snow', 75: 'Heavy Snow',
+      80: 'Rain Showers', 81: 'Heavy Showers', 82: 'Violent Showers',
+      95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Heavy Thunderstorm'
+    }
+    return map[code] || 'Unknown'
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding:'24px',maxWidth:'600px',width:'95%',maxHeight:'80vh',overflow:'auto'}}>
-        <div className="flex justify-between items-center mb-4">
+      <div
+        className="glass"
+        onClick={e => e.stopPropagation()}
+        style={{
+          padding: '24px',
+          maxWidth: '640px',
+          width: '95%',
+          maxHeight: '85vh',
+          overflow: 'auto',
+          borderRadius: '20px',
+          background: 'rgba(15,23,42,0.92)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255,255,255,0.06)'
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '16px',
+          paddingBottom: '14px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}>
           <div>
-            <h3 className="font-bold text-lg">Hourly Forecast</h3>
-            <p className="text-xs text-muted">{locationName || 'Your location'} • {new Date(hourlyData.time[0]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#f8fafc',
+              marginBottom: '2px'
+            }}>
+              Hourly Forecast
+            </h3>
+            <p style={{
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.4)'
+            }}>
+              {locationName || 'Your location'} •{' '}
+              {new Date(hourlyData.time[0]).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
           </div>
-          <button onClick={onClose} className="btn-ghost" style={{padding:'4px 8px',fontSize:'18px'}}><CloseIcon /></button>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '6px',
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              cursor: 'pointer',
+              color: 'rgba(255,255,255,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '34px',
+              height: '34px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+              e.currentTarget.style.color = '#fff'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.5)'
+            }}
+          >
+            <CloseIcon />
+          </button>
         </div>
-        <div className="space-y-2">
+
+        {/* Hourly List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {hourlyData.time.slice(0, 24).map((time, i) => {
             const temp = hourlyData.temperature_2m?.[i]
+            const feelsLike = hourlyData.apparent_temperature?.[i]
             const code = hourlyData.weather_code?.[i] || 0
             const precip = hourlyData.precipitation_probability?.[i]
             const rain = hourlyData.precipitation?.[i]
@@ -139,18 +221,126 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
             const pressure = hourlyData.pressure_msl?.[i]
             const gust = hourlyData.wind_gusts_10m?.[i]
 
+            const isCurrentHour = i === 0
+
             return (
-              <div key={time} className="flex items-center gap-3 p-3 rounded-xl" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.05)'}}>
-                <div className="text-sm font-medium min-w-[60px]">{new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}</div>
-                <div className="text-2xl min-w-[40px] text-center">{getIcon(code)}</div>
-                <div className="font-bold min-w-[50px] text-center">{Math.round(temp)}°</div>
-                <div className="flex flex-wrap gap-2 text-xs text-muted">
-                  {precip > 0 && <span>🌧️ {Math.round(precip)}%</span>}
-                  {rain > 0 && <span>💧 {Math.round(rain * 10) / 10}mm</span>}
-                  {wind > 0 && <span>💨 {Math.round(wind)} km/h</span>}
-                  {gust > 15 && <span>⚡{Math.round(gust)}</span>}
-                  {humidity > 0 && <span>💧 {Math.round(humidity)}%</span>}
-                  {pressure > 0 && <span>📊 {Math.round(pressure)} hPa</span>}
+              <div
+                key={time}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '12px',
+                  background: isCurrentHour
+                    ? 'rgba(56,189,248,0.08)'
+                    : 'rgba(255,255,255,0.02)',
+                  border: isCurrentHour
+                    ? '1px solid rgba(56,189,248,0.15)'
+                    : '1px solid rgba(255,255,255,0.04)',
+                  gap: '10px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {/* Time */}
+                <div style={{ minWidth: '65px' }}>
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: isCurrentHour ? '700' : '500',
+                    color: isCurrentHour ? '#7dd3fc' : '#f8fafc'
+                  }}>
+                    {new Date(time).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      hour12: true
+                    })}
+                  </div>
+                  {isCurrentHour && (
+                    <div style={{
+                      fontSize: '8px',
+                      color: 'rgba(56,189,248,0.5)',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      Now
+                    </div>
+                  )}
+                </div>
+
+                {/* Icon */}
+                <div style={{ fontSize: '24px', minWidth: '36px', textAlign: 'center' }}>
+                  {getIcon(code)}
+                </div>
+
+                {/* Temp */}
+                <div style={{ minWidth: '48px', textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: '#f8fafc'
+                  }}>
+                    {Math.round(temp)}°
+                  </div>
+                  {feelsLike && Math.round(feelsLike) !== Math.round(temp) && (
+                    <div style={{
+                      fontSize: '9px',
+                      color: 'rgba(255,255,255,0.3)'
+                    }}>
+                      feels {Math.round(feelsLike)}°
+                    </div>
+                  )}
+                </div>
+
+                {/* Condition */}
+                <div style={{
+                  flex: 1,
+                  fontSize: '12px',
+                  color: 'rgba(255,255,255,0.6)',
+                  minWidth: '70px',
+                  textAlign: 'left'
+                }}>
+                  {getConditionName(code)}
+                </div>
+
+                {/* Details */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  fontSize: '10px',
+                  color: 'rgba(255,255,255,0.4)',
+                  justifyContent: 'flex-end',
+                  minWidth: '100px'
+                }}>
+                  {precip > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      🌧️ {Math.round(precip)}%
+                    </span>
+                  )}
+                  {rain > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      💧 {Math.round(rain * 10) / 10}mm
+                    </span>
+                  )}
+                  {wind > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      💨 {Math.round(wind)} km/h
+                    </span>
+                  )}
+                  {gust > 15 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#fbbf24' }}>
+                      ⚡{Math.round(gust)}
+                    </span>
+                  )}
+                  {humidity > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      💧 {Math.round(humidity)}%
+                    </span>
+                  )}
+                  {pressure > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      📊 {Math.round(pressure)} hPa
+                    </span>
+                  )}
                 </div>
               </div>
             )
