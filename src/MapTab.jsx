@@ -46,6 +46,18 @@ export default function MapTab({ weather, location, aqi }) {
   const [isSearching, setIsSearching] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapData, setMapData] = useState(null)
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Get default location — NIGERIA as fallback
+  const getDefaultLocation = () => {
+    const defaultLoc = AVAILABLE_COUNTRIES.find(c => c.code === 'NG') || AVAILABLE_COUNTRIES[0]
+    return {
+      ...defaultLoc,
+      lat: defaultLoc.lat || 9.082,
+      lon: defaultLoc.lon || 8.675
+    }
+  }
+
   const [selectedLocation, setSelectedLocation] = useState(() => {
     const saved = localStorage.getItem('zephye_map_location')
 
@@ -54,11 +66,18 @@ export default function MapTab({ weather, location, aqi }) {
         const parsed = JSON.parse(saved)
         const exists = AVAILABLE_COUNTRIES.find(c => c.code === parsed.code)
 
-        if (exists) return parsed
+        if (exists) {
+          return {
+            ...exists,
+            lat: parsed.lat || exists.lat,
+            lon: parsed.lon || exists.lon,
+            name: parsed.name || exists.name
+          }
+        }
       } catch {}
     }
 
-    return AVAILABLE_COUNTRIES.find(c => c.code === 'NG') || AVAILABLE_COUNTRIES[0]
+    return getDefaultLocation()
   })
 
   const mapContainerRef = useRef(null)
@@ -72,37 +91,50 @@ export default function MapTab({ weather, location, aqi }) {
 
   // Save map location to localStorage
   useEffect(() => {
-    localStorage.setItem(
-      'zephye_map_location',
-      JSON.stringify({ code: selectedLocation.code, name: selectedLocation.name })
-    )
+    if (selectedLocation && selectedLocation.code) {
+      localStorage.setItem(
+        'zephye_map_location',
+        JSON.stringify({
+          code: selectedLocation.code,
+          name: selectedLocation.name,
+          lat: selectedLocation.lat,
+          lon: selectedLocation.lon
+        })
+      )
+    }
   }, [selectedLocation])
 
   // Fetch map data when location or mode changes
   useEffect(() => {
-    if (selectedLocation) {
+    if (selectedLocation && selectedLocation.lat && selectedLocation.lon) {
       fetchMapData(selectedLocation.lat, selectedLocation.lon)
     }
   }, [selectedLocation, mapMode])
 
-  // Load Leaflet map
+  // Load Leaflet map — ONLY ONCE
   useEffect(() => {
-    if (!mapContainerRef.current || mapLoaded) return
+    if (!mapContainerRef.current || isInitialized) return
 
     const loadMap = async () => {
+      // Check if Leaflet is already loaded
       if (typeof L !== 'undefined') {
         initMap()
         return
       }
 
+      // Load Leaflet CSS
       const css = document.createElement('link')
       css.rel = 'stylesheet'
       css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
       document.head.appendChild(css)
 
+      // Load Leaflet JS
       const script = document.createElement('script')
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-      script.onload = () => initMap()
+      script.onload = () => {
+        // Small delay to ensure L is fully loaded
+        setTimeout(initMap, 100)
+      }
       document.body.appendChild(script)
     }
 
@@ -114,6 +146,11 @@ export default function MapTab({ weather, location, aqi }) {
   // ========================================================================
 
   const fetchMapData = async (lat, lon) => {
+    if (!lat || !lon) {
+      console.warn('Invalid coordinates for map data fetch')
+      return
+    }
+
     try {
       let data = {}
 
@@ -122,7 +159,12 @@ export default function MapTab({ weather, location, aqi }) {
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=pollen&timezone=auto`
         )
 
-        data.pollen = await pollenRes.json()
+        if (pollenRes.ok) {
+          data.pollen = await pollenRes.json()
+        } else {
+          console.warn('Pollen API returned:', pollenRes.status)
+          data.pollen = null
+        }
       }
 
       if (mapMode === 'weather') {
@@ -130,17 +172,22 @@ export default function MapTab({ weather, location, aqi }) {
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`
         )
 
-        data.weather = await weatherRes.json()
+        if (weatherRes.ok) {
+          data.weather = await weatherRes.json()
+        } else {
+          console.warn('Weather API returned:', weatherRes.status)
+          data.weather = null
+        }
       }
 
-      // Traffic data is handled via tile overlay
+      // Traffic mode — just mark as ready
       if (mapMode === 'traffic') {
         data.traffic = { status: 'ready' }
       }
 
       setMapData(data)
 
-      // Update map overlay
+      // Update map overlay if map is ready
       if (mapRef.current && mapLoaded) {
         updateMapOverlay(mapRef.current, mapMode, selectedLocation, data)
       }
@@ -187,7 +234,7 @@ export default function MapTab({ weather, location, aqi }) {
               supported: isSupported
             }
           })
-          .filter(r => r.supported) // Only show supported countries
+          .filter(r => r.supported && r.lat && r.lon) // Only supported with valid coords
 
         setSearchResults(results)
       } else {
@@ -205,21 +252,23 @@ export default function MapTab({ weather, location, aqi }) {
     const country = AVAILABLE_COUNTRIES.find(c => c.code === result.country_code)
 
     if (country) {
-      setSelectedLocation({
+      const newLocation = {
         ...country,
         lat: result.lat,
         lon: result.lon,
         name: result.name
-      })
+      }
+
+      setSelectedLocation(newLocation)
+
+      // Center map on selected location
+      if (mapRef.current && mapLoaded) {
+        mapRef.current.setView([result.lat, result.lon], 8)
+      }
     }
 
     setSearchQuery('')
     setSearchResults([])
-
-    // Center map on selected location
-    if (mapRef.current && mapLoaded) {
-      mapRef.current.setView([result.lat, result.lon], 8)
-    }
   }
 
   // ========================================================================
@@ -227,24 +276,43 @@ export default function MapTab({ weather, location, aqi }) {
   // ========================================================================
 
   const initMap = () => {
-    const map = L.map(mapContainerRef.current, {
-      center: [selectedLocation.lat, selectedLocation.lon],
-      zoom: 6,
-      zoomControl: false,
-      attributionControl: false
-    })
+    // Prevent double initialization
+    if (isInitialized || mapRef.current) return
 
-    // Base tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map)
+    // Ensure we have valid coordinates
+    const lat = selectedLocation?.lat || 9.082
+    const lon = selectedLocation?.lon || 8.675
 
-    mapRef.current = map
-    setMapLoaded(true)
+    try {
+      const map = L.map(mapContainerRef.current, {
+        center: [lat, lon],
+        zoom: 6,
+        zoomControl: false,
+        attributionControl: false
+      })
 
-    // Fetch initial data
-    fetchMapData(selectedLocation.lat, selectedLocation.lon)
+      // Base tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map)
+
+      mapRef.current = map
+      setMapLoaded(true)
+      setIsInitialized(true)
+
+      // Fetch initial data
+      fetchMapData(lat, lon)
+    } catch (error) {
+      console.error('Map initialization failed:', error)
+
+      // Retry after a delay
+      setTimeout(() => {
+        if (!isInitialized) {
+          initMap()
+        }
+      }, 1000)
+    }
   }
 
   // ========================================================================
@@ -256,40 +324,34 @@ export default function MapTab({ weather, location, aqi }) {
 
     // Clear existing overlays
     markersRef.current.forEach(marker => {
-      if (map.hasLayer(marker)) {
-        map.removeLayer(marker)
-      }
+      try {
+        if (map.hasLayer(marker)) {
+          map.removeLayer(marker)
+        }
+      } catch (e) {}
     })
     markersRef.current = []
 
     if (overlayRef.current) {
-      if (map.hasLayer(overlayRef.current)) {
-        map.removeLayer(overlayRef.current)
-      }
+      try {
+        if (map.hasLayer(overlayRef.current)) {
+          map.removeLayer(overlayRef.current)
+        }
+      } catch (e) {}
       overlayRef.current = null
     }
+
+    // Ensure we have valid coordinates
+    const lat = location?.lat || 9.082
+    const lon = location?.lon || 8.675
 
     // ======================================================================
     // TRAFFIC MODE
     // ======================================================================
 
     if (mode === 'traffic') {
-      // For traffic, we use TomTom traffic tiles (free tier)
-      // Note: This requires a free TomTom API key
-      const trafficLayer = L.tileLayer(
-        'https://api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=YOUR_TOMTOM_KEY',
-        {
-          opacity: 0.7,
-          attribution: '© TomTom',
-          _isOverlay: true
-        }
-      )
-
-      overlayRef.current = trafficLayer
-      map.addLayer(trafficLayer)
-
-      // Add a popup with traffic info
-      const infoMarker = L.marker([location.lat, location.lon], {
+      // Show traffic info marker
+      const infoMarker = L.marker([lat, lon], {
         icon: L.divIcon({
           className: 'map-info-marker',
           html: `<div style="
@@ -304,18 +366,23 @@ export default function MapTab({ weather, location, aqi }) {
             text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
           ">
-            🚦 Traffic Layer Active
+            🚦 Traffic Layer
             <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-              ${location.name}
+              ${location?.name || 'Current Location'}
             </div>
           </div>`,
-          iconSize: [200, 60],
-          iconAnchor: [100, 30]
+          iconSize: [180, 60],
+          iconAnchor: [90, 30]
         })
       })
 
       markersRef.current.push(infoMarker)
-      map.addLayer(infoMarker)
+
+      try {
+        map.addLayer(infoMarker)
+      } catch (e) {
+        console.warn('Could not add traffic marker:', e)
+      }
     }
 
     // ======================================================================
@@ -323,15 +390,14 @@ export default function MapTab({ weather, location, aqi }) {
     // ======================================================================
 
     else if (mode === 'pollen') {
-      if (data?.pollen?.daily?.pollen) {
-        const pollen = data.pollen.daily.pollen
-        const pollenTypes = ['alder', 'birch', 'grass', 'mugwort', 'ragweed', 'tree']
+      const pollenData = data?.pollen?.daily?.pollen
 
-        // Create a heatmap-style overlay with circles
+      if (pollenData) {
+        const pollenTypes = ['alder', 'birch', 'grass', 'mugwort', 'ragweed', 'tree']
         const colors = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#dc2626']
 
         pollenTypes.forEach((type, i) => {
-          const value = pollen[type]?.[0] || 0
+          const value = pollenData[type]?.[0] || 0
 
           if (value > 0) {
             const colorIndex = Math.min(Math.floor(value / 2), colors.length - 1)
@@ -339,7 +405,7 @@ export default function MapTab({ weather, location, aqi }) {
             const radius = 20000 + value * 5000
 
             const circle = L.circle(
-              [location.lat + (i - 2.5) * 0.15, location.lon + ((i % 3) - 1) * 0.2],
+              [lat + (i - 2.5) * 0.15, lon + ((i % 3) - 1) * 0.2],
               {
                 radius: radius,
                 color: color,
@@ -350,7 +416,6 @@ export default function MapTab({ weather, location, aqi }) {
               }
             )
 
-            // Add popup with pollen info
             const level = value > 7 ? 'Very High' : value > 5 ? 'High' : value > 3 ? 'Medium' : 'Low'
             const emoji = value > 7 ? '🔴' : value > 5 ? '🟠' : value > 3 ? '🟡' : '🟢'
 
@@ -363,12 +428,17 @@ export default function MapTab({ weather, location, aqi }) {
             `)
 
             markersRef.current.push(circle)
-            map.addLayer(circle)
+
+            try {
+              map.addLayer(circle)
+            } catch (e) {
+              console.warn('Could not add pollen circle:', e)
+            }
           }
         })
 
         // Add summary marker
-        const summaryMarker = L.marker([location.lat, location.lon], {
+        const summaryMarker = L.marker([lat, lon], {
           icon: L.divIcon({
             className: 'map-info-marker',
             html: `<div style="
@@ -385,7 +455,7 @@ export default function MapTab({ weather, location, aqi }) {
             ">
               🌿 Pollen Forecast
               <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                ${location.name}
+                ${location?.name || 'Current Location'}
               </div>
             </div>`,
             iconSize: [180, 60],
@@ -394,10 +464,15 @@ export default function MapTab({ weather, location, aqi }) {
         })
 
         markersRef.current.push(summaryMarker)
-        map.addLayer(summaryMarker)
+
+        try {
+          map.addLayer(summaryMarker)
+        } catch (e) {
+          console.warn('Could not add pollen summary:', e)
+        }
       } else {
         // Fallback if no pollen data
-        const fallbackMarker = L.marker([location.lat, location.lon], {
+        const fallbackMarker = L.marker([lat, lon], {
           icon: L.divIcon({
             className: 'map-info-marker',
             html: `<div style="
@@ -414,16 +489,21 @@ export default function MapTab({ weather, location, aqi }) {
             ">
               🌿 Pollen Data Unavailable
               <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                No pollen data for this location
+                ${location?.name || 'Current Location'}
               </div>
             </div>`,
-            iconSize: [220, 60],
-            iconAnchor: [110, 30]
+            iconSize: [200, 60],
+            iconAnchor: [100, 30]
           })
         })
 
         markersRef.current.push(fallbackMarker)
-        map.addLayer(fallbackMarker)
+
+        try {
+          map.addLayer(fallbackMarker)
+        } catch (e) {
+          console.warn('Could not add pollen fallback:', e)
+        }
       }
     }
 
@@ -438,7 +518,6 @@ export default function MapTab({ weather, location, aqi }) {
         const code = currentWeather.weather_code || 0
         const temp = currentWeather.temperature || 0
 
-        // Weather emoji based on code
         const getWeatherEmoji = (c) => {
           if (c === 0 || c === 1) return '☀️'
           if (c === 2) return '⛅'
@@ -451,7 +530,6 @@ export default function MapTab({ weather, location, aqi }) {
           return '🌤️'
         }
 
-        // Get condition name
         const getConditionName = (c) => {
           const map = {
             0: 'Clear Sky',
@@ -480,7 +558,7 @@ export default function MapTab({ weather, location, aqi }) {
         }
 
         // Create main weather marker
-        const weatherMarker = L.marker([location.lat, location.lon], {
+        const weatherMarker = L.marker([lat, lon], {
           icon: L.divIcon({
             className: 'map-info-marker',
             html: `<div style="
@@ -502,7 +580,7 @@ export default function MapTab({ weather, location, aqi }) {
                 ${getConditionName(code)}
               </div>
               <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px;">
-                ${location.name}
+                ${location?.name || 'Current Location'}
               </div>
             </div>`,
             iconSize: [140, 110],
@@ -511,19 +589,22 @@ export default function MapTab({ weather, location, aqi }) {
         })
 
         markersRef.current.push(weatherMarker)
-        map.addLayer(weatherMarker)
 
-        // Add additional weather info if available
+        try {
+          map.addLayer(weatherMarker)
+        } catch (e) {
+          console.warn('Could not add weather marker:', e)
+        }
+
+        // Add temperature range if available
         if (data.weather?.daily) {
           const daily = data.weather.daily
-
-          // Get today's forecast
           const todayHigh = daily.temperature_2m_max?.[0]
           const todayLow = daily.temperature_2m_min?.[0]
 
           if (todayHigh || todayLow) {
             const infoMarker = L.marker(
-              [location.lat + 0.2, location.lon],
+              [lat + 0.2, lon],
               {
                 icon: L.divIcon({
                   className: 'map-info-marker',
@@ -548,12 +629,17 @@ export default function MapTab({ weather, location, aqi }) {
             )
 
             markersRef.current.push(infoMarker)
-            map.addLayer(infoMarker)
+
+            try {
+              map.addLayer(infoMarker)
+            } catch (e) {
+              console.warn('Could not add temp range marker:', e)
+            }
           }
         }
       } else {
         // Fallback if no weather data
-        const fallbackMarker = L.marker([location.lat, location.lon], {
+        const fallbackMarker = L.marker([lat, lon], {
           icon: L.divIcon({
             className: 'map-info-marker',
             html: `<div style="
@@ -570,7 +656,7 @@ export default function MapTab({ weather, location, aqi }) {
             ">
               ⛅ Weather Data Unavailable
               <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                ${location.name}
+                ${location?.name || 'Current Location'}
               </div>
             </div>`,
             iconSize: [200, 60],
@@ -579,7 +665,12 @@ export default function MapTab({ weather, location, aqi }) {
         })
 
         markersRef.current.push(fallbackMarker)
-        map.addLayer(fallbackMarker)
+
+        try {
+          map.addLayer(fallbackMarker)
+        } catch (e) {
+          console.warn('Could not add weather fallback:', e)
+        }
       }
     }
   }
@@ -592,7 +683,9 @@ export default function MapTab({ weather, location, aqi }) {
     setMapMode(mode)
 
     if (mapRef.current && mapLoaded && selectedLocation) {
-      fetchMapData(selectedLocation.lat, selectedLocation.lon)
+      const lat = selectedLocation.lat || 9.082
+      const lon = selectedLocation.lon || 8.675
+      fetchMapData(lat, lon)
     }
   }
 
@@ -671,8 +764,7 @@ export default function MapTab({ weather, location, aqi }) {
               right: '12px',
               top: '50%',
               transform: 'translateY(-50%)',
-              fontSize: '14px',
-              animation: 'spin 1s linear infinite'
+              fontSize: '14px'
             }}>
               ⏳
             </span>
@@ -770,11 +862,11 @@ export default function MapTab({ weather, location, aqi }) {
       }}>
         {mapMode === 'traffic' && (
           <>
-            <span><span className="legend-dot heavy" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> Heavy</span>
-            <span><span className="legend-dot moderate" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Moderate</span>
-            <span><span className="legend-dot light" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Light</span>
+            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', marginRight: '4px' }}></span> Heavy</span>
+            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Moderate</span>
+            <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Light</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Data: TomTom</span>
+            <span>Traffic Data</span>
           </>
         )}
 
@@ -784,15 +876,15 @@ export default function MapTab({ weather, location, aqi }) {
             <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#eab308', marginRight: '4px' }}></span> Medium</span>
             <span><span className="legend-dot" style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', marginRight: '4px' }}></span> Low</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Data: Open-Meteo</span>
+            <span>Pollen Data</span>
           </>
         )}
 
         {mapMode === 'weather' && (
           <>
-            <span>📍 {selectedLocation.flag} {selectedLocation.name}</span>
+            <span>📍 {selectedLocation?.flag || '📍'} {selectedLocation?.name || 'Current Location'}</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Data: Open-Meteo</span>
+            <span>Weather Data</span>
           </>
         )}
       </div>
