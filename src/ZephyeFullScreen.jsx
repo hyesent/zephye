@@ -16,12 +16,15 @@ import { getHealthAdvice } from './data/Health.js'
 import { getDIYConstructionAdvice } from './data/DIYconstruction.js'
 import { getPetsAdvice } from './data/Pets.js'
 import { getEnergyHomeAdvice } from './data/EnergyHome.js'
+import { getWeatherAdvice } from './data/BasicWeatherAdvice.js' // NEW IMPORT
 
 const GHOST_SUGGESTIONS = [
   'Ask "stargazing tonight" or "moon phase"',
   'Try "what should I wear" or "safe to run"',
   'Ask "will it rain" or "UV burn time"',
-  'Type "paint drying time" or "best photo hour"'
+  'Type "paint drying time" or "best photo hour"',
+  'Ask "will it rain tomorrow at 2 PM"',  // NEW
+  'Try "farming advice" or "should I water"' // NEW
 ]
 
 const QNA_MAP = [
@@ -30,7 +33,7 @@ const QNA_MAP = [
   { keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty'], fn: getSkinHairAdvice, name: 'SkinHair' },
   { keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive'], fn: getDrivingAdvice, name: 'Driving' },
   { keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey'], fn: getTravelingAdvice, name: 'Traveling' },
-  { keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse'], fn: getFarmingAdvice, name: 'Farming' },
+  { keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse', 'cow', 'chicken', 'livestock', 'poultry', 'yield', 'tractor'], fn: getFarmingAdvice, name: 'Farming' },
   { keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing'], fn: getStargazingAdvice, name: 'Stargazing' },
   { keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos'], fn: getPhotographyAdvice, name: 'Photography' },
   { keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue'], fn: getEventsAdvice, name: 'Events' },
@@ -39,6 +42,8 @@ const QNA_MAP = [
   { keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying'], fn: getDIYConstructionAdvice, name: 'DIY' },
   { keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog'], fn: getPetsAdvice, name: 'Pets' },
   { keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility'], fn: getEnergyHomeAdvice, name: 'EnergyHome' },
+  // NEW: Weather Advice (time-aware)
+  { keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear'], fn: getWeatherAdvice, name: 'Weather' },
 ]
 
 export default function ZephyeFullScreen({
@@ -148,6 +153,8 @@ export default function ZephyeFullScreen({
       visibilityCategory: weather?.current?.visibility ? (weather.current.visibility / 1000 < 1 ? 'fog' : weather.current.visibility / 1000 < 5 ? 'poor' : 'good') : 'good',
       timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
       season: ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getMonth()],
+      // NEW: Pass hourly data for time-aware weather
+      hourly: weather?.hourly || {}
     }
 
     let bestMatch = null
@@ -168,18 +175,22 @@ export default function ZephyeFullScreen({
       return await bestMatch.fn(data, question)
     }
 
-    if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather/)) {
-      return await getClothingAdvice(data, question)
+    // Fallback for weather questions
+    if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend/)) {
+      return await getWeatherAdvice(data, question)
     }
     if (q.match(/moon|star|sky|night/)) {
       return await getStargazingAdvice(data, question)
+    }
+    if (q.match(/farm|crop|plant|harvest|seed|garden|soil|irrigation|livestock/)) {
+      return await getFarmingAdvice(data, question)
     }
     if (q.match(/outside|run|exercise|walk|jog/)) {
       return await getSportsAdvice(data, question)
     }
 
     const suggestions = QNA_MAP.slice(0, 3).map(r => r.name).join(', ')
-    return `Not sure what you need. I can help with: ${suggestions}, and more. Current temp is ${temp}°C. Try "what should I wear" or "safe to run"?`
+    return `Not sure what you need. I can help with: ${suggestions}, and more. Current temp is ${temp}°C. Try "what should I wear" or "will it rain tomorrow"?`
   }
 
   const handleAsk = async (question) => {
@@ -295,7 +306,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* Quick Action Chips */}
+      {/* Quick Action Chips — UPDATED with weather/time chips */}
       {messages.length <= 1 && (
         <div style={{ 
           display: 'flex', 
@@ -305,7 +316,7 @@ export default function ZephyeFullScreen({
           flexWrap: 'wrap',
           borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          {['What should I wear?', 'Can I run today?', 'Stargazing tonight?', 'Will it rain?', 'Safe to drive?'].map((q, i) => (
+          {['Will it rain tomorrow?', 'What should I wear?', 'Stargazing tonight?', 'Farming advice?', 'Safe to drive?'].map((q, i) => (
             <button
               key={i}
               onClick={() => handleAsk(q)}
