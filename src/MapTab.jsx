@@ -99,6 +99,7 @@ export default function MapTab({ weather, location, aqi }) {
   const routeMarkersRef = useRef([])
   const longPressTimerRef = useRef(null)
   const isLongPressRef = useRef(false)
+  const currentPopupRef = useRef(null)
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
@@ -181,12 +182,10 @@ export default function MapTab({ weather, location, aqi }) {
 
     // ─── SINGLE TAP → POLLEN ─────────────────────────────────────────────
     map.on('click', (e) => {
-      // If this is a long press, skip the single tap
       if (isLongPressRef.current) {
         isLongPressRef.current = false
         return
       }
-
       const { lat, lng } = e.latlng
       handleSingleTap(lat, lng, map)
     })
@@ -197,13 +196,13 @@ export default function MapTab({ weather, location, aqi }) {
       handleDoubleTap(lat, lng, map)
     })
 
-    // ─── LONG PRESS / RIGHT CLICK → ROUTE ───────────────────────────────
+    // ─── RIGHT CLICK → ROUTE ─────────────────────────────────────────────
     map.on('contextmenu', (e) => {
       const { lat, lng } = e.latlng
       handleDoubleTap(lat, lng, map)
     })
 
-    // ─── MOUSE DOWN / UP FOR LONG PRESS DETECTION ────────────────────────
+    // ─── LONG PRESS DETECTION ────────────────────────────────────────────
     map.on('mousedown', () => {
       isLongPressRef.current = false
       longPressTimerRef.current = setTimeout(() => {
@@ -224,40 +223,55 @@ export default function MapTab({ weather, location, aqi }) {
     fetchMapData(lat, lon)
   }
 
+  // ─── Popup Helper ────────────────────────────────────────────────────────
+
+  const showPopup = (map, lat, lng, html, options = {}) => {
+    // Close existing popup
+    if (currentPopupRef.current) {
+      map.closePopup(currentPopupRef.current)
+      currentPopupRef.current = null
+    }
+
+    const popup = L.popup({
+      maxWidth: options.maxWidth || 300,
+      className: 'custom-popup'
+    })
+      .setLatLng([lat, lng])
+      .setContent(html)
+
+    popup.openOn(map)
+    currentPopupRef.current = popup
+    return popup
+  }
+
   // ─── Tap Handlers ────────────────────────────────────────────────────────
 
   const handleSingleTap = async (lat, lng, map) => {
-    // Show loading popup
-    const loadingPopup = L.popup()
-      .setLatLng([lat, lng])
-      .setContent(`
-        <div style="
-          background: rgba(15,23,42,0.92);
-          backdrop-filter: blur(16px);
-          padding: 10px 16px;
-          border-radius: 12px;
-          color: #f8fafc;
-          font-size: 13px;
-          font-family: 'Poppins', sans-serif;
-        ">
-          ⏳ Loading pollen...
-        </div>
-      `)
-      .setMaxWidth(200)
-      .openOn(map)
+    // Show loading
+    showPopup(map, lat, lng, `
+      <div style="
+        background: rgba(15,23,42,0.92);
+        backdrop-filter: blur(16px);
+        padding: 10px 16px;
+        border-radius: 12px;
+        color: #f8fafc;
+        font-size: 13px;
+        font-family: 'Poppins', sans-serif;
+      ">
+        ⏳ Loading pollen...
+      </div>
+    `)
 
-    // Fetch pollen data
     const pollenData = await fetchPollenForLocation(lat, lng)
 
     if (pollenData && pollenData.hourly) {
-      loadingPopup.setContent(createPollenPopup(pollenData, lat, lng))
+      showPopup(map, lat, lng, createPollenPopup(pollenData, lat, lng))
     } else {
-      // Fallback: show weather
       const weatherData = await fetchWeatherForLocation(lat, lng)
       if (weatherData) {
-        loadingPopup.setContent(createWeatherPopup(weatherData))
+        showPopup(map, lat, lng, createWeatherPopup(weatherData))
       } else {
-        loadingPopup.setContent(`
+        showPopup(map, lat, lng, `
           <div style="
             background: rgba(15,23,42,0.92);
             backdrop-filter: blur(16px);
@@ -270,7 +284,7 @@ export default function MapTab({ weather, location, aqi }) {
           ">
             ❌ No data available
             <div style="font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 4px;">
-              Try double tap for route
+              Try double tap or right-click for route
             </div>
           </div>
         `)
@@ -282,29 +296,24 @@ export default function MapTab({ weather, location, aqi }) {
     // Clear previous route
     clearRoute(map)
 
-    // Show calculating popup
-    const routePopup = L.popup()
-      .setLatLng([lat, lng])
-      .setContent(`
-        <div style="
-          background: rgba(15,23,42,0.92);
-          backdrop-filter: blur(16px);
-          padding: 10px 16px;
-          border-radius: 12px;
-          color: #f8fafc;
-          font-size: 13px;
-          font-family: 'Poppins', sans-serif;
-          text-align: center;
-        ">
-          🗺️ Calculating route...
-        </div>
-      `)
-      .setMaxWidth(200)
-      .openOn(map)
+    // Show calculating
+    showPopup(map, lat, lng, `
+      <div style="
+        background: rgba(15,23,42,0.92);
+        backdrop-filter: blur(16px);
+        padding: 10px 16px;
+        border-radius: 12px;
+        color: #f8fafc;
+        font-size: 13px;
+        font-family: 'Poppins', sans-serif;
+        text-align: center;
+      ">
+        🗺️ Calculating route...
+      </div>
+    `)
 
     setIsCalculatingRoute(true)
 
-    // Calculate route
     const result = await calculateRoute(
       selectedLocation.lat,
       selectedLocation.lon,
@@ -315,9 +324,9 @@ export default function MapTab({ weather, location, aqi }) {
     setIsCalculatingRoute(false)
 
     if (result) {
-      drawRoute(map, result, lat, lng, routePopup)
+      drawRoute(map, result, lat, lng)
     } else {
-      routePopup.setContent(`
+      showPopup(map, lat, lng, `
         <div style="
           background: rgba(15,23,42,0.92);
           backdrop-filter: blur(16px);
@@ -337,7 +346,7 @@ export default function MapTab({ weather, location, aqi }) {
     }
   }
 
-  // ─── Route Calculation with OpenRouteService ────────────────────────────
+  // ─── Route Calculation ──────────────────────────────────────────────────
 
   const calculateRoute = async (startLat, startLon, endLat, endLon) => {
     try {
@@ -366,12 +375,9 @@ export default function MapTab({ weather, location, aqi }) {
         return {
           geometry,
           distance: distanceKm,
-          duration: durationStr,
-          durationSeconds: duration,
-          distanceMeters: distance
+          duration: durationStr
         }
       }
-
       return null
     } catch (error) {
       console.error('Route calculation failed:', error)
@@ -379,7 +385,7 @@ export default function MapTab({ weather, location, aqi }) {
     }
   }
 
-  const drawRoute = (map, result, endLat, endLon, popup) => {
+  const drawRoute = (map, result, endLat, endLon) => {
     if (!map) return
 
     // Convert geometry to Leaflet polyline
@@ -429,8 +435,11 @@ export default function MapTab({ weather, location, aqi }) {
 
     routeMarkersRef.current = [startMarker, endMarker]
 
-    // Update popup with route info
-    popup.setContent(`
+    // Show route info popup
+    const midLat = (selectedLocation.lat + endLat) / 2
+    const midLon = (selectedLocation.lon + endLon) / 2
+
+    showPopup(map, midLat, midLon, `
       <div style="
         background: rgba(15,23,42,0.92);
         backdrop-filter: blur(16px);
@@ -451,7 +460,7 @@ export default function MapTab({ weather, location, aqi }) {
           Tap map to clear
         </div>
       </div>
-    `)
+    `, { maxWidth: 250 })
 
     // Zoom to fit route
     map.fitBounds(routeLine.getBounds(), { padding: [80, 80] })
@@ -478,6 +487,11 @@ export default function MapTab({ weather, location, aqi }) {
       }
     })
     routeMarkersRef.current = []
+
+    if (currentPopupRef.current) {
+      map.closePopup(currentPopupRef.current)
+      currentPopupRef.current = null
+    }
   }
 
   // ─── Fetch Functions ────────────────────────────────────────────────────
@@ -507,7 +521,7 @@ export default function MapTab({ weather, location, aqi }) {
     }
   }
 
-  // ─── Popup Creators ──────────────────────────────────────────────────────
+  // ─── Popup HTML Creators ────────────────────────────────────────────────
 
   const createPollenPopup = (data, lat, lon) => {
     if (!data?.hourly) return 'No pollen data available'
@@ -673,7 +687,6 @@ export default function MapTab({ weather, location, aqi }) {
     const lat = selectedLocation?.lat ?? DEFAULT_LOCATION.lat
     const lon = selectedLocation?.lon ?? DEFAULT_LOCATION.lon
 
-    // Clear ALL markers
     markersRef.current.forEach(m => {
       try { map.removeLayer(m) } catch {}
     })
@@ -736,7 +749,6 @@ export default function MapTab({ weather, location, aqi }) {
       renderTrafficOverlay(map, lat, lon)
     }
 
-    // Zoom to fit
     if (markersRef.current.length > 0) {
       try {
         const group = L.featureGroup(markersRef.current)
@@ -1072,7 +1084,6 @@ export default function MapTab({ weather, location, aqi }) {
 
   return (
     <div className="map-tab-container glass" style={{ padding: '16px', position: 'relative' }}>
-      {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -1083,7 +1094,6 @@ export default function MapTab({ weather, location, aqi }) {
         position: 'relative',
         zIndex: 10
       }}>
-        {/* Capsule Switch */}
         <div style={{
           display: 'flex',
           background: 'rgba(10,22,40,0.8)',
@@ -1114,7 +1124,6 @@ export default function MapTab({ weather, location, aqi }) {
           ))}
         </div>
 
-        {/* Search */}
         <div style={{
           position: 'relative',
           flex: 1,
@@ -1205,7 +1214,6 @@ export default function MapTab({ weather, location, aqi }) {
         </div>
       </div>
 
-      {/* Map */}
       <div
         ref={mapContainerRef}
         style={{
@@ -1236,7 +1244,6 @@ export default function MapTab({ weather, location, aqi }) {
         )}
       </div>
 
-      {/* Legend */}
       <div style={{
         marginTop: '12px',
         display: 'flex',
