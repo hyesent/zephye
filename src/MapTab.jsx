@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 // CONSTANTS
 // ============================================================================
 
+const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjkzZGIxMDYzZDZmOTQyOGZiZGFlMzk2OTA3ZWJkZjA4IiwiaCI6Im11cm11cjY0In0="
+
 const SUPPORTED_COUNTRIES = [
   { code: 'NG', name: 'Nigeria', lat: 9.082, lon: 8.675, flag: '🇳🇬' },
   { code: 'US', name: 'United States', lat: 37.090, lon: -95.713, flag: '🇺🇸' },
@@ -52,14 +54,7 @@ const WEATHER_NAMES = {
 }
 
 const POLLEN_TYPES = ['alder', 'birch', 'grass', 'mugwort', 'olive', 'ragweed']
-const POLLEN_LABELS = {
-  alder: 'Alder',
-  birch: 'Birch',
-  grass: 'Grass',
-  mugwort: 'Mugwort',
-  olive: 'Olive',
-  ragweed: 'Ragweed'
-}
+const POLLEN_LABELS = { alder: 'Alder', birch: 'Birch', grass: 'Grass', mugwort: 'Mugwort', olive: 'Olive', ragweed: 'Ragweed' }
 const POLLEN_COLORS = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#dc2626']
 const POLLEN_LEVELS = ['Very Low', 'Low', 'Moderate', 'High', 'Very High', 'Extreme']
 
@@ -84,13 +79,13 @@ export default function MapTab({ weather, location, aqi }) {
       if (saved) {
         const parsed = JSON.parse(saved)
         const exists = SUPPORTED_COUNTRIES.find(c => c.code === parsed.code)
-        if (exists && parsed.lat && parsed.lon) {
-          return parsed
-        }
+        if (exists && parsed.lat && parsed.lon) return parsed
       }
     } catch {}
     return DEFAULT_LOCATION
   })
+  const [routeData, setRouteData] = useState(null)
+  const [routePoints, setRoutePoints] = useState([])
 
   // ─── Refs ──────────────────────────────────────────────────────────────────
 
@@ -101,22 +96,19 @@ export default function MapTab({ weather, location, aqi }) {
   const searchTimeoutRef = useRef(null)
   const abortControllerRef = useRef(null)
   const isMapInitializedRef = useRef(false)
-  const homeMarkerRef = useRef(null)
+  const routeLayerRef = useRef(null)
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (selectedLocation?.lat && selectedLocation?.lon) {
-      localStorage.setItem(
-        'zephye_map_location',
-        JSON.stringify({
-          code: selectedLocation.code,
-          name: selectedLocation.name,
-          lat: selectedLocation.lat,
-          lon: selectedLocation.lon,
-          flag: selectedLocation.flag
-        })
-      )
+      localStorage.setItem('zephye_map_location', JSON.stringify({
+        code: selectedLocation.code,
+        name: selectedLocation.name,
+        lat: selectedLocation.lat,
+        lon: selectedLocation.lon,
+        flag: selectedLocation.flag
+      }))
     }
   }, [selectedLocation])
 
@@ -185,17 +177,45 @@ export default function MapTab({ weather, location, aqi }) {
       attribution: '© OpenStreetMap'
     }).addTo(map)
 
-    // Click on map → show weather popup
+    // ─── TAP MAP → FETCH POLLEN FOR LOCATION ─────────────────────────────
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng
-      const data = await fetchWeatherForLocation(lat, lng)
-      if (data) {
-        const popupContent = createWeatherPopup(data)
+      
+      // Fetch pollen data for tapped location
+      const pollenData = await fetchPollenForLocation(lat, lng)
+      
+      if (pollenData) {
+        setTapLocationData(pollenData)
+        const popupContent = createPollenPopup(pollenData, lat, lng)
+        
         L.popup()
           .setLatLng([lat, lng])
           .setContent(popupContent)
+          .setMaxWidth(300)
           .openOn(map)
+      } else {
+        // Fallback: show weather data if pollen fails
+        const weatherData = await fetchWeatherForLocation(lat, lng)
+        if (weatherData) {
+          const popupContent = createWeatherPopup(weatherData)
+          L.popup()
+            .setLatLng([lat, lng])
+            .setContent(popupContent)
+            .openOn(map)
+        }
       }
+    })
+
+    // ─── DOUBLE TAP → CALCULATE ROUTE ────────────────────────────────────
+    let lastTap = 0
+    map.on('click', (e) => {
+      const now = Date.now()
+      if (now - lastTap < 500) {
+        // Double tap detected — calculate route from home to this point
+        const { lat, lng } = e.latlng
+        calculateRoute(selectedLocation.lat, selectedLocation.lon, lat, lng)
+      }
+      lastTap = now
     })
 
     mapRef.current = map
@@ -204,7 +224,145 @@ export default function MapTab({ weather, location, aqi }) {
     fetchMapData(lat, lon)
   }
 
-  // ─── Fetch Weather for Clicked Location ─────────────────────────────────
+  // ─── Route Calculation with OpenRouteService ────────────────────────────
+
+  const calculateRoute = async (startLat, startLon, endLat, endLon) => {
+    const map = mapRef.current
+    if (!map) return
+
+    try {
+      // OpenRouteService API call
+      const url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
+        `api_key=${ORS_API_KEY}&` +
+        `start=${startLon},${startLat}&` +
+        `end=${endLon},${endLat}&` +
+        `format=json`
+
+      const response = await fetch(url)
+      const data = await response.json()
+
+      if (data.features && data.features.length > 0) {
+        const feature = data.features[0]
+        const geometry = feature.geometry
+        const properties = feature.properties
+        
+        // Extract route data
+        const distance = properties.segments[0]?.distance || 0 // in meters
+        const duration = properties.segments[0]?.duration || 0 // in seconds
+        
+        // Format distance and duration
+        const distanceKm = (distance / 1000).toFixed(1)
+        const durationMin = Math.round(duration / 60)
+        const durationStr = durationMin < 60 
+          ? `${durationMin} min` 
+          : `${Math.floor(durationMin / 60)}h ${durationMin % 60}m`
+
+        // Draw route on map
+        if (routeLayerRef.current) {
+          map.removeLayer(routeLayerRef.current)
+          routeLayerRef.current = null
+        }
+
+        // Convert geometry to Leaflet polyline
+        const coords = geometry.coordinates.map(coord => [coord[1], coord[0]])
+        const routeLine = L.polyline(coords, {
+          color: '#38bdf8',
+          weight: 4,
+          opacity: 0.8,
+          dashArray: '8, 6'
+        }).addTo(map)
+
+        routeLayerRef.current = routeLine
+
+        // Add markers for start and end
+        const startIcon = L.divIcon({
+          className: 'route-marker',
+          html: `<div style="
+            background: #22c55e;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #f8fafc;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          "></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6]
+        })
+
+        const endIcon = L.divIcon({
+          className: 'route-marker',
+          html: `<div style="
+            background: #ef4444;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #f8fafc;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          "></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6]
+        })
+
+        L.marker([startLat, startLon], { icon: startIcon }).addTo(map)
+        L.marker([endLat, endLon], { icon: endIcon }).addTo(map)
+
+        // Show route info popup
+        const popupContent = `
+          <div style="
+            background: rgba(15,23,42,0.92);
+            backdrop-filter: blur(16px);
+            padding: 12px 16px;
+            border-radius: 14px;
+            color: #f8fafc;
+            font-family: 'Poppins', sans-serif;
+            min-width: 140px;
+            text-align: center;
+          ">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">🚗 Route</div>
+            <div style="font-size: 18px; font-weight: 700; color: #38bdf8;">${distanceKm} km</div>
+            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">⏱️ ${durationStr}</div>
+            <div style="font-size: 9px; color: rgba(255,255,255,0.2); margin-top: 4px;">
+              OpenRouteService · Driving
+            </div>
+          </div>
+        `
+
+        const midLat = (startLat + endLat) / 2
+        const midLon = (startLon + endLon) / 2
+
+        L.popup()
+          .setLatLng([midLat, midLon])
+          .setContent(popupContent)
+          .setMaxWidth(250)
+          .openOn(map)
+
+        // Zoom to fit route
+        map.fitBounds(routeLine.getBounds(), { padding: [80, 80] })
+
+        setRouteData({ distance: distanceKm, duration: durationStr })
+      } else {
+        console.error('No route found')
+      }
+    } catch (error) {
+      console.error('Route calculation failed:', error)
+    }
+  }
+
+  // ─── Fetch Pollen for Tapped Location ───────────────────────────────────
+
+  const fetchPollenForLocation = async (lat, lon) => {
+    try {
+      const res = await fetch(
+        `https://air-quality-api.open-meteo.com/v1/air-quality?` +
+        `latitude=${lat}&longitude=${lon}&` +
+        `hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&` +
+        `timezone=auto`
+      )
+      return await res.json()
+    } catch {
+      return null
+    }
+  }
 
   const fetchWeatherForLocation = async (lat, lon) => {
     try {
@@ -215,6 +373,71 @@ export default function MapTab({ weather, location, aqi }) {
     } catch {
       return null
     }
+  }
+
+  // ─── Popup Creators ──────────────────────────────────────────────────────
+
+  const createPollenPopup = (data, lat, lon) => {
+    if (!data?.hourly) return 'No pollen data available'
+
+    const todayIndex = data.hourly?.time?.findIndex(t => {
+      const date = new Date(t)
+      const today = new Date()
+      return date.getDate() === today.getDate() &&
+             date.getMonth() === today.getMonth() &&
+             date.getFullYear() === today.getFullYear()
+    }) || 0
+
+    let popupHtml = `
+      <div style="
+        background: rgba(15,23,42,0.92);
+        backdrop-filter: blur(16px);
+        padding: 12px 16px;
+        border-radius: 14px;
+        color: #f8fafc;
+        font-family: 'Poppins', sans-serif;
+        min-width: 140px;
+        max-width: 200px;
+      ">
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">🌿 Pollen Levels</div>
+        <div style="font-size: 10px; color: rgba(255,255,255,0.3); margin-bottom: 6px;">
+          ${lat.toFixed(2)}, ${lon.toFixed(2)}
+        </div>
+    `
+
+    POLLEN_TYPES.forEach((type) => {
+      const key = `${type}_pollen`
+      const values = data.hourly?.[key] || []
+      const todayValues = values.slice(todayIndex, todayIndex + 12).filter(v => v !== null)
+      const avg = todayValues.length > 0
+        ? todayValues.reduce((a, b) => a + b, 0) / todayValues.length
+        : 0
+
+      const intensity = Math.min(avg / 8, 1)
+      const colorIndex = Math.min(Math.floor(intensity * 5), POLLEN_COLORS.length - 1)
+      const color = POLLEN_COLORS[colorIndex] || POLLEN_COLORS[0]
+      const levelIndex = Math.min(Math.floor(intensity * 5), POLLEN_LEVELS.length - 1)
+      const level = POLLEN_LEVELS[levelIndex] || POLLEN_LEVELS[0]
+
+      const label = POLLEN_LABELS[type] || type
+
+      popupHtml += `
+        <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <span>${label}</span>
+          <span style="color: ${color}; font-weight: 600;">${level}</span>
+          <span style="color: rgba(255,255,255,0.4); font-size: 10px;">${avg.toFixed(0)}</span>
+        </div>
+      `
+    })
+
+    popupHtml += `
+        <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 6px; text-align: center;">
+          Double tap for route
+        </div>
+      </div>
+    `
+
+    return popupHtml
   }
 
   const createWeatherPopup = (data) => {
@@ -232,18 +455,21 @@ export default function MapTab({ weather, location, aqi }) {
       <div style="
         background: rgba(15,23,42,0.92);
         backdrop-filter: blur(16px);
-        padding: 14px 18px;
-        border-radius: 16px;
+        padding: 12px 16px;
+        border-radius: 14px;
         color: #f8fafc;
         font-family: 'Poppins', sans-serif;
         min-width: 120px;
         text-align: center;
       ">
-        <div style="font-size: 32px;">${emoji}</div>
-        <div style="font-size: 20px; font-weight: 700;">${temp}°C</div>
-        <div style="font-size: 12px; color: rgba(255,255,255,0.5);">${name}</div>
-        <div style="font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px;">
+        <div style="font-size: 28px;">${emoji}</div>
+        <div style="font-size: 18px; font-weight: 700;">${temp}°C</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.5);">${name}</div>
+        <div style="font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px;">
           ⬆ ${high}° ⬇ ${low}°
+        </div>
+        <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 4px;">
+          Double tap for route
         </div>
       </div>
     `
@@ -264,7 +490,6 @@ export default function MapTab({ weather, location, aqi }) {
       let data = {}
 
       if (mode === 'pollen') {
-        // Use Open-Meteo Air Quality API (FREE, NO KEY)
         const res = await fetch(
           `https://air-quality-api.open-meteo.com/v1/air-quality?` +
           `latitude=${lat}&longitude=${lon}&` +
@@ -316,40 +541,37 @@ export default function MapTab({ weather, location, aqi }) {
       overlayRef.current = null
     }
 
-    // ─── SINGLE HOME MARKER ──────────────────────────────────────────────
+    // ─── HOME MARKER — Smaller Glass Card ──────────────────────────────
 
     const homeIcon = L.divIcon({
       className: 'home-marker',
       html: `
         <div style="
-          background: rgba(56, 189, 248, 0.12);
-          backdrop-filter: blur(12px);
-          padding: 10px 16px;
-          border-radius: 14px;
-          border: 1px solid rgba(56, 189, 248, 0.25);
-          box-shadow: 0 4px 24px rgba(56, 189, 248, 0.15);
+          background: rgba(56, 189, 248, 0.10);
+          backdrop-filter: blur(10px);
+          padding: 6px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(56, 189, 248, 0.15);
+          box-shadow: 0 2px 12px rgba(56, 189, 248, 0.08);
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 6px;
           color: #f8fafc;
-          font-size: 13px;
+          font-size: 11px;
         ">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
           </svg>
-          <div>
-            <div style="font-weight: 600; font-size: 14px;">${selectedLocation?.name || 'Location'}</div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.4);">${selectedLocation?.flag || '📍'} ${selectedLocation?.code || ''}</div>
-          </div>
+          <span style="font-weight: 500; font-size: 11px;">${selectedLocation?.name?.split(',')[0] || 'Location'}</span>
+          <span style="font-size: 9px; color: rgba(255,255,255,0.3);">${selectedLocation?.flag || ''}</span>
         </div>
       `,
-      iconSize: [200, 48],
-      iconAnchor: [100, 24]
+      iconSize: [140, 32],
+      iconAnchor: [70, 16]
     })
 
     const homeMarker = L.marker([lat, lon], { icon: homeIcon })
     markersRef.current.push(homeMarker)
-    homeMarkerRef.current = homeMarker
     map.addLayer(homeMarker)
 
     // ─── Mode-specific overlay ────────────────────────────────────────────
@@ -391,20 +613,20 @@ export default function MapTab({ weather, location, aqi }) {
         <div style="
           background: rgba(15,23,42,0.85);
           backdrop-filter: blur(16px);
-          padding: 10px 16px;
-          border-radius: 14px;
+          padding: 6px 12px;
+          border-radius: 10px;
           border: 1px solid rgba(255,255,255,0.06);
-          color: rgba(255,255,255,0.5);
-          font-size: 13px;
+          color: rgba(255,255,255,0.4);
+          font-size: 11px;
           text-align: center;
         ">
           ⏳ ${message}
         </div>
       `,
-      iconSize: [170, 40],
-      iconAnchor: [85, 20]
+      iconSize: [140, 30],
+      iconAnchor: [70, 15]
     })
-    const loadingMarker = L.marker([lat + 0.12, lon + 0.12], { icon: loadingIcon })
+    const loadingMarker = L.marker([lat + 0.10, lon + 0.10], { icon: loadingIcon })
     markersRef.current.push(loadingMarker)
     map.addLayer(loadingMarker)
   }
@@ -423,26 +645,26 @@ export default function MapTab({ weather, location, aqi }) {
       className: 'weather-marker',
       html: `
         <div style="
-          background: rgba(15,23,42,0.88);
+          background: rgba(15,23,42,0.85);
           backdrop-filter: blur(16px);
-          padding: 14px 18px;
-          border-radius: 18px;
+          padding: 10px 14px;
+          border-radius: 14px;
           border: 1px solid rgba(255,255,255,0.06);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
           text-align: center;
-          min-width: 100px;
+          min-width: 80px;
         ">
-          <div style="font-size: 38px; margin-bottom: 2px;">${emoji}</div>
-          <div style="font-size: 26px; font-weight: 700; color: #f8fafc;">${temp}°C</div>
-          <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px;">${name}</div>
-          <div style="font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 4px;">Tap map for more</div>
+          <div style="font-size: 32px; margin-bottom: 0px;">${emoji}</div>
+          <div style="font-size: 20px; font-weight: 700; color: #f8fafc;">${temp}°C</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 0px;">${name}</div>
+          <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 2px;">Tap for pollen · Double tap for route</div>
         </div>
       `,
-      iconSize: [130, 120],
-      iconAnchor: [65, 60]
+      iconSize: [120, 105],
+      iconAnchor: [60, 52]
     })
 
-    const marker = L.marker([lat + 0.12, lon + 0.12], { icon: weatherIcon })
+    const marker = L.marker([lat + 0.10, lon + 0.10], { icon: weatherIcon })
     markersRef.current.push(marker)
     map.addLayer(marker)
 
@@ -463,32 +685,31 @@ export default function MapTab({ weather, location, aqi }) {
           className: 'detail-marker',
           html: `
             <div style="
-              background: rgba(15,23,42,0.7);
-              backdrop-filter: blur(8px);
-              padding: 4px 12px;
-              border-radius: 10px;
-              border: 1px solid rgba(255,255,255,0.05);
-              font-size: 11px;
-              color: rgba(255,255,255,0.6);
+              background: rgba(15,23,42,0.6);
+              backdrop-filter: blur(6px);
+              padding: 2px 10px;
+              border-radius: 8px;
+              border: 1px solid rgba(255,255,255,0.04);
+              font-size: 10px;
+              color: rgba(255,255,255,0.5);
             ">
               ${details}
             </div>
           `,
-          iconSize: [150, 26],
-          iconAnchor: [75, 13]
+          iconSize: [130, 22],
+          iconAnchor: [65, 11]
         })
 
-        const detailMarker = L.marker([lat - 0.12, lon - 0.08], { icon: detailIcon })
+        const detailMarker = L.marker([lat - 0.10, lon - 0.06], { icon: detailIcon })
         markersRef.current.push(detailMarker)
         map.addLayer(detailMarker)
       }
     }
   }
 
-  // ─── Pollen Overlay (Heatmap from Open-Meteo Air Quality API) ──────────
+  // ─── Pollen Overlay ─────────────────────────────────────────────────────
 
   const renderPollenOverlay = (map, data, lat, lon) => {
-    // Get today's pollen data from hourly
     const todayIndex = data.hourly?.time?.findIndex(t => {
       const date = new Date(t)
       const today = new Date()
@@ -500,7 +721,6 @@ export default function MapTab({ weather, location, aqi }) {
     const pollenValues = POLLEN_TYPES.map(type => {
       const key = `${type}_pollen`
       const values = data.hourly?.[key] || []
-      // Get average of today's values
       const todayValues = values.slice(todayIndex, todayIndex + 24).filter(v => v !== null)
       const avg = todayValues.length > 0
         ? todayValues.reduce((a, b) => a + b, 0) / todayValues.length
@@ -517,28 +737,28 @@ export default function MapTab({ weather, location, aqi }) {
       const levelIndex = Math.min(Math.floor(intensity * 5), POLLEN_LEVELS.length - 1)
       const level = POLLEN_LEVELS[levelIndex] || POLLEN_LEVELS[0]
 
-      const radius = 15000 + p.value * 3000
+      const radius = 12000 + p.value * 2500
 
       const circle = L.circle(
-        [lat + (i - 2.5) * 0.15, lon + ((i % 3) - 1) * 0.2],
+        [lat + (i - 2.5) * 0.13, lon + ((i % 3) - 1) * 0.18],
         {
           radius: radius,
           color: color,
           fillColor: color,
-          fillOpacity: 0.15 + intensity * 0.5,
-          weight: 2,
-          opacity: 0.6,
+          fillOpacity: 0.12 + intensity * 0.5,
+          weight: 1.5,
+          opacity: 0.5,
           className: 'pollen-circle'
         }
       )
 
       const popupContent = `
         <div style="
-          font-size: 13px;
+          font-size: 12px;
           color: #1a1a2e;
           font-weight: 500;
-          padding: 4px;
-          min-width: 120px;
+          padding: 2px;
+          min-width: 100px;
         ">
           <strong>${p.label} Pollen</strong><br>
           Level: <span style="color: ${color}; font-weight: 700;">${level}</span><br>
@@ -551,38 +771,41 @@ export default function MapTab({ weather, location, aqi }) {
       map.addLayer(circle)
     })
 
-    // Heatmap Legend
+    // Legend
     const avgPollen = pollenValues.reduce((sum, p) => sum + p.value, 0) / pollenValues.length
 
     const legendIcon = L.divIcon({
       className: 'pollen-legend',
       html: `
         <div style="
-          background: rgba(15,23,42,0.88);
+          background: rgba(15,23,42,0.85);
           backdrop-filter: blur(16px);
-          padding: 10px 14px;
-          border-radius: 14px;
+          padding: 6px 12px;
+          border-radius: 10px;
           border: 1px solid rgba(255,255,255,0.06);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.2);
           text-align: center;
-          min-width: 100px;
+          min-width: 80px;
         ">
-          <div style="font-size: 12px; font-weight: 600; color: #f8fafc; margin-bottom: 4px;">🌿 Pollen Heatmap</div>
-          <div style="display: flex; justify-content: center; gap: 6px; font-size: 9px; color: rgba(255,255,255,0.5);">
-            <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 2px;"></span> Low</span>
-            <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #eab308; margin-right: 2px;"></span> Med</span>
-            <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; margin-right: 2px;"></span> High</span>
+          <div style="font-size: 10px; font-weight: 600; color: #f8fafc; margin-bottom: 2px;">🌿 Pollen Heatmap</div>
+          <div style="display: flex; justify-content: center; gap: 4px; font-size: 8px; color: rgba(255,255,255,0.4);">
+            <span><span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; margin-right: 2px;"></span> Low</span>
+            <span><span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #eab308; margin-right: 2px;"></span> Med</span>
+            <span><span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ef4444; margin-right: 2px;"></span> High</span>
           </div>
-          <div style="font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 3px;">
+          <div style="font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 2px;">
             Avg: ${avgPollen.toFixed(1)} grains/m³
+          </div>
+          <div style="font-size: 7px; color: rgba(255,255,255,0.12); margin-top: 2px;">
+            Double tap for route
           </div>
         </div>
       `,
-      iconSize: [140, 65],
-      iconAnchor: [70, 32]
+      iconSize: [120, 70],
+      iconAnchor: [60, 35]
     })
 
-    const legendMarker = L.marker([lat + 0.25, lon - 0.1], { icon: legendIcon })
+    const legendMarker = L.marker([lat + 0.22, lon - 0.08], { icon: legendIcon })
     markersRef.current.push(legendMarker)
     map.addLayer(legendMarker)
   }
@@ -590,47 +813,38 @@ export default function MapTab({ weather, location, aqi }) {
   // ─── Traffic Overlay ─────────────────────────────────────────────────────
 
   const renderTrafficOverlay = (map, lat, lon) => {
-    // TomTom traffic tiles (free tier — replace with your key)
-    const trafficLayer = L.tileLayer(
-      'https://api.tomtom.com/traffic/map/4/tile/flow/{z}/{x}/{y}.png?key=YOUR_TOMTOM_KEY',
-      {
-        opacity: 0.7,
-        attribution: '© TomTom',
-        _isOverlay: true
-      }
-    )
-
-    overlayRef.current = trafficLayer
-    map.addLayer(trafficLayer)
-
-    const trafficIcon = L.divIcon({
+    // OpenRouteService doesn't do live traffic tiles
+    // Show a message and use OSM as fallback
+    const infoIcon = L.divIcon({
       className: 'traffic-info',
       html: `
         <div style="
           background: rgba(15,23,42,0.85);
           backdrop-filter: blur(16px);
-          padding: 10px 16px;
-          border-radius: 14px;
+          padding: 8px 14px;
+          border-radius: 12px;
           border: 1px solid rgba(255,255,255,0.06);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          color: rgba(255,255,255,0.5);
+          font-size: 11px;
           text-align: center;
+          max-width: 160px;
         ">
-          <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">🚦 Traffic Layer</div>
-          <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px;">
-            ${selectedLocation?.name || 'Location'} · Real-time
+          🚦 Traffic Layer
+          <div style="font-size: 9px; color: rgba(255,255,255,0.25); margin-top: 2px;">
+            OpenRouteService for routing
           </div>
-          <div style="font-size: 9px; color: rgba(255,255,255,0.2); margin-top: 4px;">
-            Data: TomTom
+          <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 2px;">
+            Double tap for route
           </div>
         </div>
       `,
-      iconSize: [160, 65],
-      iconAnchor: [80, 32]
+      iconSize: [160, 60],
+      iconAnchor: [80, 30]
     })
 
-    const trafficMarker = L.marker([lat + 0.08, lon + 0.08], { icon: trafficIcon })
-    markersRef.current.push(trafficMarker)
-    map.addLayer(trafficMarker)
+    const infoMarker = L.marker([lat + 0.08, lon + 0.08], { icon: infoIcon })
+    markersRef.current.push(infoMarker)
+    map.addLayer(infoMarker)
   }
 
   // ─── Search ──────────────────────────────────────────────────────────────
@@ -755,7 +969,7 @@ export default function MapTab({ weather, location, aqi }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🚦 Traffic'}
+              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🚦 Route'}
             </button>
           ))}
         </div>
@@ -896,7 +1110,7 @@ export default function MapTab({ weather, location, aqi }) {
           <>
             <span>📍 {selectedLocation?.flag || '📍'} {selectedLocation?.name || 'Location'}</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Tap map for weather at any location</span>
+            <span>Tap for pollen · Double tap for route</span>
           </>
         )}
         {mode === 'pollen' && (
@@ -910,9 +1124,9 @@ export default function MapTab({ weather, location, aqi }) {
         )}
         {mode === 'traffic' && (
           <>
-            <span>🚦 TomTom Traffic</span>
+            <span>🗺️ OpenRouteService</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Real-time flow</span>
+            <span>Double tap for route</span>
           </>
         )}
       </div>
