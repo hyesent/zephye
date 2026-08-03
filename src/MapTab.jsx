@@ -84,8 +84,7 @@ export default function MapTab({ weather, location, aqi }) {
     } catch {}
     return DEFAULT_LOCATION
   })
-  const [routeData, setRouteData] = useState(null)
-  const [routePoints, setRoutePoints] = useState([])
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false)
 
   // ─── Refs ──────────────────────────────────────────────────────────────────
 
@@ -97,6 +96,8 @@ export default function MapTab({ weather, location, aqi }) {
   const abortControllerRef = useRef(null)
   const isMapInitializedRef = useRef(false)
   const routeLayerRef = useRef(null)
+  const routeMarkersRef = useRef([])
+  const lastTapRef = useRef(0)
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
@@ -177,45 +178,123 @@ export default function MapTab({ weather, location, aqi }) {
       attribution: '© OpenStreetMap'
     }).addTo(map)
 
-    // ─── TAP MAP → FETCH POLLEN FOR LOCATION ─────────────────────────────
+    // ─── SINGLE TAP → POLLEN DATA ────────────────────────────────────────
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng
       
-      // Fetch pollen data for tapped location
+      // Show loading popup
+      const loadingPopup = L.popup()
+        .setLatLng([lat, lng])
+        .setContent(`
+          <div style="
+            background: rgba(15,23,42,0.92);
+            backdrop-filter: blur(16px);
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Poppins', sans-serif;
+          ">
+            ⏳ Loading pollen data...
+          </div>
+        `)
+        .setMaxWidth(200)
+        .openOn(map)
+
+      // Fetch pollen data
       const pollenData = await fetchPollenForLocation(lat, lng)
       
       if (pollenData) {
-        setTapLocationData(pollenData)
         const popupContent = createPollenPopup(pollenData, lat, lng)
-        
-        L.popup()
-          .setLatLng([lat, lng])
-          .setContent(popupContent)
-          .setMaxWidth(300)
-          .openOn(map)
+        loadingPopup.setContent(popupContent)
       } else {
-        // Fallback: show weather data if pollen fails
+        // Fallback: show weather data
         const weatherData = await fetchWeatherForLocation(lat, lng)
         if (weatherData) {
-          const popupContent = createWeatherPopup(weatherData)
-          L.popup()
-            .setLatLng([lat, lng])
-            .setContent(popupContent)
-            .openOn(map)
+          loadingPopup.setContent(createWeatherPopup(weatherData))
+        } else {
+          loadingPopup.setContent(`
+            <div style="
+              background: rgba(15,23,42,0.92);
+              backdrop-filter: blur(16px);
+              padding: 10px 16px;
+              border-radius: 12px;
+              color: #f8fafc;
+              font-size: 13px;
+              font-family: 'Poppins', sans-serif;
+              text-align: center;
+            ">
+              ❌ No data available
+              <div style="font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 4px;">
+                Try again or double tap for route
+              </div>
+            </div>
+          `)
         }
       }
     })
 
-    // ─── DOUBLE TAP → CALCULATE ROUTE ────────────────────────────────────
-    let lastTap = 0
-    map.on('click', (e) => {
-      const now = Date.now()
-      if (now - lastTap < 500) {
-        // Double tap detected — calculate route from home to this point
-        const { lat, lng } = e.latlng
-        calculateRoute(selectedLocation.lat, selectedLocation.lon, lat, lng)
+    // ─── DOUBLE TAP → ROUTE CALCULATION ──────────────────────────────────
+    map.on('dblclick', async (e) => {
+      const { lat, lng } = e.latlng
+      
+      // Clear previous route
+      clearRoute()
+      
+      // Show calculating popup
+      const routePopup = L.popup()
+        .setLatLng([lat, lng])
+        .setContent(`
+          <div style="
+            background: rgba(15,23,42,0.92);
+            backdrop-filter: blur(16px);
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+          ">
+            🗺️ Calculating route...
+          </div>
+        `)
+        .setMaxWidth(200)
+        .openOn(map)
+
+      setIsCalculatingRoute(true)
+
+      // Calculate route
+      const result = await calculateRoute(
+        selectedLocation.lat,
+        selectedLocation.lon,
+        lat,
+        lng
+      )
+
+      setIsCalculatingRoute(false)
+
+      if (result) {
+        // Draw route on map
+        drawRoute(result, lat, lng, routePopup)
+      } else {
+        routePopup.setContent(`
+          <div style="
+            background: rgba(15,23,42,0.92);
+            backdrop-filter: blur(16px);
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+          ">
+            ❌ Route not found
+            <div style="font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 4px;">
+              Try a different location
+            </div>
+          </div>
+        `)
       }
-      lastTap = now
     })
 
     mapRef.current = map
@@ -227,125 +306,149 @@ export default function MapTab({ weather, location, aqi }) {
   // ─── Route Calculation with OpenRouteService ────────────────────────────
 
   const calculateRoute = async (startLat, startLon, endLat, endLon) => {
-    const map = mapRef.current
-    if (!map) return
-
     try {
-      // OpenRouteService API call
       const url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
         `api_key=${ORS_API_KEY}&` +
         `start=${startLon},${startLat}&` +
-        `end=${endLon},${endLat}&` +
-        `format=json`
+        `end=${endLon},${endLat}`
+
+      console.log('Route URL:', url)
 
       const response = await fetch(url)
       const data = await response.json()
+
+      console.log('Route response:', data)
 
       if (data.features && data.features.length > 0) {
         const feature = data.features[0]
         const geometry = feature.geometry
         const properties = feature.properties
         
-        // Extract route data
-        const distance = properties.segments[0]?.distance || 0 // in meters
-        const duration = properties.segments[0]?.duration || 0 // in seconds
+        const distance = properties.segments[0]?.distance || 0
+        const duration = properties.segments[0]?.duration || 0
         
-        // Format distance and duration
         const distanceKm = (distance / 1000).toFixed(1)
         const durationMin = Math.round(duration / 60)
         const durationStr = durationMin < 60 
           ? `${durationMin} min` 
           : `${Math.floor(durationMin / 60)}h ${durationMin % 60}m`
 
-        // Draw route on map
-        if (routeLayerRef.current) {
-          map.removeLayer(routeLayerRef.current)
-          routeLayerRef.current = null
+        return {
+          geometry,
+          distance: distanceKm,
+          duration: durationStr,
+          durationSeconds: duration,
+          distanceMeters: distance
         }
-
-        // Convert geometry to Leaflet polyline
-        const coords = geometry.coordinates.map(coord => [coord[1], coord[0]])
-        const routeLine = L.polyline(coords, {
-          color: '#38bdf8',
-          weight: 4,
-          opacity: 0.8,
-          dashArray: '8, 6'
-        }).addTo(map)
-
-        routeLayerRef.current = routeLine
-
-        // Add markers for start and end
-        const startIcon = L.divIcon({
-          className: 'route-marker',
-          html: `<div style="
-            background: #22c55e;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid #f8fafc;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          "></div>`,
-          iconSize: [12, 12],
-          iconAnchor: [6, 6]
-        })
-
-        const endIcon = L.divIcon({
-          className: 'route-marker',
-          html: `<div style="
-            background: #ef4444;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid #f8fafc;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          "></div>`,
-          iconSize: [12, 12],
-          iconAnchor: [6, 6]
-        })
-
-        L.marker([startLat, startLon], { icon: startIcon }).addTo(map)
-        L.marker([endLat, endLon], { icon: endIcon }).addTo(map)
-
-        // Show route info popup
-        const popupContent = `
-          <div style="
-            background: rgba(15,23,42,0.92);
-            backdrop-filter: blur(16px);
-            padding: 12px 16px;
-            border-radius: 14px;
-            color: #f8fafc;
-            font-family: 'Poppins', sans-serif;
-            min-width: 140px;
-            text-align: center;
-          ">
-            <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">🚗 Route</div>
-            <div style="font-size: 18px; font-weight: 700; color: #38bdf8;">${distanceKm} km</div>
-            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">⏱️ ${durationStr}</div>
-            <div style="font-size: 9px; color: rgba(255,255,255,0.2); margin-top: 4px;">
-              OpenRouteService · Driving
-            </div>
-          </div>
-        `
-
-        const midLat = (startLat + endLat) / 2
-        const midLon = (startLon + endLon) / 2
-
-        L.popup()
-          .setLatLng([midLat, midLon])
-          .setContent(popupContent)
-          .setMaxWidth(250)
-          .openOn(map)
-
-        // Zoom to fit route
-        map.fitBounds(routeLine.getBounds(), { padding: [80, 80] })
-
-        setRouteData({ distance: distanceKm, duration: durationStr })
-      } else {
-        console.error('No route found')
       }
+      
+      return null
     } catch (error) {
       console.error('Route calculation failed:', error)
+      return null
     }
+  }
+
+  const drawRoute = (result, endLat, endLon, popup) => {
+    const map = mapRef.current
+    if (!map) return
+
+    // Convert geometry to Leaflet polyline
+    const coords = result.geometry.coordinates.map(coord => [coord[1], coord[0]])
+    
+    const routeLine = L.polyline(coords, {
+      color: '#38bdf8',
+      weight: 4,
+      opacity: 0.8,
+      dashArray: '8, 6'
+    }).addTo(map)
+
+    routeLayerRef.current = routeLine
+
+    // Add start and end markers
+    const startIcon = L.divIcon({
+      className: 'route-marker-start',
+      html: `<div style="
+        background: #22c55e;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid #f8fafc;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    })
+
+    const endIcon = L.divIcon({
+      className: 'route-marker-end',
+      html: `<div style="
+        background: #ef4444;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid #f8fafc;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    })
+
+    const startMarker = L.marker([selectedLocation.lat, selectedLocation.lon], { icon: startIcon }).addTo(map)
+    const endMarker = L.marker([endLat, endLon], { icon: endIcon }).addTo(map)
+
+    routeMarkersRef.current = [startMarker, endMarker]
+
+    // Update popup with route info
+    popup.setContent(`
+      <div style="
+        background: rgba(15,23,42,0.92);
+        backdrop-filter: blur(16px);
+        padding: 12px 16px;
+        border-radius: 14px;
+        color: #f8fafc;
+        font-family: 'Poppins', sans-serif;
+        min-width: 140px;
+        text-align: center;
+      ">
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">🚗 Route</div>
+        <div style="font-size: 22px; font-weight: 700; color: #38bdf8;">${result.distance} km</div>
+        <div style="font-size: 14px; color: rgba(255,255,255,0.6);">⏱️ ${result.duration}</div>
+        <div style="font-size: 9px; color: rgba(255,255,255,0.2); margin-top: 4px;">
+          OpenRouteService · Driving
+        </div>
+        <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 2px;">
+          Tap map to clear route
+        </div>
+      </div>
+    `)
+
+    // Zoom to fit route
+    map.fitBounds(routeLine.getBounds(), { padding: [80, 80] })
+
+    // Add click handler to clear route
+    const clearHandler = () => {
+      clearRoute()
+      map.off('click', clearHandler)
+    }
+    map.on('click', clearHandler)
+  }
+
+  const clearRoute = () => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (routeLayerRef.current) {
+      map.removeLayer(routeLayerRef.current)
+      routeLayerRef.current = null
+    }
+
+    routeMarkersRef.current.forEach(m => {
+      if (map.hasLayer(m)) {
+        map.removeLayer(m)
+      }
+    })
+    routeMarkersRef.current = []
   }
 
   // ─── Fetch Pollen for Tapped Location ───────────────────────────────────
@@ -396,14 +499,15 @@ export default function MapTab({ weather, location, aqi }) {
         border-radius: 14px;
         color: #f8fafc;
         font-family: 'Poppins', sans-serif;
-        min-width: 140px;
-        max-width: 200px;
+        min-width: 160px;
       ">
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">🌿 Pollen Levels</div>
-        <div style="font-size: 10px; color: rgba(255,255,255,0.3); margin-bottom: 6px;">
+        <div style="font-size: 9px; color: rgba(255,255,255,0.25); margin-bottom: 6px;">
           ${lat.toFixed(2)}, ${lon.toFixed(2)}
         </div>
     `
+
+    let hasData = false
 
     POLLEN_TYPES.forEach((type) => {
       const key = `${type}_pollen`
@@ -412,6 +516,8 @@ export default function MapTab({ weather, location, aqi }) {
       const avg = todayValues.length > 0
         ? todayValues.reduce((a, b) => a + b, 0) / todayValues.length
         : 0
+
+      if (avg > 0) hasData = true
 
       const intensity = Math.min(avg / 8, 1)
       const colorIndex = Math.min(Math.floor(intensity * 5), POLLEN_COLORS.length - 1)
@@ -430,8 +536,16 @@ export default function MapTab({ weather, location, aqi }) {
       `
     })
 
+    if (!hasData) {
+      popupHtml += `
+        <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; padding: 8px 0;">
+          No pollen data available for this location
+        </div>
+      `
+    }
+
     popupHtml += `
-        <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 6px; text-align: center;">
+        <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 6px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
           Double tap for route
         </div>
       </div>
@@ -530,7 +644,7 @@ export default function MapTab({ weather, location, aqi }) {
     const lat = selectedLocation?.lat ?? DEFAULT_LOCATION.lat
     const lon = selectedLocation?.lon ?? DEFAULT_LOCATION.lon
 
-    // Clear ALL markers
+    // Clear ALL markers (keep home marker)
     markersRef.current.forEach(m => {
       try { map.removeLayer(m) } catch {}
     })
@@ -541,7 +655,7 @@ export default function MapTab({ weather, location, aqi }) {
       overlayRef.current = null
     }
 
-    // ─── HOME MARKER — Smaller Glass Card ──────────────────────────────
+    // ─── HOME MARKER ──────────────────────────────────────────────────────
 
     const homeIcon = L.divIcon({
       className: 'home-marker',
@@ -813,8 +927,6 @@ export default function MapTab({ weather, location, aqi }) {
   // ─── Traffic Overlay ─────────────────────────────────────────────────────
 
   const renderTrafficOverlay = (map, lat, lon) => {
-    // OpenRouteService doesn't do live traffic tiles
-    // Show a message and use OSM as fallback
     const infoIcon = L.divIcon({
       className: 'traffic-info',
       html: `
@@ -829,12 +941,12 @@ export default function MapTab({ weather, location, aqi }) {
           text-align: center;
           max-width: 160px;
         ">
-          🚦 Traffic Layer
+          🗺️ Route Calculator
           <div style="font-size: 9px; color: rgba(255,255,255,0.25); margin-top: 2px;">
-            OpenRouteService for routing
+            Double tap any location
           </div>
           <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 2px;">
-            Double tap for route
+            OpenRouteService · Driving
           </div>
         </div>
       `,
@@ -969,7 +1081,7 @@ export default function MapTab({ weather, location, aqi }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🚦 Route'}
+              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🗺️ Route'}
             </button>
           ))}
         </div>
