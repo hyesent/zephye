@@ -54,6 +54,167 @@ const CloseIcon = () => (
   </svg>
 )
 
+// ============================================================================
+// MAP MODAL — Shows when user switches to Map tab
+// ============================================================================
+
+function MapModal({ isOpen, onClose }) {
+  if (!isOpen) return null
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="glass"
+        onClick={e => e.stopPropagation()}
+        style={{
+          padding: '28px 24px 24px',
+          maxWidth: '420px',
+          width: '90%',
+          borderRadius: '20px',
+          background: 'rgba(15,23,42,0.94)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
+          position: 'relative',
+          textAlign: 'center'
+        }}
+      >
+        {/* Close button (X) */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            padding: '6px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            cursor: 'pointer',
+            color: 'rgba(255,255,255,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+            e.currentTarget.style.color = '#fff'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+            e.currentTarget.style.color = 'rgba(255,255,255,0.4)'
+          }}
+        >
+          <CloseIcon />
+        </button>
+
+        {/* Icon */}
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗺️</div>
+
+        {/* Title */}
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '700',
+          color: '#f8fafc',
+          marginBottom: '6px'
+        }}>
+          Map Features
+        </h3>
+
+        {/* Status Badge */}
+        <div style={{
+          display: 'inline-block',
+          padding: '4px 12px',
+          borderRadius: '20px',
+          fontSize: '11px',
+          fontWeight: '600',
+          background: 'rgba(56,189,248,0.15)',
+          color: '#7dd3fc',
+          border: '1px solid rgba(56,189,248,0.2)',
+          marginBottom: '14px'
+        }}>
+          ⚡ Undergoing Upgrade
+        </div>
+
+        {/* Description */}
+        <p style={{
+          fontSize: '13px',
+          color: 'rgba(255,255,255,0.5)',
+          lineHeight: '1.6',
+          marginBottom: '16px'
+        }}>
+          Some map features are being enhanced. Core functionality is still available.
+        </p>
+
+        {/* Divider */}
+        <div style={{
+          height: '1px',
+          background: 'rgba(255,255,255,0.06)',
+          marginBottom: '14px'
+        }} />
+
+        {/* Gesture Helpers */}
+        <div style={{
+          textAlign: 'left',
+          fontSize: '12px',
+          color: 'rgba(255,255,255,0.4)'
+        }}>
+          <p style={{ fontWeight: '600', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
+            📌 How to use:
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>👆</span>
+              <span>Single tap — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Weather data</span></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>👆👆</span>
+              <span>Double tap — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Pollen data</span></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>👆⏱️</span>
+              <span>Long press / Right click — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Route calculation</span></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>🚦</span>
+              <span>Traffic tab — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Live traffic + incidents</span></span>
+            </div>
+          </div>
+        </div>
+
+        {/* OK Button */}
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%',
+            padding: '10px',
+            borderRadius: '12px',
+            background: 'rgba(56,189,248,0.15)',
+            color: '#7dd3fc',
+            fontWeight: '600',
+            fontSize: '14px',
+            border: '1px solid rgba(56,189,248,0.2)',
+            cursor: 'pointer',
+            marginTop: '16px',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(56,189,248,0.25)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(56,189,248,0.15)'
+          }}
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const getAllQuotesPool = () => {
   const pool = []
   Object.keys(QUOTES).forEach(cat => {
@@ -382,6 +543,20 @@ function AppContent() {
   const [hasWelcomed, setHasWelcomed] = useState(false)
   const [voiceToUse, setVoiceToUse] = useState('en-US-JennyNeural')
   const [showHourlyModal, setShowHourlyModal] = useState(false)
+  const [showMapModal, setShowMapModal] = useState(false)
+
+  // ─── Show map modal when tab switches to 'map' ──────────────────────────
+
+  useEffect(() => {
+    if (tab === 'map') {
+      // Check if user has seen the map modal before
+      const hasSeenMapModal = localStorage.getItem('zephye_seen_map_modal')
+      if (!hasSeenMapModal) {
+        setShowMapModal(true)
+        localStorage.setItem('zephye_seen_map_modal', 'true')
+      }
+    }
+  }, [tab])
 
   useEffect(() => { localStorage.setItem('zephye_saved_locations', JSON.stringify(savedLocations)) }, [savedLocations])
 
@@ -604,6 +779,12 @@ function AppContent() {
       <div className={`weather-bg ${getWeatherClass(wc)}`}></div>
       {toast && <div className="toast">{toast}</div>}
       
+      {/* ─── Map Modal ────────────────────────────────────────────────────── */}
+      <MapModal 
+        isOpen={showMapModal} 
+        onClose={() => setShowMapModal(false)} 
+      />
+
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding:'24px'}}>
