@@ -2,9 +2,16 @@
 // TRAFFIC ADVICE — Traffic incidents, congestion, road conditions
 // ============================================================================
 
-import { getCachedTraffic, setCachedTraffic } from '../MapTab.jsx'
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── CONSTANTS ──────────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-// ─── Sample Questions ──────────────────────────────────────────────────────
+const MAPBOX_KEY = "pk.eyJ1IjoiaHllc2VudCIsImEiOiJjbXNkd2Fsd20wMTRjMndxeHZ1MXZkdWk5In0.oo-poQNG7epNSEADCQFZPQ"
+const TRAFFIC_CACHE_TTL = 8 * 60 * 60 * 1000 // 8 hours
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SAMPLE QUESTIONS ──────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export const sampleQuestions = [
   "Is there traffic on my route?",
@@ -12,25 +19,125 @@ export const sampleQuestions = [
   "What's the traffic like right now?",
   "Is there a road closure?",
   "How bad is the traffic today?",
-  "Any traffic incidents in my area?"
+  "Any traffic incidents in my area?",
+  "Traffic to work?",
+  "Is the highway congested?",
+  "What's happening on the road?"
 ]
 
-// ─── Main Function ─────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── CACHE HELPERS ─────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-export const getTrafficAdvice = async (data, question) => {
+const getTrafficCacheKey = (lat, lon) => {
+  const roundedLat = Math.round(lat * 100) / 100
+  const roundedLon = Math.round(lon * 100) / 100
+  return `zephye_traffic_incidents_${roundedLat}_${roundedLon}`
+}
+
+const getCachedTraffic = (lat, lon) => {
+  try {
+    const key = getTrafficCacheKey(lat, lon)
+    const cached = localStorage.getItem(key)
+    if (!cached) return null
+
+    const data = JSON.parse(cached)
+    if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return data.value
+  } catch {
+    return null
+  }
+}
+
+const setCachedTraffic = (lat, lon, incidents) => {
+  try {
+    const key = getTrafficCacheKey(lat, lon)
+    localStorage.setItem(key, JSON.stringify({
+      value: incidents,
+      timestamp: Date.now()
+    }))
+  } catch {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('zephye_traffic_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(k))
+          if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
+            localStorage.removeItem(k)
+          }
+        } catch {}
+      }
+    })
+  }
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const findSavedLocation = (name, savedLocations) => {
+  if (!savedLocations || savedLocations.length === 0) return null
+  const lowerName = name.toLowerCase().trim()
+  
+  let match = savedLocations.find(loc => 
+    loc.label && loc.label.toLowerCase() === lowerName
+  )
+  if (match) return match
+  
+  match = savedLocations.find(loc => {
+    const label = loc.label?.toLowerCase() || ''
+    const locName = loc.name?.toLowerCase() || ''
+    return label.includes(lowerName) || locName.includes(lowerName)
+  })
+  
+  return match || null
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MAIN FUNCTION ─────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+export const getTrafficAdvice = async (data, question, options = {}) => {
   const q = question.toLowerCase()
-  const { lat, lon, city, homeLat, homeLon, homeName } = data
+  const { lat, lon, city, homeLat, homeLon, homeName, savedLocations = [] } = data
 
-  // Fetch traffic incidents (using caching)
-  let incidents = getCachedTraffic(lat, lon)
+  // ─── Check if user mentioned a saved location ──────────────────────────
+
+  let targetLocation = options.location || null
+  let targetLat = lat
+  let targetLon = lon
+  let targetName = city || 'Your Area'
+
+  // Parse from question
+  if (!targetLocation) {
+    // Check for saved location mentions
+    for (const loc of savedLocations) {
+      const label = loc.label?.toLowerCase() || ''
+      const locName = loc.name?.toLowerCase() || ''
+      if (q.includes(label) || q.includes(locName)) {
+        targetLocation = loc
+        break
+      }
+    }
+  }
+
+  if (targetLocation && typeof targetLocation === 'object' && targetLocation.lat) {
+    targetLat = targetLocation.lat
+    targetLon = targetLocation.lon
+    targetName = targetLocation.label || targetLocation.name || 'saved location'
+  }
+
+  // ─── Fetch traffic incidents ────────────────────────────────────────────
+
+  let incidents = getCachedTraffic(targetLat, targetLon)
 
   if (!incidents) {
     try {
-      // Fetch from Mapbox (or TomTom fallback)
-      const MAPBOX_KEY = "pk.eyJ1IjoiaHllc2VudCIsImEiOiJjbXNkd2Fsd20wMTRjMndxeHZ1MXZkdWk5In0.oo-poQNG7epNSEADCQFZPQ"
-      const destLat = lat + 0.1
-      const destLon = lon + 0.1
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon},${lat};${destLon},${destLat}?` +
+      const destLat = targetLat + 0.1
+      const destLon = targetLon + 0.1
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${targetLon},${targetLat};${destLon},${destLat}?` +
         `annotations=congestion,incidents&` +
         `access_token=${MAPBOX_KEY}`
 
@@ -39,7 +146,7 @@ export const getTrafficAdvice = async (data, question) => {
 
       if (data.routes && data.routes.length > 0) {
         incidents = data.routes[0].incidents || []
-        setCachedTraffic(lat, lon, incidents)
+        setCachedTraffic(targetLat, targetLon, incidents)
       } else {
         incidents = []
       }
@@ -50,85 +157,35 @@ export const getTrafficAdvice = async (data, question) => {
 
   // ─── Build Response ──────────────────────────────────────────────────────
 
-  let response = `🚦 **Traffic Report for ${city || 'Your Area'}**\n\n`
+  let responseText = `🚦 **Traffic Report for ${targetName}**\n\n`
 
   if (!incidents || incidents.length === 0) {
-    response += `✅ No traffic incidents reported in your area.\n`
-    response += `🌐 Roads appear clear with normal flow.\n`
-    return response
+    responseText += `✅ No traffic incidents reported in this area.\n`
+    responseText += `🌐 Roads appear clear with normal flow.\n`
+    return responseText
   }
 
   // ─── Count by Type ──────────────────────────────────────────────────────
 
   const typeCounts = {}
+  const severityCounts = {}
+
   incidents.forEach(inc => {
     const type = inc.type || inc.iconCategory || 'unknown'
     typeCounts[type] = (typeCounts[type] || 0) + 1
+    
+    const severity = inc.severity || inc.properties?.severity || 'unknown'
+    severityCounts[severity] = (severityCounts[severity] || 0) + 1
   })
 
-  response += `📊 **Incident Summary:**\n`
-  Object.entries(typeCounts).forEach(([type, count]) => {
-    const emoji = {
-      accident: '🚗',
-      construction: '🚧',
-      roadClosure: '🚫',
-      hazard: '⚠️',
-      weather: '🌧️',
-      event: '🎪'
-    } [type] || '📌'
-    response += `  ${emoji} ${count} ${type}${count > 1 ? 's' : ''}\n`
-  })
+  // ─── Summary ─────────────────────────────────────────────────────────────
 
-  response += `\n📋 **Details:**\n`
-
-  incidents.slice(0, 5).forEach((inc, i) => {
-    const type = inc.type || inc.iconCategory || 'unknown'
-    const emoji = {
-      accident: '🚗',
-      construction: '🚧',
-      roadClosure: '🚫',
-      hazard: '⚠️',
-      weather: '🌧️',
-      event: '🎪'
-    } [type] || '📌'
-    const desc = inc.description || inc.properties?.description || 'Traffic incident reported'
-
-    response += `  ${i + 1}. ${emoji} **${type.charAt(0).toUpperCase() + type.slice(1)}**\n`
-    response += `     ${desc}\n`
-
-    if (inc.startTime) {
-      response += `     🕐 Started: ${new Date(inc.startTime).toLocaleString()}\n`
-    }
-    if (inc.endTime) {
-      response += `     ⏳ Ends: ${new Date(inc.endTime).toLocaleString()}\n`
-    }
-    if (inc.length) {
-      response += `     📏 Length: ${inc.length}m\n`
-    }
-    response += `\n`
-  })
-
-  if (incidents.length > 5) {
-    response += `  ... and ${incidents.length - 5} more incidents reported.\n`
-  }
-
-  // ─── Driving Advice ──────────────────────────────────────────────────────
-
-  response += `\n💡 **Advice:**\n`
-
-  if (typeCounts.accident > 0) {
-    response += `  ⚠️ Accidents reported — drive with caution in the area.\n`
-  }
-  if (typeCounts.construction > 0) {
-    response += `  🚧 Construction zones — expect delays and lane closures.\n`
-  }
-  if (typeCounts.roadClosure > 0) {
-    response += `  🚫 Road closures — plan alternative routes.\n`
-  }
-
-  response += `\n📍 ${homeName || 'Your location'} — Stay safe on the road!`
-
-  return response
-}
-
-export default getTrafficAdvice
+  responseText += `📊 **Incident Summary:**\n`
+  
+  const typeEmojis = {
+    accident: '🚗',
+    construction: '🚧',
+    roadClosure: '🚫',
+    hazard: '⚠️',
+    weather: '🌧️',
+    event: '
