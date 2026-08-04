@@ -1242,3 +1242,144 @@ input:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* ============================================================================
+   CUSTOM POPUP STYLES (Leaflet)
+   ============================================================================ */
+
+.custom-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.custom-popup .leaflet-popup-tip {
+  display: none !important;
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: unset !important;
+}
+
+/* ============================================================================
+   ROUTE MARKERS
+   ============================================================================ */
+
+.route-marker-start {
+  background: transparent !important;
+  border: none !important;
+}
+
+.route-marker-end {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ============================================================================
+   HOME MARKER
+   ============================================================================ */
+
+.home-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.home-marker svg {
+  filter: drop-shadow(0 2px 8px rgba(56, 189, 248, 0.3));
+}
+
+.home-marker svg:hover {
+  filter: drop-shadow(0 2px 16px rgba(56, 189, 248, 0.5));
+}
+
+/* ============================================================================
+   WEATHER MARKER
+   ============================================================================ */
+
+.weather-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ============================================================================
+   POLLEN CIRCLE
+   ============================================================================ */
+
+.pollen-circle {
+  transition: all 0.3s ease;
+}
+
+.pollen-circle:hover {
+  opacity: 0.8 !important;
+}
+
+/* ============================================================================
+   LOADING MARKER
+   ============================================================================ */
+
+.loading-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ============================================================================
+   MAPBOX / TRAFFIC MARKER
+   ============================================================================ */
+
+.traffic-info {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ============================================================================
+   POLLEN LEGEND
+   ============================================================================ */
+
+.pollen-legend {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ============================================================================
+   LEAFLET OVERRIDES
+   ============================================================================ */
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+.leaflet-popup {
+  margin-bottom: 0 !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+/* ============================================================================
+   SPIN ANIMATION FOR LOADING
+   ============================================================================ */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   LOADING SPINNER
+   ============================================================================ */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.loading-spinner {
+  animation: spin 2s linear infinite;
+  display: inline-block;
+}
