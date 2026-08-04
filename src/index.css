@@ -1383,3 +1383,40 @@ input:focus {
   animation: spin 2s linear infinite;
   display: inline-block;
 }
+
+/* ============================================================================
+   MOBILE BOTTOM NAV — Fit 5 items
+   ============================================================================ */
+
+@media (max-width: 520px) {
+  .bottom-nav {
+    padding: 8px 6px 14px;
+    justify-content: space-between;
+    gap: 2px;
+  }
+
+  .nav-btn {
+    padding: 6px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    border-radius: 8px;
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+    min-width: 0;
+  }
+
+  .nav-btn.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--glass-border);
+  }
+}
+
+/* For very small screens (e.g., < 380px) */
+@media (max-width: 380px) {
+  .nav-btn {
+    font-size: 9px;
+    padding: 4px 2px;
+  }
+}
