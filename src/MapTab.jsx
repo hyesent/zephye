@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ============================================================================
-// TRAFFIC CACHING — 8-Hour Auto-Delete
+// TRAFFIC CACHING — 8-Hour Auto-Delete (EXPORTED)
 // ============================================================================
 
 const TRAFFIC_CACHE_TTL = 8 * 60 * 60 * 1000 // 8 hours
 
-const getTrafficCacheKey = (lat, lon) => {
+export const getTrafficCacheKey = (lat, lon) => {
   const roundedLat = Math.round(lat * 100) / 100
   const roundedLon = Math.round(lon * 100) / 100
   return `zephye_traffic_incidents_${roundedLat}_${roundedLon}`
 }
 
-const getCachedTraffic = (lat, lon) => {
+export const getCachedTraffic = (lat, lon) => {
   try {
     const key = getTrafficCacheKey(lat, lon)
     const cached = localStorage.getItem(key)
@@ -29,7 +29,7 @@ const getCachedTraffic = (lat, lon) => {
   }
 }
 
-const setCachedTraffic = (lat, lon, incidents) => {
+export const setCachedTraffic = (lat, lon, incidents) => {
   try {
     const key = getTrafficCacheKey(lat, lon)
     localStorage.setItem(key, JSON.stringify({
@@ -1351,7 +1351,7 @@ export default function MapTab({ weather, location, aqi }) {
     map.addLayer(legendMarker)
   }
 
-  // ─── Traffic Overlay (Mapbox Traffic Tiles + Incidents) ─────────────────
+  // ─── Traffic Overlay ─────────────────────────────────────────────────────
 
   const renderTrafficOverlay = (map, lat, lon) => {
     // ─── Mapbox Traffic Tiles ──────────────────────────────────────────────
