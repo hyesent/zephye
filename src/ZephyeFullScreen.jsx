@@ -56,168 +56,351 @@ const findSavedLocation = (name) => {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── BOOSTED QNA MAPPER ────────────────────────────────────────────────────
+// ─── ULTRA-SMART INTENT MAP ───────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-// Each entry now has:
-// - keys: array of keywords (higher weight = longer/more specific)
-// - fn: the advice function
-// - name: display name
-// - context: optional additional context words that boost score
-const QNA_MAP = [
-  { 
-    keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'cold', 'hot', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear', 'what should i wear today'], 
-    fn: getClothingAdvice, 
-    name: 'Clothing',
-    context: ['fashion', 'style', 'dress code', 'formal', 'casual']
-  },
-  { 
-    keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga', 'outdoor activity'], 
-    fn: getLifestyleAdvice, 
-    name: 'Lifestyle',
-    context: ['leisure', 'recreation', 'fun', 'relax', 'exercise light', 'walking']
-  },
-  { 
-    keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty', 'skincare', 'hair care', 'beauty routine'], 
-    fn: getSkinHairAdvice, 
-    name: 'SkinHair',
-    context: ['beauty', 'cosmetics', 'face', 'scalp', 'complexion']
-  },
-  { 
-    keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'biking', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'travel by car'], 
-    fn: getDrivingAdvice, 
-    name: 'Driving',
-    context: ['vehicle', 'transport', 'road trip', 'freeway', 'intersection']
-  },
-  { 
-    keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey', 'traveling', 'destination', 'tourism', 'business trip', 'holiday'], 
-    fn: getTravelingAdvice, 
-    name: 'Traveling',
-    context: ['abroad', 'international', 'domestic', 'travel plan', 'itinerary']
-  },
-  { 
-    keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse', 'cow', 'chicken', 'livestock', 'poultry', 'yield', 'tractor', 'agriculture', 'farming', 'crops', 'vegetable garden'], 
-    fn: getFarmingAdvice, 
-    name: 'Farming',
-    context: ['agriculture', 'agronomy', 'orchard', 'ranch', 'cultivation']
-  },
-  { 
-    keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star'], 
-    fn: getStargazingAdvice, 
-    name: 'Stargazing',
-    context: ['celestial', 'cosmos', 'observatory', 'night', 'sky watch']
-  },
-  { 
-    keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos', 'photographer', 'composition', 'exposure', 'aperture', 'shutter speed'], 
-    fn: getPhotographyAdvice, 
-    name: 'Photography',
-    context: ['videos', 'videography', 'visual', 'image', 'creative']
-  },
-  { 
-    keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue', 'birthday', 'anniversary', 'corporate event', 'block party', 'fair', 'reception'], 
-    fn: getEventsAdvice, 
-    name: 'Events',
-    context: ['celebration', 'social', 'gathering', 'occasion']
-  },
-  { 
-    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'sports', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength'], 
-    fn: getSportsAdvice, 
-    name: 'Sports',
-    context: ['athletic', 'physical', 'activity', 'competition']
-  },
-  { 
-    keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical', 'migraine', 'arthritis', 'heart', 'diabetes', 'copd', 'breathing', 'safe to go outside', 'doctor', 'hospital', 'symptoms', 'medicine', 'condition', 'chronic illness', 'pain', 'injury'], 
-    fn: getHealthAdvice, 
-    name: 'Health',
-    context: ['wellness', 'medical condition', 'symptoms', 'treatment', 'patient']
-  },
-  { 
-    keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying', 'home repair', 'fix', 'remodel', 'contractor', 'carpentry', 'plumbing', 'electrical'], 
-    fn: getDIYConstructionAdvice, 
-    name: 'DIY',
-    context: ['home improvement', 'handyman', 'project', 'repair']
-  },
-  { 
-    keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog', 'pet care', 'veterinarian', 'puppy training', 'cat care', 'dog walking', 'pet health', 'animal welfare'], 
-    fn: getPetsAdvice, 
-    name: 'Pets',
-    context: ['pet safety', 'vet', 'animal shelter', 'wildlife']
-  },
-  { 
-    keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility', 'energy bill', 'electric', 'gas', 'insulation', 'efficiency', 'smart home'], 
-    fn: getEnergyHomeAdvice, 
-    name: 'EnergyHome',
-    context: ['utility', 'temperature control', 'climate control', 'savings']
-  },
-  { 
-    keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear', 'weather forecast', 'temperature today', 'will it rain'], 
-    fn: getWeatherAdvice, 
+const INTENT_MAP = [
+  {
+    id: 'weather',
     name: 'Weather',
-    context: ['forecast', 'climate', 'conditions', 'atmosphere']
+    keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear', 'will it rain', 'temperature today', 'weather forecast', 'degrees', 'celsius', 'fahrenheit', 'precipitation', 'humidity', 'wind speed'],
+    fn: getWeatherAdvice,
+    priority: 1,
+    section: '🌡️ Weather',
+    keywords: ['weather', 'forecast', 'temperature', 'rain', 'storm']
   },
-  { 
-    keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report', 'bumper to bumper', 'delay', 'construction traffic'], 
-    fn: getTrafficAdvice, 
-    name: 'Traffic',
-    context: ['road', 'cars', 'highway traffic', 'commute']
+  {
+    id: 'sports',
+    name: 'Sports',
+    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'peloton', 'spin', 'cyclist', 'trail run', 'track', 'sprint', 'workout', 'exercise', 'sports', 'game', 'match', 'tournament', 'practice', 'training', 'workout', 'fitness'],
+    fn: getSportsAdvice,
+    priority: 1,
+    section: '🏃 Sports',
+    keywords: ['bike', 'biking', 'ride', 'run', 'gym', 'exercise', 'sport', 'workout', 'training', 'game', 'football', 'tennis', 'swim', 'hike']
   },
-  { 
-    keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate', 'direction', 'map', 'navigation', 'road trip', 'distance between', 'travel duration'], 
-    fn: getRouteAdvice, 
+  {
+    id: 'clothing',
+    name: 'Clothing',
+    keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear', 'dress code', 'fashion', 'style', 'formal', 'casual', 'sweatshirt', 't-shirt', 'sweatpants', 'leggings', 'athletic wear', 'running shoes', 'cycling kit'],
+    fn: getClothingAdvice,
+    priority: 2,
+    section: '👕 Clothing',
+    keywords: ['wear', 'clothes', 'outfit', 'dress', 'jacket', 'fashion', 'style']
+  },
+  {
+    id: 'route',
     name: 'Route',
-    context: ['directions', 'map route', 'wayfinding', 'path']
+    keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate', 'direction', 'map', 'navigation', 'road trip', 'distance between', 'travel duration', 'way', 'bike route', 'cycling route', 'path', 'trail', 'route planner', 'shortest route', 'fastest route', 'scenic route'],
+    fn: getRouteAdvice,
+    priority: 2,
+    section: '🗺️ Route',
+    keywords: ['route', 'distance', 'how long', 'get to', 'from', 'to', 'directions', 'map', 'navigate']
   },
+  {
+    id: 'traffic',
+    name: 'Traffic',
+    keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report', 'bumper to bumper', 'delay', 'construction traffic', 'road closure', 'car crash', 'bike lane blocked', 'cycle lane', 'traffic jam', 'stuck in traffic', 'rush hour', 'commute traffic'],
+    fn: getTrafficAdvice,
+    priority: 2,
+    section: '🚦 Traffic',
+    keywords: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow']
+  },
+  {
+    id: 'driving',
+    name: 'Driving',
+    keys: ['drive', 'driving', 'road', 'car', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'vehicle', 'transport', 'freeway', 'intersection', 'road bike', 'bike on road', 'cycle lane', 'driving conditions', 'road conditions', 'pavement', 'roads'],
+    fn: getDrivingAdvice,
+    priority: 3,
+    section: '🚗 Driving',
+    keywords: ['drive', 'driving', 'road', 'car', 'vehicle', 'highway']
+  },
+  {
+    id: 'health',
+    name: 'Health',
+    keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical', 'migraine', 'arthritis', 'heart', 'diabetes', 'copd', 'breathing', 'safe to go outside', 'doctor', 'hospital', 'symptoms', 'medicine', 'condition', 'chronic', 'pain', 'injury', 'wellness', 'air quality', 'pollution', 'allergies', 'pollen', 'dust', 'smoke', 'fever', 'cough', 'sneeze'],
+    fn: getHealthAdvice,
+    priority: 3,
+    section: '🏥 Health',
+    keywords: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'breathing', 'air quality', 'pain']
+  },
+  {
+    id: 'lifestyle',
+    name: 'Lifestyle',
+    keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga', 'outdoor activity', 'leisure', 'recreation', 'fun', 'relax', 'exercise light', 'walking', 'bike ride', 'casual ride', 'leisure bike', 'hammock', 'read outside', 'garden', 'bird watching'],
+    fn: getLifestyleAdvice,
+    priority: 3,
+    section: '🌿 Lifestyle',
+    keywords: ['lifestyle', 'mood', 'walk', 'park', 'picnic', 'relax', 'leisure', 'bike ride']
+  },
+  {
+    id: 'stargazing',
+    name: 'Stargazing',
+    keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star', 'celestial', 'observatory', 'night vision', 'astrophotography', 'deep space'],
+    fn: getStargazingAdvice,
+    priority: 3,
+    section: '🌙 Stargazing',
+    keywords: ['star', 'moon', 'night sky', 'telescope', 'astronomy']
+  },
+  {
+    id: 'farming',
+    name: 'Farming',
+    keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse', 'cow', 'chicken', 'livestock', 'poultry', 'yield', 'tractor', 'agriculture', 'orchard', 'ranch', 'cultivation', 'compost', 'mulch', 'prune', 'weed', 'pesticide', 'fertilizer'],
+    fn: getFarmingAdvice,
+    priority: 3,
+    section: '🌾 Farming',
+    keywords: ['farm', 'crop', 'plant', 'garden', 'soil', 'harvest']
+  },
+  {
+    id: 'photography',
+    name: 'Photography',
+    keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos', 'photographer', 'composition', 'exposure', 'aperture', 'shutter speed', 'videography', 'visual', 'image', 'RAW', 'lightroom', 'photoshop', 'editing', 'sunset photo', 'sunrise photo'],
+    fn: getPhotographyAdvice,
+    priority: 3,
+    section: '📸 Photography',
+    keywords: ['photo', 'camera', 'photography', 'shoot', 'picture', 'lens']
+  },
+  {
+    id: 'events',
+    name: 'Events',
+    keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue', 'birthday', 'anniversary', 'corporate', 'block party', 'fair', 'reception', 'social', 'occasion', 'gala', 'fundraiser', 'conference', 'meeting'],
+    fn: getEventsAdvice,
+    priority: 3,
+    section: '🎉 Events',
+    keywords: ['event', 'party', 'wedding', 'bbq', 'picnic', 'festival', 'concert']
+  },
+  {
+    id: 'pets',
+    name: 'Pets',
+    keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog', 'pet care', 'veterinarian', 'puppy training', 'cat care', 'dog walking', 'vet', 'animal shelter', 'wildlife', 'fish', 'hamster', 'guinea pig', 'reptile', 'snake'],
+    fn: getPetsAdvice,
+    priority: 3,
+    section: '🐾 Pets',
+    keywords: ['pet', 'dog', 'cat', 'animal', 'walk my dog', 'puppy']
+  },
+  {
+    id: 'diy',
+    name: 'DIY',
+    keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying', 'home repair', 'fix', 'remodel', 'contractor', 'carpentry', 'plumbing', 'electrical', 'home improvement', 'handyman', 'project', 'saw', 'screwdriver', 'wrench', 'tool', 'workshop'],
+    fn: getDIYConstructionAdvice,
+    priority: 3,
+    section: '🔧 DIY',
+    keywords: ['diy', 'build', 'construction', 'paint', 'renovation', 'repair']
+  },
+  {
+    id: 'energy',
+    name: 'EnergyHome',
+    keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility', 'electric', 'gas', 'insulation', 'efficiency', 'smart home', 'temperature control', 'climate control', 'savings', 'kwh', 'solar panel', 'inverter', 'battery', 'generator'],
+    fn: getEnergyHomeAdvice,
+    priority: 3,
+    section: '⚡ Energy',
+    keywords: ['energy', 'power', 'electricity', 'bill', 'ac', 'heating', 'solar']
+  },
+  {
+    id: 'traveling',
+    name: 'Traveling',
+    keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey', 'traveling', 'destination', 'tourism', 'business trip', 'holiday', 'abroad', 'international', 'domestic', 'itinerary', 'layover', 'baggage', 'luggage', 'suitcase'],
+    fn: getTravelingAdvice,
+    priority: 3,
+    section: '✈️ Travel',
+    keywords: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport']
+  },
+  {
+    id: 'skin_hair',
+    name: 'SkinHair',
+    keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty', 'skincare', 'hair care', 'beauty routine', 'cosmetics', 'face', 'scalp', 'complexion', 'rosacea', 'dandruff', 'oily skin', 'dry hair', 'curly hair', 'straight hair', 'shampoo', 'conditioner'],
+    fn: getSkinHairAdvice,
+    priority: 3,
+    section: '💄 Beauty',
+    keywords: ['skin', 'hair', 'sunscreen', 'makeup', 'beauty', 'skincare']
+  }
 ]
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── BOOSTED SCORING FUNCTION ──────────────────────────────────────────────
+// ─── SCORING ENGINE ──────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-const scoreQuestion = (question, route) => {
+const scoreQuestion = (question, intent) => {
   const q = question.toLowerCase()
   let score = 0
-  let matchedKeys = []
-  
-  // Check main keys
-  for (const key of route.keys) {
+  const matched = []
+  const exactMatches = []
+
+  for (const key of intent.keys) {
     const keyLower = key.toLowerCase()
     if (q.includes(keyLower)) {
-      // Longer matches = higher score (more specific)
-      const weight = keyLower.length / 3 // Longer keys get more weight
+      // Longer keys = more specific = higher score
+      const weight = Math.min(keyLower.length / 2, 5)
       score += weight
-      matchedKeys.push(keyLower)
-    }
-  }
-  
-  // Check context keywords (bonus)
-  if (route.context) {
-    for (const ctx of route.context) {
-      if (q.includes(ctx.toLowerCase())) {
-        score += 2 // Context bonus
+      matched.push(keyLower)
+      if (keyLower.length > 8 && q.split(/\s+/).some(w => w === keyLower)) {
+        exactMatches.push(keyLower)
+        score += 3 // Bonus for exact word match
       }
     }
   }
-  
-  // Check for exact phrase matches (big bonus)
-  for (const key of route.keys) {
-    if (key.length > 10 && q.includes(key.toLowerCase())) {
-      score += 5 // Exact long phrase match
-    }
-  }
-  
-  // Check for word boundaries (e.g., "run" matches "running" but not "brunch")
-  // Partial word matching with bonus
+
+  // Check for word overlap (partial matches)
   const words = q.split(/\s+/)
   for (const word of words) {
     if (word.length < 3) continue
-    for (const key of route.keys) {
-      if (key.includes(word) || word.includes(key)) {
-        score += 1.5
+    for (const key of intent.keys) {
+      if (key.includes(word) && word.length > 2) {
+        score += 1
       }
     }
   }
+
+  // Priority bonus (higher priority = more likely)
+  score += (10 - intent.priority) * 0.5
+
+  return { score, matched, exactMatches }
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MULTI-INTENT DETECTION ──────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const detectIntents = (question) => {
+  const results = []
+  const q = question.toLowerCase()
   
-  return { score, matchedKeys }
+  // Score all intents
+  for (const intent of INTENT_MAP) {
+    const { score, matched } = scoreQuestion(q, intent)
+    if (score > 1.5) {
+      results.push({
+        intent,
+        score,
+        matched,
+        isPrimary: false
+      })
+    }
+  }
+
+  // Sort by score descending
+  results.sort((a, b) => b.score - a.score)
+
+  // Determine primary intent (highest score)
+  if (results.length > 0) {
+    results[0].isPrimary = true
+  }
+
+  // Return top 2-3 intents if they're close in score
+  const primaryScore = results[0]?.score || 0
+  const selected = results.filter(r => r.score > primaryScore * 0.4)
+  
+  return selected.slice(0, 3) // Max 3 intents
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── RESPONSE MERGER ──────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const mergeResponses = (responses, intents, question) => {
+  if (responses.length === 0) return null
+  if (responses.length === 1) return responses[0]
+
+  // Extract key sections from each response
+  const sections = []
+  const allLines = []
+  const warnings = []
+  const bottomLines = []
+
+  for (let i = 0; i < responses.length; i++) {
+    const text = responses[i]
+    const intent = intents[i]?.intent
+    const isPrimary = intents[i]?.isPrimary || false
+
+    // Split into lines
+    const lines = text.split('\n').filter(l => l.trim())
+    
+    // Extract the section header if present
+    const sectionHeader = intent?.section || `📌 ${intent?.name || 'Advice'}`
+
+    let sectionLines = []
+    let warningLines = []
+    let bottomLine = ''
+
+    for (const line of lines) {
+      if (line.includes('⚠️') || line.includes('WARNING') || line.includes('🚨')) {
+        warningLines.push(line)
+      } else if (line.includes('BOTTOM LINE') || line.includes('Bottom Line') || line.includes('💡')) {
+        bottomLine = line
+      } else if (!line.includes('---') && !line.includes('===') && !line.includes('Conditions') && line.trim().length > 3) {
+        sectionLines.push(line)
+      }
+    }
+
+    sections.push({
+      header: sectionHeader,
+      lines: sectionLines.slice(0, 6), // Limit to 6 lines per section
+      warnings: warningLines,
+      bottomLine: bottomLine,
+      isPrimary,
+      raw: text
+    })
+  }
+
+  // Build merged response
+  let merged = ``
+  
+  // Add the primary section first (full)
+  const primary = sections.find(s => s.isPrimary) || sections[0]
+  if (primary) {
+    merged += `${primary.header}\n`
+    merged += primary.lines.join('\n')
+    merged += '\n\n'
+  }
+
+  // Add secondary sections (condensed)
+  const secondary = sections.filter(s => !s.isPrimary)
+  if (secondary.length > 0) {
+    merged += `📋 **Also consider:**\n\n`
+    for (const sec of secondary) {
+      merged += `${sec.header}\n`
+      // Only show the most important lines (first 3)
+      const topLines = sec.lines.slice(0, 3)
+      merged += topLines.join('\n')
+      if (sec.lines.length > 3) {
+        merged += `\n  ... and ${sec.lines.length - 3} more items`
+      }
+      merged += '\n\n'
+    }
+  }
+
+  // Add warnings section (deduplicated)
+  const allWarnings = []
+  for (const sec of sections) {
+    for (const w of sec.warnings) {
+      if (!allWarnings.some(existing => existing.includes(w.substring(0, 20)))) {
+        allWarnings.push(w)
+      }
+    }
+  }
+
+  if (allWarnings.length > 0) {
+    merged += `⚠️ **Warnings:**\n`
+    for (const w of allWarnings.slice(0, 5)) {
+      merged += `${w}\n`
+    }
+    if (allWarnings.length > 5) {
+      merged += `... and ${allWarnings.length - 5} more warnings\n`
+    }
+    merged += '\n'
+  }
+
+  // Add bottom line (use primary, or merge)
+  const bottomLinesList = sections.map(s => s.bottomLine).filter(Boolean)
+  if (bottomLinesList.length > 0) {
+    merged += `💡 **Bottom Line:**\n`
+    merged += bottomLinesList[0]
+    if (bottomLinesList.length > 1) {
+      merged += `\n• ${bottomLinesList.slice(1).join('\n• ')}`
+    }
+    merged += '\n'
+  }
+
+  return merged
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -233,6 +416,7 @@ const getDynamicSuggestions = () => {
     'Type "paint drying time" or "best photo hour"',
     'Ask "will it rain tomorrow at 2 PM"',
     'Try "farming advice" or "should I water"',
+    'Ask "can I go biking" or "traffic to work"'
   ]
   
   if (savedLocs.length > 0) {
@@ -283,8 +467,6 @@ export default function ZephyeFullScreen({
   const wind = weather?.current?.wind_speed_10m
   const uv = weather?.current?.uv_index || weather?.daily?.uv_index_max?.[0]
   const conditionCode = weather?.current?.weather_code
-
-  // ─── Load saved locations ────────────────────────────────────────────────
 
   useEffect(() => {
     if (isOpen) {
@@ -341,7 +523,7 @@ export default function ZephyeFullScreen({
   }, [messages, streamingText])
 
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── ROUTE QUESTION WITH BOOSTED SCORING ─────────────────────────────────
+  // ─── SMART ROUTING ENGINE ────────────────────────────────────────────────
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const routeQuestion = async (question) => {
@@ -381,160 +563,96 @@ export default function ZephyeFullScreen({
       savedLocations: savedLocations
     }
 
-    // ─── BOOSTED SCORING ──────────────────────────────────────────────────
+    // ─── Detect all intents ──────────────────────────────────────────────
+    const detectedIntents = detectIntents(q)
+    
+    console.log(`🧠 Detected intents:`, detectedIntents.map(d => `${d.intent.name} (${d.score.toFixed(1)})`).join(', '))
 
-    let bestMatch = null
-    let bestScore = 0
-    let bestMatchedKeys = []
+    // ─── If no intents detected ──────────────────────────────────────────
+    if (detectedIntents.length === 0) {
+      // Check for route/traffic keywords
+      const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
+      const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions']
 
-    for (const route of QNA_MAP) {
-      const { score, matchedKeys } = scoreQuestion(q, route)
-      if (score > bestScore) {
-        bestScore = score
-        bestMatch = route
-        bestMatchedKeys = matchedKeys
+      const hasRoute = routeKeywords.some(k => q.includes(k))
+      const hasTraffic = trafficKeywords.some(k => q.includes(k))
+
+      if (hasRoute || hasTraffic) {
+        const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
+        const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
+
+        let fromLocation = null
+        let toLocation = null
+
+        if (fromMatch) {
+          const fromName = fromMatch[1].trim()
+          const savedFrom = findSavedLocation(fromName)
+          if (savedFrom) {
+            fromLocation = { ...savedFrom, isSaved: true }
+          } else {
+            fromLocation = fromName
+          }
+        }
+
+        if (toMatch) {
+          const toName = toMatch[1].trim()
+          const savedTo = findSavedLocation(toName)
+          if (savedTo) {
+            toLocation = { ...savedTo, isSaved: true }
+          } else {
+            toLocation = toName
+          }
+        }
+
+        if (toLocation && !fromLocation) {
+          fromLocation = 'home'
+        }
+
+        if (hasTraffic && !toLocation) {
+          return await getTrafficAdvice(data, question, {})
+        }
+
+        if (hasRoute && toLocation) {
+          return await getRouteAdvice(data, question, { from: fromLocation, to: toLocation, savedLocations })
+        }
+      }
+
+      // Weather fallback
+      if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend|temperature/)) {
+        return await getWeatherAdvice(data, question)
+      }
+
+      // Default response
+      return `I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, or health. Current temp is ${temp}°C.`
+    }
+
+    // ─── Get responses for all detected intents ──────────────────────────
+    const responses = []
+    const intents = []
+
+    for (const detected of detectedIntents) {
+      try {
+        const response = await detected.intent.fn(data, question)
+        responses.push(response)
+        intents.push(detected)
+      } catch (e) {
+        console.error(`Error getting advice for ${detected.intent.name}:`, e)
       }
     }
 
-    // ─── MINIMUM THRESHOLD ──────────────────────────────────────────────
-
-    const MIN_SCORE = 1.0 // Lower threshold so more questions get routed
-
-    if (bestMatch && bestScore >= MIN_SCORE) {
-      console.log(`🎯 Mapped to: ${bestMatch.name} (score: ${bestScore.toFixed(1)})`)
-      console.log(`   Matched: ${bestMatchedKeys.join(', ')}`)
-      return await bestMatch.fn(data, question)
-    }
-
-    // ─── FALLBACK: Check for route/traffic keywords ──────────────────────
-
-    const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
-    const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions']
-
-    const hasRouteKeyword = routeKeywords.some(k => q.includes(k))
-    const hasTrafficKeyword = trafficKeywords.some(k => q.includes(k))
-
-    // ─── Check if user mentioned a saved location ─────────────────────────
-
-    let mentionedSavedLocation = null
-    for (const loc of savedLocations) {
-      const label = loc.label?.toLowerCase() || ''
-      const name = loc.name?.toLowerCase() || ''
-      if (q.includes(label) || q.includes(name)) {
-        mentionedSavedLocation = loc
-        break
-      }
-    }
-
-    // ─── Route/Traffic special handling ──────────────────────────────────
-
-    if (hasRouteKeyword || hasTrafficKeyword) {
-      const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
-      const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
-
-      let fromLocation = null
-      let toLocation = null
-
-      if (fromMatch) {
-        const fromName = fromMatch[1].trim()
-        const savedFrom = findSavedLocation(fromName)
-        if (savedFrom) {
-          fromLocation = { ...savedFrom, isSaved: true }
-        } else {
-          fromLocation = fromName
-        }
-      }
-
-      if (toMatch) {
-        const toName = toMatch[1].trim()
-        const savedTo = findSavedLocation(toName)
-        if (savedTo) {
-          toLocation = { ...savedTo, isSaved: true }
-        } else {
-          toLocation = toName
-        }
-      }
-
-      if (mentionedSavedLocation) {
-        if (!toLocation && q.includes('to')) {
-          toLocation = { ...mentionedSavedLocation, isSaved: true }
-        }
-        if (!fromLocation && q.includes('from')) {
-          fromLocation = { ...mentionedSavedLocation, isSaved: true }
-        }
-        if (hasTrafficKeyword && !toLocation && !fromLocation) {
-          toLocation = { ...mentionedSavedLocation, isSaved: true }
-        }
-      }
-
-      if (toLocation && !fromLocation) {
-        fromLocation = 'home'
-      }
-
-      if (hasTrafficKeyword && !hasRouteKeyword && !toLocation && !fromLocation) {
-        if (mentionedSavedLocation) {
-          return await getTrafficAdvice(data, question, { location: mentionedSavedLocation })
-        }
-        return await getTrafficAdvice(data, question, {})
-      }
-
-      if (hasRouteKeyword || (fromLocation && toLocation)) {
-        return await getRouteAdvice(data, question, { 
-          from: fromLocation, 
-          to: toLocation,
-          savedLocations: savedLocations
-        })
-      }
-    }
-
-    // ─── WEATHER FALLBACK ─────────────────────────────────────────────────
-
-    if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend|temperature/)) {
+    // ─── If no responses, fallback ──────────────────────────────────────
+    if (responses.length === 0) {
       return await getWeatherAdvice(data, question)
     }
 
-    // ─── STARGAZING FALLBACK ─────────────────────────────────────────────
-
-    if (q.match(/moon|star|sky|night|constellation|galaxy/)) {
-      return await getStargazingAdvice(data, question)
+    // ─── If only one response, return it directly ──────────────────────
+    if (responses.length === 1) {
+      return responses[0]
     }
 
-    // ─── FARMING FALLBACK ─────────────────────────────────────────────────
-
-    if (q.match(/farm|crop|plant|harvest|seed|garden|soil|irrigation|livestock/)) {
-      return await getFarmingAdvice(data, question)
-    }
-
-    // ─── SPORTS FALLBACK ──────────────────────────────────────────────────
-
-    if (q.match(/outside|run|exercise|walk|jog|sport|gym|workout/)) {
-      return await getSportsAdvice(data, question)
-    }
-
-    // ─── HEALTH FALLBACK ──────────────────────────────────────────────────
-
-    if (q.match(/health|allergy|asthma|sick|cold|flu|headache|medical|pain/)) {
-      return await getHealthAdvice(data, question)
-    }
-
-    // ─── BUILD LOCATION-AWARE SUGGESTIONS ─────────────────────────────────
-
-    let suggestionText = 'Not sure what you need. I can help with: '
-    const baseSuggestions = ['weather', 'pollen', 'stargazing', 'farming', 'clothing']
-    const allSuggestions = [...baseSuggestions]
-
-    if (savedLocations.length > 0) {
-      allSuggestions.push(`route to ${savedLocations[0].label || 'saved location'}`)
-      if (savedLocations.length > 1) {
-        allSuggestions.push(`route from ${savedLocations[0].label || 'location 1'} to ${savedLocations[1].label || 'location 2'}`)
-      }
-      allSuggestions.push('traffic to work')
-    }
-
-    suggestionText += allSuggestions.join(', ')
-    suggestionText += `. Current temp is ${temp}°C. Try "what should I wear", "will it rain tomorrow", or "route to work"?`
-
-    return suggestionText
+    // ─── Merge multiple responses ──────────────────────────────────────
+    const merged = mergeResponses(responses, intents, question)
+    return merged || responses[0]
   }
 
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -619,7 +737,7 @@ export default function ZephyeFullScreen({
     )
   }
 
-  // ─── Build dynamic quick action chips ────────────────────────────────────
+  // ─── Quick Action Chips ──────────────────────────────────────────────────
 
   const getQuickActionChips = () => {
     const chips = [
@@ -628,7 +746,8 @@ export default function ZephyeFullScreen({
       'Stargazing tonight?',
       'Farming advice?',
       'Safe to drive?',
-      'Traffic incidents near me?'
+      'Traffic incidents near me?',
+      'Can I go biking?'
     ]
 
     const savedLocs = savedLocations.slice(0, 2)
@@ -681,7 +800,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* Quick Action Chips — DYNAMIC with saved locations */}
+      {/* Quick Action Chips */}
       {messages.length <= 1 && (
         <div style={{ 
           display: 'flex', 
