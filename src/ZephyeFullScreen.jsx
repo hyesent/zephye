@@ -16,16 +16,86 @@ import { getHealthAdvice } from './data/Health.js'
 import { getDIYConstructionAdvice } from './data/DIYconstruction.js'
 import { getPetsAdvice } from './data/Pets.js'
 import { getEnergyHomeAdvice } from './data/EnergyHome.js'
-import { getWeatherAdvice } from './data/BasicWeatherAdvice.js' // NEW IMPORT
+import { getWeatherAdvice } from './data/BasicWeatherAdvice.js'
+import { getTrafficAdvice } from './data/TrafficAdvice.js'
+import { getRouteAdvice } from './data/RouteAdvice.js'
 
-const GHOST_SUGGESTIONS = [
-  'Ask "stargazing tonight" or "moon phase"',
-  'Try "what should I wear" or "safe to run"',
-  'Ask "will it rain" or "UV burn time"',
-  'Type "paint drying time" or "best photo hour"',
-  'Ask "will it rain tomorrow at 2 PM"',  // NEW
-  'Try "farming advice" or "should I water"' // NEW
-]
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── HELPER: Get Saved Locations ──────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const getSavedLocations = () => {
+  try {
+    const saved = localStorage.getItem('zephye_saved_locations')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      // Filter out any without lat/lon
+      return parsed.filter(loc => loc.lat && loc.lon)
+    }
+    return []
+  } catch {
+    return []
+  }
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── HELPER: Find Saved Location by Name ──────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const findSavedLocation = (name) => {
+  const locations = getSavedLocations()
+  const lowerName = name.toLowerCase().trim()
+  
+  // First try exact match on label
+  let match = locations.find(loc => 
+    loc.label && loc.label.toLowerCase() === lowerName
+  )
+  
+  if (match) return match
+  
+  // Then try partial match on label or name
+  match = locations.find(loc => {
+    const label = loc.label?.toLowerCase() || ''
+    const locName = loc.name?.toLowerCase() || ''
+    return label.includes(lowerName) || locName.includes(lowerName)
+  })
+  
+  return match || null
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── GHOST SUGGESTIONS ─────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const getDynamicSuggestions = () => {
+  const savedLocs = getSavedLocations()
+  const suggestions = [
+    'Ask "stargazing tonight" or "moon phase"',
+    'Try "what should I wear" or "safe to run"',
+    'Ask "will it rain" or "UV burn time"',
+    'Type "paint drying time" or "best photo hour"',
+    'Ask "will it rain tomorrow at 2 PM"',
+    'Try "farming advice" or "should I water"',
+    'Ask "traffic to work" or "route to Lagos"',
+  ]
+  
+  // Add dynamic saved location suggestions
+  if (savedLocs.length > 0) {
+    const locNames = savedLocs.map(l => l.label || 'Untitled').filter(Boolean)
+    if (locNames.length > 0) {
+      suggestions.push(`Ask "route to ${locNames[0]}" or "traffic to ${locNames[0]}"`)
+    }
+    if (locNames.length > 1) {
+      suggestions.push(`Ask "route from ${locNames[0]} to ${locNames[1]}"`)
+    }
+  }
+  
+  return suggestions
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── QNA MAP ───────────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const QNA_MAP = [
   { keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'cold', 'hot', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear'], fn: getClothingAdvice, name: 'Clothing' },
@@ -42,9 +112,14 @@ const QNA_MAP = [
   { keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying'], fn: getDIYConstructionAdvice, name: 'DIY' },
   { keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog'], fn: getPetsAdvice, name: 'Pets' },
   { keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility'], fn: getEnergyHomeAdvice, name: 'EnergyHome' },
-  // NEW: Weather Advice (time-aware)
   { keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear'], fn: getWeatherAdvice, name: 'Weather' },
+  { keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report'], fn: getTrafficAdvice, name: 'Traffic' },
+  { keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate'], fn: getRouteAdvice, name: 'Route' },
 ]
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MAIN COMPONENT ────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export default function ZephyeFullScreen({
   isOpen,
@@ -67,6 +142,7 @@ export default function ZephyeFullScreen({
   const [streamingText, setStreamingText] = useState('')
   const [moonPhase, setMoonPhase] = useState(0)
   const [activeTab, setActiveTab] = useState('ask')
+  const [savedLocations, setSavedLocations] = useState([])
 
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -76,6 +152,14 @@ export default function ZephyeFullScreen({
   const wind = weather?.current?.wind_speed_10m
   const uv = weather?.current?.uv_index || weather?.daily?.uv_index_max?.[0]
   const conditionCode = weather?.current?.weather_code
+
+  // ─── Load saved locations ────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (isOpen) {
+      setSavedLocations(getSavedLocations())
+    }
+  }, [isOpen])
 
   function getAqiLevel(aqi) {
     if (aqi == null) return { label: 'Unknown', color: '#6b7280' }
@@ -110,18 +194,24 @@ export default function ZephyeFullScreen({
       setGhostText('')
       return
     }
+    
+    const suggestions = getDynamicSuggestions()
     let i = 0
-    setGhostText(GHOST_SUGGESTIONS[0])
+    setGhostText(suggestions[0])
     const interval = setInterval(() => {
-      i = (i + 1) % GHOST_SUGGESTIONS.length
-      setGhostText(GHOST_SUGGESTIONS[i])
+      i = (i + 1) % suggestions.length
+      setGhostText(suggestions[i])
     }, 3000)
     return () => clearInterval(interval)
-  }, [input])
+  }, [input, savedLocations])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
+
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── ROUTE QUESTION HANDLING WITH SAVED LOCATIONS ───────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const routeQuestion = async (question) => {
     const q = question.toLowerCase()
@@ -153,12 +243,114 @@ export default function ZephyeFullScreen({
       visibilityCategory: weather?.current?.visibility ? (weather.current.visibility / 1000 < 1 ? 'fog' : weather.current.visibility / 1000 < 5 ? 'poor' : 'good') : 'good',
       timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
       season: ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getMonth()],
-      // NEW: Pass hourly data for time-aware weather
-      hourly: weather?.hourly || {}
+      hourly: weather?.hourly || {},
+      homeLat: location?.lat,
+      homeLon: location?.lon,
+      homeName: location?.name,
+      // ─── Pass saved locations ──────────────────────────────────────────
+      savedLocations: savedLocations
     }
 
     let bestMatch = null
     let bestScore = 0
+
+    // ─── Check for explicit route or traffic keywords ─────────────────────
+
+    const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
+    const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'traffic report']
+    const savedLocationNames = savedLocations.map(l => l.label?.toLowerCase() || '').filter(Boolean)
+
+    const hasRouteKeyword = routeKeywords.some(k => q.includes(k))
+    const hasTrafficKeyword = trafficKeywords.some(k => q.includes(k))
+
+    // ─── Check if user mentioned a saved location ─────────────────────────
+
+    let mentionedSavedLocation = null
+    for (const loc of savedLocations) {
+      const label = loc.label?.toLowerCase() || ''
+      const name = loc.name?.toLowerCase() || ''
+      if (q.includes(label) || q.includes(name)) {
+        mentionedSavedLocation = loc
+        break
+      }
+    }
+
+    // ─── If user asks about route without specifying locations ────────────
+
+    if (hasRouteKeyword || hasTrafficKeyword) {
+      const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
+      const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
+
+      let fromLocation = null
+      let toLocation = null
+
+      // ─── Check if "from" or "to" match a saved location ────────────────
+
+      if (fromMatch) {
+        const fromName = fromMatch[1].trim()
+        const savedFrom = findSavedLocation(fromName)
+        if (savedFrom) {
+          fromLocation = { ...savedFrom, isSaved: true }
+        } else {
+          fromLocation = fromName
+        }
+      }
+
+      if (toMatch) {
+        const toName = toMatch[1].trim()
+        const savedTo = findSavedLocation(toName)
+        if (savedTo) {
+          toLocation = { ...savedTo, isSaved: true }
+        } else {
+          toLocation = toName
+        }
+      }
+
+      // ─── If user mentioned a saved location generically ─────────────────
+
+      if (mentionedSavedLocation) {
+        // If they said "route to work" and "work" is a saved location
+        if (!toLocation && q.includes('to')) {
+          toLocation = { ...mentionedSavedLocation, isSaved: true }
+        }
+        if (!fromLocation && q.includes('from')) {
+          fromLocation = { ...mentionedSavedLocation, isSaved: true }
+        }
+        // If they said "traffic to work" or "traffic near work"
+        if (hasTrafficKeyword && !toLocation && !fromLocation) {
+          // Use the mentioned saved location as the destination
+          toLocation = { ...mentionedSavedLocation, isSaved: true }
+        }
+      }
+
+      // ─── If only "to" is specified and no "from", use home ─────────────
+
+      if (toLocation && !fromLocation) {
+        fromLocation = 'home'
+      }
+
+      // ─── Check if user is asking about traffic incidents ────────────────
+
+      if (hasTrafficKeyword && !hasRouteKeyword && !toLocation && !fromLocation) {
+        // If they mentioned a saved location, use it
+        if (mentionedSavedLocation) {
+          return await getTrafficAdvice(data, question, { location: mentionedSavedLocation })
+        }
+        return await getTrafficAdvice(data, question, {})
+      }
+
+      // ─── If route keywords found, use RouteAdvice ──────────────────────
+
+      if (hasRouteKeyword || (fromLocation && toLocation)) {
+        return await getRouteAdvice(data, question, { 
+          from: fromLocation, 
+          to: toLocation,
+          savedLocations: savedLocations
+        })
+      }
+    }
+
+    // ─── Standard QNA routing ──────────────────────────────────────────────
 
     for (const route of QNA_MAP) {
       let score = 0
@@ -175,23 +367,51 @@ export default function ZephyeFullScreen({
       return await bestMatch.fn(data, question)
     }
 
-    // Fallback for weather questions
+    // ─── Fallbacks ──────────────────────────────────────────────────────────
+
     if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend/)) {
       return await getWeatherAdvice(data, question)
     }
+
+    if (q.match(/route|drive|traffic|road|journey|trip|commute|how long|distance|from|to/)) {
+      return await getRouteAdvice(data, question, { savedLocations: savedLocations })
+    }
+
     if (q.match(/moon|star|sky|night/)) {
       return await getStargazingAdvice(data, question)
     }
+
     if (q.match(/farm|crop|plant|harvest|seed|garden|soil|irrigation|livestock/)) {
       return await getFarmingAdvice(data, question)
     }
+
     if (q.match(/outside|run|exercise|walk|jog/)) {
       return await getSportsAdvice(data, question)
     }
 
-    const suggestions = QNA_MAP.slice(0, 3).map(r => r.name).join(', ')
-    return `Not sure what you need. I can help with: ${suggestions}, and more. Current temp is ${temp}°C. Try "what should I wear" or "will it rain tomorrow"?`
+    // ─── Build location-aware suggestions ──────────────────────────────────
+
+    let suggestionText = 'Not sure what you need. I can help with: '
+    const baseSuggestions = ['weather', 'pollen', 'stargazing', 'farming', 'clothing']
+    const allSuggestions = [...baseSuggestions]
+
+    if (savedLocations.length > 0) {
+      allSuggestions.push(`route to ${savedLocations[0].label || 'saved location'}`)
+      if (savedLocations.length > 1) {
+        allSuggestions.push(`route from ${savedLocations[0].label || 'location 1'} to ${savedLocations[1].label || 'location 2'}`)
+      }
+      allSuggestions.push('traffic to work')
+    }
+
+    suggestionText += allSuggestions.join(', ')
+    suggestionText += `. Current temp is ${temp}°C. Try "what should I wear", "will it rain tomorrow", or "route to work"?`
+
+    return suggestionText
   }
+
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── HANDLE ASK ──────────────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const handleAsk = async (question) => {
     if (!question.trim()) return
@@ -271,9 +491,37 @@ export default function ZephyeFullScreen({
     )
   }
 
+  // ─── Build dynamic quick action chips ────────────────────────────────────
+
+  const getQuickActionChips = () => {
+    const chips = [
+      'Will it rain tomorrow?',
+      'What should I wear?',
+      'Stargazing tonight?',
+      'Farming advice?',
+      'Safe to drive?',
+      'Traffic incidents near me?'
+    ]
+
+    // Add saved location chips
+    const savedLocs = savedLocations.slice(0, 2)
+    if (savedLocs.length > 0) {
+      const label = savedLocs[0].label || 'saved location'
+      chips.push(`Route to ${label}?`)
+      chips.push(`Traffic to ${label}?`)
+    }
+    if (savedLocs.length > 1) {
+      const label1 = savedLocs[0].label || 'location 1'
+      const label2 = savedLocs[1].label || 'location 2'
+      chips.push(`Route from ${label1} to ${label2}?`)
+    }
+
+    return chips
+  }
+
   return (
     <div className="ai-fullscreen">
-      {/* HEADER with capsule switch + weather badge */}
+      {/* HEADER */}
       <div className="ai-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 10px' }}>
@@ -306,7 +554,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* Quick Action Chips — UPDATED with weather/time chips */}
+      {/* Quick Action Chips — DYNAMIC with saved locations */}
       {messages.length <= 1 && (
         <div style={{ 
           display: 'flex', 
@@ -316,7 +564,7 @@ export default function ZephyeFullScreen({
           flexWrap: 'wrap',
           borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          {['Will it rain tomorrow?', 'What should I wear?', 'Stargazing tonight?', 'Farming advice?', 'Safe to drive?'].map((q, i) => (
+          {getQuickActionChips().map((q, i) => (
             <button
               key={i}
               onClick={() => handleAsk(q)}
@@ -386,7 +634,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* INPUT AREA — microphone INSIDE the input wrapper */}
+      {/* INPUT AREA */}
       <div className="ai-input-wrap">
         <div style={{ maxWidth: '768px', margin: '0 auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <div className="input-wrapper">
@@ -416,7 +664,6 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* ADD-ON STYLES for capsule, mic, actions */}
       <style jsx>{`
         .capsule-switch {
           display: flex;
