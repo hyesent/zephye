@@ -188,4 +188,109 @@ export const getTrafficAdvice = async (data, question, options = {}) => {
     roadClosure: '🚫',
     hazard: '⚠️',
     weather: '🌧️',
-    event: '
+    event: '🎪',
+    congestion: '🚦',
+    laneClosed: '🚧',
+    brokenDownVehicle: '🛻'
+  }
+
+  Object.entries(typeCounts).forEach(([type, count]) => {
+    const emoji = typeEmojis[type] || '📌'
+    responseText += `  ${emoji} ${count} ${type.replace(/([A-Z])/g, ' $1').trim()}${count > 1 ? 's' : ''}\n`
+  })
+
+  // Show severity breakdown
+  if (severityCounts['critical'] || severityCounts['high']) {
+    responseText += `\n⚠️ **Critical incidents:** ${(severityCounts['critical'] || 0) + (severityCounts['high'] || 0)}\n`
+  }
+
+  responseText += `\n📋 **Details:**\n`
+
+  // Sort incidents by severity (critical first)
+  const sortedIncidents = [...incidents].sort((a, b) => {
+    const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
+    const aSev = a.severity || a.properties?.severity || 'low'
+    const bSev = b.severity || b.properties?.severity || 'low'
+    return (severityOrder[aSev] || 4) - (severityOrder[bSev] || 4)
+  })
+
+  sortedIncidents.slice(0, 8).forEach((inc, i) => {
+    const type = inc.type || inc.iconCategory || 'unknown'
+    const emoji = typeEmojis[type] || '📌'
+    const desc = inc.description || inc.properties?.description || 'Traffic incident reported'
+    const severity = inc.severity || inc.properties?.severity || ''
+    const severityBadge = severity ? ` [${severity.toUpperCase()}]` : ''
+
+    responseText += `  ${i + 1}. ${emoji} **${type.replace(/([A-Z])/g, ' $1').trim()}**${severityBadge}\n`
+    responseText += `     ${desc}\n`
+
+    if (inc.startTime) {
+      const start = new Date(inc.startTime)
+      responseText += `     🕐 Started: ${start.toLocaleString()}\n`
+    }
+    if (inc.endTime) {
+      const end = new Date(inc.endTime)
+      responseText += `     ⏳ Ends: ${end.toLocaleString()}\n`
+    }
+    if (inc.length) {
+      responseText += `     📏 Affects: ${Math.round(inc.length)}m\n`
+    }
+    if (inc.lanesBlocked) {
+      responseText += `     🚧 Lanes blocked: ${inc.lanesBlocked}\n`
+    }
+    if (inc.delay) {
+      responseText += `     ⏱️ Delay: ${Math.round(inc.delay / 60)} minutes\n`
+    }
+    responseText += `\n`
+  })
+
+  if (incidents.length > 8) {
+    responseText += `  ... and ${incidents.length - 8} more incidents reported.\n`
+  }
+
+  // ─── Advice ──────────────────────────────────────────────────────────────
+
+  responseText += `\n💡 **Advice:**\n`
+
+  if (typeCounts.accident > 0) {
+    responseText += `  ⚠️ Accidents reported — drive with caution in the area.\n`
+  }
+  if (typeCounts.construction > 0) {
+    responseText += `  🚧 Construction zones — expect delays and lane closures.\n`
+  }
+  if (typeCounts.roadClosure > 0) {
+    responseText += `  🚫 Road closures — plan alternative routes.\n`
+  }
+  if (typeCounts.congestion > 2) {
+    responseText += `  🚦 Heavy congestion detected — allow extra travel time.\n`
+  }
+  if (typeCounts.hazard > 0) {
+    responseText += `  ⚠️ Hazards on road — reduce speed and stay alert.\n`
+  }
+
+  // ─── Saved location context ─────────────────────────────────────────────
+
+  if (targetLocation && typeof targetLocation === 'object') {
+    responseText += `\n📍 This report is for your saved location: **${targetLocation.label || targetLocation.name}**\n`
+  } else if (targetName !== city) {
+    responseText += `\n📍 This report is for: **${targetName}**\n`
+  }
+
+  // ─── Weather impact ─────────────────────────────────────────────────────
+
+  if (data.condition) {
+    const condition = data.condition.toLowerCase()
+    if (condition.includes('rain') || condition.includes('storm')) {
+      responseText += `\n🌧️ **Weather:** ${data.condition} — roads may be slippery. Drive carefully.\n`
+    }
+    if (data.temp && data.temp < 5) {
+      responseText += `❄️ **Cold weather:** ${Math.round(data.temp)}°C — watch for icy patches.\n`
+    }
+  }
+
+  responseText += `\n🚗 **Stay safe on the road!**`
+
+  return responseText
+}
+
+export default getTrafficAdvice
