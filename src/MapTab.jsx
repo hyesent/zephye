@@ -1,13 +1,84 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ============================================================================
+// TRAFFIC CACHING — 8-Hour Auto-Delete
+// ============================================================================
+
+const TRAFFIC_CACHE_TTL = 8 * 60 * 60 * 1000 // 8 hours
+
+const getTrafficCacheKey = (lat, lon) => {
+  const roundedLat = Math.round(lat * 100) / 100
+  const roundedLon = Math.round(lon * 100) / 100
+  return `zephye_traffic_incidents_${roundedLat}_${roundedLon}`
+}
+
+const getCachedTraffic = (lat, lon) => {
+  try {
+    const key = getTrafficCacheKey(lat, lon)
+    const cached = localStorage.getItem(key)
+    if (!cached) return null
+
+    const data = JSON.parse(cached)
+    if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return data.value
+  } catch {
+    return null
+  }
+}
+
+const setCachedTraffic = (lat, lon, incidents) => {
+  try {
+    const key = getTrafficCacheKey(lat, lon)
+    localStorage.setItem(key, JSON.stringify({
+      value: incidents,
+      timestamp: Date.now()
+    }))
+  } catch {
+    // Storage full — clear old traffic caches
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('zephye_traffic_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(k))
+          if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
+            localStorage.removeItem(k)
+          }
+        } catch {}
+      }
+    })
+  }
+}
+
+// ─── Auto-Cleanup ──────────────────────────────────────────────────────────
+
+const cleanupTrafficCache = () => {
+  const lastCleanup = localStorage.getItem('zephye_traffic_last_cleanup')
+  const now = Date.now()
+
+  if (!lastCleanup || now - parseInt(lastCleanup) > TRAFFIC_CACHE_TTL) {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('zephye_traffic_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key))
+          if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
+            localStorage.removeItem(key)
+          }
+        } catch {}
+      }
+    })
+    localStorage.setItem('zephye_traffic_last_cleanup', String(now))
+  }
+}
+
+cleanupTrafficCache()
+
+// ============================================================================
 // CONSTANTS
 // ============================================================================
 
-// ─── Mapbox API Key ────────────────────────────────────────────────────────
 const MAPBOX_KEY = "pk.eyJ1IjoiaHllc2VudCIsImEiOiJjbXNkd2Fsd20wMTRjMndxeHZ1MXZkdWk5In0.oo-poQNG7epNSEADCQFZPQ"
-
-// ─── OpenRouteService Key ─────────────────────────────────────────────────
 const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjkzZGIxMDYzZDZmOTQyOGZiZGFlMzk2OTA3ZWJkZjA4IiwiaCI6Im11cm11cjY0In0="
 
 const SUPPORTED_COUNTRIES = [
@@ -77,6 +148,9 @@ export default function MapTab({ weather, location, aqi }) {
   const [isSearching, setIsSearching] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapData, setMapData] = useState(null)
+  const [trafficIncidents, setTrafficIncidents] = useState([])
+  const [isLoadingIncidents, setIsLoadingIncidents] = useState(false)
+  const [lastTrafficFetch, setLastTrafficFetch] = useState(null)
   const [selectedLocation, setSelectedLocation] = useState(() => {
     try {
       const saved = localStorage.getItem('zephye_map_location')
@@ -94,6 +168,7 @@ export default function MapTab({ weather, location, aqi }) {
   const mapRef = useRef(null)
   const markersRef = useRef([])
   const overlayRef = useRef(null)
+  const incidentMarkersRef = useRef([])
   const mapContainerRef = useRef(null)
   const searchTimeoutRef = useRef(null)
   const abortControllerRef = useRef(null)
@@ -531,7 +606,7 @@ export default function MapTab({ weather, location, aqi }) {
     }
   }
 
-  // ─── Fetch Functions ────────────────────────────────────────────────────
+  // ─── Fetch Weather ──────────────────────────────────────────────────────
 
   const fetchWeatherForLocation = async (lat, lon) => {
     try {
@@ -543,6 +618,8 @@ export default function MapTab({ weather, location, aqi }) {
       return null
     }
   }
+
+  // ─── Fetch Pollen ───────────────────────────────────────────────────────
 
   const fetchPollenForLocation = async (lat, lon) => {
     try {
@@ -556,6 +633,275 @@ export default function MapTab({ weather, location, aqi }) {
     } catch {
       return null
     }
+  }
+
+  // ─── Fetch Traffic Incidents (with Caching) ─────────────────────────────
+
+  const fetchTrafficIncidents = async (lat, lon) => {
+    // Check cache first
+    const cached = getCachedTraffic(lat, lon)
+    if (cached) {
+      console.log('📦 Using cached traffic data for', lat, lon)
+      setTrafficIncidents(cached)
+      renderIncidentMarkers(cached)
+      return cached
+    }
+
+    setIsLoadingIncidents(true)
+
+    try {
+      // Calculate bounding box (approx 50km radius)
+      const latOffset = 0.45
+      const lonOffset = 0.45
+      const bbox = `${lon - lonOffset},${lat - latOffset},${lon + lonOffset},${lat + latOffset}`
+
+      // Mapbox Directions API with incident annotations
+      // Using a random destination to get incidents in the area
+      const destLat = lat + 0.1
+      const destLon = lon + 0.1
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon},${lat};${destLon},${destLat}?` +
+        `annotations=congestion,incidents&` +
+        `access_token=${MAPBOX_KEY}`
+
+      const response = await fetch(url)
+      const data = await response.json()
+
+      let incidents = []
+
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0]
+        incidents = route.incidents || []
+      }
+
+      // If no incidents from route, try a wider area fetch
+      if (incidents.length === 0) {
+        // Fallback: use a larger bbox with a different approach
+        const widerUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon - 0.2},${lat - 0.2};${lon + 0.2},${lat + 0.2}?` +
+          `annotations=incidents&` +
+          `access_token=${MAPBOX_KEY}`
+
+        const widerResponse = await fetch(widerUrl)
+        const widerData = await widerResponse.json()
+
+        if (widerData.routes && widerData.routes.length > 0) {
+          incidents = widerData.routes[0].incidents || []
+        }
+      }
+
+      // Cache the incidents
+      setCachedTraffic(lat, lon, incidents)
+      setTrafficIncidents(incidents)
+      renderIncidentMarkers(incidents)
+
+      return incidents
+    } catch (error) {
+      console.error('Failed to fetch traffic incidents:', error)
+      
+      // Try TomTom as fallback (if you still have the key)
+      try {
+        const tomTomKey = "YOUR_TOMTOM_KEY"
+        const bbox = `${lon - 0.3},${lat - 0.3},${lon + 0.3},${lat + 0.3}`
+        const ttUrl = `https://api.tomtom.com/traffic/services/5/incidentDetails?` +
+          `key=${tomTomKey}&` +
+          `bbox=${bbox}&` +
+          `fields={incidents{type,geometry{type,coordinates},properties{iconCategory,description,startTime,endTime,length}}}&` +
+          `language=en-GB&timeValidityFilter=present`
+        
+        const ttResponse = await fetch(ttUrl)
+        const ttData = await ttResponse.json()
+        
+        if (ttData.incidents) {
+          setCachedTraffic(lat, lon, ttData.incidents)
+          setTrafficIncidents(ttData.incidents)
+          renderIncidentMarkers(ttData.incidents)
+          return ttData.incidents
+        }
+      } catch (ttError) {
+        console.error('TomTom fallback also failed:', ttError)
+      }
+
+      return []
+    } finally {
+      setIsLoadingIncidents(false)
+    }
+  }
+
+  // ─── Render Incident Markers ─────────────────────────────────────────────
+
+  const renderIncidentMarkers = (incidents) => {
+    const map = mapRef.current
+    if (!map) return
+
+    // Clear previous incident markers
+    incidentMarkersRef.current.forEach(m => {
+      try { map.removeLayer(m) } catch {}
+    })
+    incidentMarkersRef.current = []
+
+    if (!incidents || incidents.length === 0) {
+      // Show "no incidents" marker
+      const noIncidentIcon = L.divIcon({
+        className: 'no-incident',
+        html: `
+          <div style="
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(16px);
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            text-align: center;
+          ">
+            ✅ No traffic incidents reported
+          </div>
+        `,
+        iconSize: [170, 30],
+        iconAnchor: [85, 15]
+      })
+
+      const marker = L.marker([selectedLocation.lat + 0.1, selectedLocation.lon], { icon: noIncidentIcon })
+      incidentMarkersRef.current.push(marker)
+      map.addLayer(marker)
+      return
+    }
+
+    // Incident type icons
+    const incidentIcons = {
+      accident: '🚗',
+      construction: '🚧',
+      roadClosure: '🚫',
+      hazard: '⚠️',
+      weather: '🌧️',
+      event: '🎪',
+      default: '📌'
+    }
+
+    const incidentColors = {
+      accident: '#ef4444',
+      construction: '#eab308',
+      roadClosure: '#dc2626',
+      hazard: '#f97316',
+      weather: '#3b82f6',
+      event: '#8b5cf6',
+      default: '#6b7280'
+    }
+
+    incidents.forEach((incident, index) => {
+      const type = incident.type || incident.iconCategory || 'default'
+      const typeLower = type.toLowerCase()
+      const emoji = incidentIcons[typeLower] || incidentIcons.default
+      const color = incidentColors[typeLower] || incidentColors.default
+      
+      // Get coordinates
+      let lat = selectedLocation.lat + (Math.random() - 0.5) * 0.05
+      let lon = selectedLocation.lon + (Math.random() - 0.5) * 0.05
+      
+      if (incident.geometry && incident.geometry.coordinates) {
+        const coords = incident.geometry.coordinates
+        if (Array.isArray(coords) && coords.length >= 2) {
+          lon = coords[0]
+          lat = coords[1]
+        }
+      }
+
+      const description = incident.description || incident.properties?.description || 'Traffic incident reported'
+
+      const incidentIcon = L.divIcon({
+        className: 'incident-marker',
+        html: `
+          <div style="
+            background: ${color}22;
+            backdrop-filter: blur(12px);
+            padding: 6px 10px;
+            border-radius: 20px;
+            border: 2px solid ${color}66;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #f8fafc;
+            font-size: 11px;
+            font-weight: 500;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+          ">
+            <span style="font-size: 14px;">${emoji}</span>
+            <span>${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+          </div>
+        `,
+        iconSize: [80, 30],
+        iconAnchor: [40, 15]
+      })
+
+      const marker = L.marker([lat, lon], { icon: incidentIcon })
+
+      // Popup with detailed info
+      const popupContent = `
+        <div style="
+          background: rgba(15,23,42,0.92);
+          backdrop-filter: blur(16px);
+          padding: 12px 16px;
+          border-radius: 14px;
+          color: #f8fafc;
+          font-family: 'Poppins', sans-serif;
+          min-width: 200px;
+          max-width: 280px;
+        ">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">${emoji}</span>
+            <span>${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+          </div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 6px;">
+            ${description}
+          </div>
+          ${incident.startTime ? `
+            <div style="font-size: 10px; color: rgba(255,255,255,0.3);">
+              🕐 Started: ${new Date(incident.startTime).toLocaleString()}
+            </div>
+          ` : ''}
+          ${incident.endTime ? `
+            <div style="font-size: 10px; color: rgba(255,255,255,0.3);">
+              ⏳ Ends: ${new Date(incident.endTime).toLocaleString()}
+            </div>
+          ` : ''}
+          ${incident.length ? `
+            <div style="font-size: 10px; color: rgba(255,255,255,0.3);">
+              📏 Length: ${incident.length}m
+            </div>
+          ` : ''}
+        </div>
+      `
+
+      marker.bindPopup(popupContent)
+
+      incidentMarkersRef.current.push(marker)
+      map.addLayer(marker)
+    })
+
+    // Show count summary
+    const countIcon = L.divIcon({
+      className: 'incident-count',
+      html: `
+        <div style="
+          background: rgba(15,23,42,0.85);
+          backdrop-filter: blur(16px);
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.6);
+          font-size: 11px;
+          text-align: center;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        ">
+          📍 ${incidents.length} incident${incidents.length > 1 ? 's' : ''} reported
+        </div>
+      `,
+      iconSize: [160, 30],
+      iconAnchor: [80, 15]
+    })
+
+    const countMarker = L.marker([selectedLocation.lat + 0.12, selectedLocation.lon + 0.08], { icon: countIcon })
+    incidentMarkersRef.current.push(countMarker)
+    map.addLayer(countMarker)
   }
 
   // ─── Popup HTML Creators ────────────────────────────────────────────────
@@ -702,6 +1048,12 @@ export default function MapTab({ weather, location, aqi }) {
         data = await res.json()
       }
 
+      if (mode === 'traffic') {
+        // Fetch traffic incidents with caching
+        await fetchTrafficIncidents(lat, lon)
+        data = { traffic: true }
+      }
+
       setMapData(data)
       updateMap(data)
 
@@ -720,6 +1072,7 @@ export default function MapTab({ weather, location, aqi }) {
     const lat = selectedLocation?.lat ?? DEFAULT_LOCATION.lat
     const lon = selectedLocation?.lon ?? DEFAULT_LOCATION.lon
 
+    // Clear markers
     markersRef.current.forEach(m => {
       try { map.removeLayer(m) } catch {}
     })
@@ -782,6 +1135,7 @@ export default function MapTab({ weather, location, aqi }) {
       renderTrafficOverlay(map, lat, lon)
     }
 
+    // Zoom to fit
     if (markersRef.current.length > 0) {
       try {
         const group = L.featureGroup(markersRef.current)
@@ -997,15 +1351,14 @@ export default function MapTab({ weather, location, aqi }) {
     map.addLayer(legendMarker)
   }
 
-  // ─── Mapbox Traffic Overlay ─────────────────────────────────────────────
+  // ─── Traffic Overlay (Mapbox Traffic Tiles + Incidents) ─────────────────
 
   const renderTrafficOverlay = (map, lat, lon) => {
     // ─── Mapbox Traffic Tiles ──────────────────────────────────────────────
-    // Mapbox traffic tiles using the key you provided
     const trafficLayer = L.tileLayer(
       `https://api.mapbox.com/v4/mapbox.mapbox-traffic-v1/{z}/{x}/{y}.png?access_token=${MAPBOX_KEY}`,
       {
-        opacity: 0.7,
+        opacity: 0.6,
         attribution: '© Mapbox',
         _isOverlay: true,
         maxZoom: 18,
@@ -1018,6 +1371,9 @@ export default function MapTab({ weather, location, aqi }) {
     map.addLayer(trafficLayer)
 
     // ─── Traffic Info Marker ──────────────────────────────────────────────
+    const hasIncidents = trafficIncidents && trafficIncidents.length > 0
+    const incidentCount = trafficIncidents?.length || 0
+
     const trafficIcon = L.divIcon({
       className: 'traffic-info',
       html: `
@@ -1030,29 +1386,32 @@ export default function MapTab({ weather, location, aqi }) {
           color: rgba(255,255,255,0.5);
           font-size: 11px;
           text-align: center;
-          max-width: 180px;
+          max-width: 200px;
         ">
           🚦 Mapbox Traffic
           <div style="font-size: 9px; color: rgba(255,255,255,0.25); margin-top: 2px;">
-            ${selectedLocation?.name || 'Location'} · Real-time
+            ${selectedLocation?.name || 'Location'} · ${hasIncidents ? `${incidentCount} incident${incidentCount > 1 ? 's' : ''}` : 'No incidents'}
           </div>
-          <div style="display: flex; justify-content: center; gap: 8px; font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 3px;">
+          <div style="display: flex; justify-content: center; gap: 8px; font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 2px;">
             <span>🟢 Free</span>
             <span>🟡 Moderate</span>
             <span>🔴 Heavy</span>
           </div>
           <div style="font-size: 7px; color: rgba(255,255,255,0.12); margin-top: 2px;">
-            Long press or right-click for route
+            ${isLoadingIncidents ? '⏳ Updating incidents...' : 'Long press/right-click for route'}
           </div>
         </div>
       `,
-      iconSize: [180, 75],
-      iconAnchor: [90, 37]
+      iconSize: [190, 75],
+      iconAnchor: [95, 37]
     })
 
     const infoMarker = L.marker([lat + 0.08, lon + 0.08], { icon: trafficIcon })
     markersRef.current.push(infoMarker)
     map.addLayer(infoMarker)
+
+    // ─── Incident markers are rendered separately ─────────────────────────
+    // They're updated when traffic data is fetched
   }
 
   // ─── Search ──────────────────────────────────────────────────────────────
@@ -1329,7 +1688,11 @@ export default function MapTab({ weather, location, aqi }) {
           <>
             <span>🚦 Mapbox Traffic</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span>Long press/right-click for route</span>
+            <span>{trafficIncidents.length > 0 ? `${trafficIncidents.length} incident${trafficIncidents.length > 1 ? 's' : ''} detected` : 'No incidents'}</span>
+            <span style={{ opacity: 0.3 }}>•</span>
+            <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)' }}>
+              {getCachedTraffic(selectedLocation.lat, selectedLocation.lon) ? '📦 Cached' : ''}
+            </span>
           </>
         )}
       </div>
