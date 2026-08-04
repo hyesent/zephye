@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 // CONSTANTS
 // ============================================================================
 
+// ─── Mapbox API Key ────────────────────────────────────────────────────────
+const MAPBOX_KEY = "pk.eyJ1IjoiaHllc2VudCIsImEiOiJjbXNkd2Fsd20wMTRjMndxeHZ1MXZkdWk5In0.oo-poQNG7epNSEADCQFZPQ"
+
+// ─── OpenRouteService Key ─────────────────────────────────────────────────
 const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjkzZGIxMDYzZDZmOTQyOGZiZGFlMzk2OTA3ZWJkZjA4IiwiaCI6Im11cm11cjY0In0="
 
 const SUPPORTED_COUNTRIES = [
@@ -183,7 +187,6 @@ export default function MapTab({ weather, location, aqi }) {
 
     // ─── SINGLE TAP → WEATHER ─────────────────────────────────────────────
     map.on('click', (e) => {
-      // Check if this was a long press
       if (isLongPressRef.current) {
         isLongPressRef.current = false
         return
@@ -191,17 +194,14 @@ export default function MapTab({ weather, location, aqi }) {
 
       const { lat, lng } = e.latlng
       
-      // Double click detection
       clickCountRef.current++
       
       if (clickCountRef.current === 1) {
         clickTimerRef.current = setTimeout(() => {
-          // Single click → Weather
           handleSingleTap(lat, lng, map)
           clickCountRef.current = 0
         }, 300)
       } else if (clickCountRef.current === 2) {
-        // Double click → Pollen
         clearTimeout(clickTimerRef.current)
         clickCountRef.current = 0
         handleDoubleTap(lat, lng, map)
@@ -702,10 +702,6 @@ export default function MapTab({ weather, location, aqi }) {
         data = await res.json()
       }
 
-      if (mode === 'traffic') {
-        data = { traffic: true }
-      }
-
       setMapData(data)
       updateMap(data)
 
@@ -1001,10 +997,28 @@ export default function MapTab({ weather, location, aqi }) {
     map.addLayer(legendMarker)
   }
 
-  // ─── Traffic Overlay ─────────────────────────────────────────────────────
+  // ─── Mapbox Traffic Overlay ─────────────────────────────────────────────
 
   const renderTrafficOverlay = (map, lat, lon) => {
-    const infoIcon = L.divIcon({
+    // ─── Mapbox Traffic Tiles ──────────────────────────────────────────────
+    // Mapbox traffic tiles using the key you provided
+    const trafficLayer = L.tileLayer(
+      `https://api.mapbox.com/v4/mapbox.mapbox-traffic-v1/{z}/{x}/{y}.png?access_token=${MAPBOX_KEY}`,
+      {
+        opacity: 0.7,
+        attribution: '© Mapbox',
+        _isOverlay: true,
+        maxZoom: 18,
+        tileSize: 512,
+        zoomOffset: -1
+      }
+    )
+
+    overlayRef.current = trafficLayer
+    map.addLayer(trafficLayer)
+
+    // ─── Traffic Info Marker ──────────────────────────────────────────────
+    const trafficIcon = L.divIcon({
       className: 'traffic-info',
       html: `
         <div style="
@@ -1016,22 +1030,27 @@ export default function MapTab({ weather, location, aqi }) {
           color: rgba(255,255,255,0.5);
           font-size: 11px;
           text-align: center;
-          max-width: 160px;
+          max-width: 180px;
         ">
-          🗺️ Route Calculator
+          🚦 Mapbox Traffic
           <div style="font-size: 9px; color: rgba(255,255,255,0.25); margin-top: 2px;">
-            Long press or right-click any location
+            ${selectedLocation?.name || 'Location'} · Real-time
           </div>
-          <div style="font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 2px;">
-            OpenRouteService · Driving
+          <div style="display: flex; justify-content: center; gap: 8px; font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 3px;">
+            <span>🟢 Free</span>
+            <span>🟡 Moderate</span>
+            <span>🔴 Heavy</span>
+          </div>
+          <div style="font-size: 7px; color: rgba(255,255,255,0.12); margin-top: 2px;">
+            Long press or right-click for route
           </div>
         </div>
       `,
-      iconSize: [160, 65],
-      iconAnchor: [80, 32]
+      iconSize: [180, 75],
+      iconAnchor: [90, 37]
     })
 
-    const infoMarker = L.marker([lat + 0.08, lon + 0.08], { icon: infoIcon })
+    const infoMarker = L.marker([lat + 0.08, lon + 0.08], { icon: trafficIcon })
     markersRef.current.push(infoMarker)
     map.addLayer(infoMarker)
   }
@@ -1156,7 +1175,7 @@ export default function MapTab({ weather, location, aqi }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🗺️ Route'}
+              {m === 'weather' ? '⛅ Weather' : m === 'pollen' ? '🌿 Pollen' : '🚦 Traffic'}
             </button>
           ))}
         </div>
@@ -1308,7 +1327,7 @@ export default function MapTab({ weather, location, aqi }) {
         )}
         {mode === 'traffic' && (
           <>
-            <span>🗺️ OpenRouteService</span>
+            <span>🚦 Mapbox Traffic</span>
             <span style={{ opacity: 0.3 }}>•</span>
             <span>Long press/right-click for route</span>
           </>
