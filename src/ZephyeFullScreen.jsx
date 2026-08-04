@@ -84,7 +84,7 @@ const QNA_MAP = [
     context: ['beauty', 'cosmetics', 'face', 'scalp', 'complexion']
   },
   { 
-    keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'travel by car'], 
+    keys: ['drive', 'driving', 'road', 'car', 'traffic', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'biking', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'travel by car'], 
     fn: getDrivingAdvice, 
     name: 'Driving',
     context: ['vehicle', 'transport', 'road trip', 'freeway', 'intersection']
