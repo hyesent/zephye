@@ -29,7 +29,6 @@ const getSavedLocations = () => {
     const saved = localStorage.getItem('zephye_saved_locations')
     if (saved) {
       const parsed = JSON.parse(saved)
-      // Filter out any without lat/lon
       return parsed.filter(loc => loc.lat && loc.lon)
     }
     return []
@@ -46,14 +45,11 @@ const findSavedLocation = (name) => {
   const locations = getSavedLocations()
   const lowerName = name.toLowerCase().trim()
   
-  // First try exact match on label
   let match = locations.find(loc => 
     loc.label && loc.label.toLowerCase() === lowerName
   )
-  
   if (match) return match
   
-  // Then try partial match on label or name
   match = locations.find(loc => {
     const label = loc.label?.toLowerCase() || ''
     const locName = loc.name?.toLowerCase() || ''
@@ -76,10 +72,8 @@ const getDynamicSuggestions = () => {
     'Type "paint drying time" or "best photo hour"',
     'Ask "will it rain tomorrow at 2 PM"',
     'Try "farming advice" or "should I water"',
-    'Ask "traffic to work" or "route to Lagos"',
   ]
   
-  // Add dynamic saved location suggestions
   if (savedLocs.length > 0) {
     const locNames = savedLocs.map(l => l.label || 'Untitled').filter(Boolean)
     if (locNames.length > 0) {
@@ -210,7 +204,7 @@ export default function ZephyeFullScreen({
   }, [messages, streamingText])
 
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── ROUTE QUESTION HANDLING WITH SAVED LOCATIONS ───────────────────────
+  // ─── ROUTE QUESTION HANDLING ─────────────────────────────────────────────
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const routeQuestion = async (question) => {
@@ -247,7 +241,6 @@ export default function ZephyeFullScreen({
       homeLat: location?.lat,
       homeLon: location?.lon,
       homeName: location?.name,
-      // ─── Pass saved locations ──────────────────────────────────────────
       savedLocations: savedLocations
     }
 
@@ -258,7 +251,6 @@ export default function ZephyeFullScreen({
 
     const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
     const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'traffic report']
-    const savedLocationNames = savedLocations.map(l => l.label?.toLowerCase() || '').filter(Boolean)
 
     const hasRouteKeyword = routeKeywords.some(k => q.includes(k))
     const hasTrafficKeyword = trafficKeywords.some(k => q.includes(k))
@@ -275,7 +267,7 @@ export default function ZephyeFullScreen({
       }
     }
 
-    // ─── If user asks about route without specifying locations ────────────
+    // ─── If user asks about traffic or route ──────────────────────────────
 
     if (hasRouteKeyword || hasTrafficKeyword) {
       const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
@@ -309,16 +301,13 @@ export default function ZephyeFullScreen({
       // ─── If user mentioned a saved location generically ─────────────────
 
       if (mentionedSavedLocation) {
-        // If they said "route to work" and "work" is a saved location
         if (!toLocation && q.includes('to')) {
           toLocation = { ...mentionedSavedLocation, isSaved: true }
         }
         if (!fromLocation && q.includes('from')) {
           fromLocation = { ...mentionedSavedLocation, isSaved: true }
         }
-        // If they said "traffic to work" or "traffic near work"
         if (hasTrafficKeyword && !toLocation && !fromLocation) {
-          // Use the mentioned saved location as the destination
           toLocation = { ...mentionedSavedLocation, isSaved: true }
         }
       }
@@ -329,17 +318,16 @@ export default function ZephyeFullScreen({
         fromLocation = 'home'
       }
 
-      // ─── Check if user is asking about traffic incidents ────────────────
+      // ─── Traffic only (no route) ────────────────────────────────────────
 
       if (hasTrafficKeyword && !hasRouteKeyword && !toLocation && !fromLocation) {
-        // If they mentioned a saved location, use it
         if (mentionedSavedLocation) {
           return await getTrafficAdvice(data, question, { location: mentionedSavedLocation })
         }
         return await getTrafficAdvice(data, question, {})
       }
 
-      // ─── If route keywords found, use RouteAdvice ──────────────────────
+      // ─── Route with traffic ─────────────────────────────────────────────
 
       if (hasRouteKeyword || (fromLocation && toLocation)) {
         return await getRouteAdvice(data, question, { 
@@ -503,7 +491,6 @@ export default function ZephyeFullScreen({
       'Traffic incidents near me?'
     ]
 
-    // Add saved location chips
     const savedLocs = savedLocations.slice(0, 2)
     if (savedLocs.length > 0) {
       const label = savedLocs[0].label || 'saved location'
