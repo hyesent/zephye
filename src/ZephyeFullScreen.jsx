@@ -20,24 +20,20 @@ import { getWeatherAdvice } from './data/BasicWeatherAdvice.js'
 import { getTrafficAdvice } from './data/TrafficAdvice.js'
 import { getRouteAdvice } from './data/RouteAdvice.js'
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── CONSTANTS & CONFIG ──────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── CONFIG ────────────────────────────────────────────────────────────────
 
 const CONFIG = {
   MAX_SUGGESTIONS: 8,
-  STREAM_DELAY_MS: 15,
+  STREAM_DELAY_MS: 12,
   MAX_INTENTS: 3,
   MIN_SCORE_THRESHOLD: 1.5,
-  SECONDARY_THRESHOLD: 0.4,
-  MAX_LINES_PER_SECTION: 6,
-  MAX_WARNINGS: 5,
+  SECONDARY_THRESHOLD: 0.35,
+  MAX_SECONDARY_LINES: 4,
+  MAX_WARNINGS: 8,
   TTS_API: 'https://hyezen.onrender.com/api/tts'
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── HELPERS ──────────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── HELPERS ──────────────────────────────────────────────────────────────
 
 const getSavedLocations = () => {
   try {
@@ -70,9 +66,7 @@ const findSavedLocation = (name) => {
   return match || null
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── INTENT MAP ──────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── INTENT MAP ───────────────────────────────────────────────────────────
 
 const INTENT_MAP = [
   {
@@ -81,7 +75,8 @@ const INTENT_MAP = [
     keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear', 'will it rain', 'temperature today', 'weather forecast', 'degrees', 'celsius', 'fahrenheit', 'precipitation', 'humidity', 'wind speed'],
     fn: getWeatherAdvice,
     priority: 1,
-    section: '🌡️ Weather',
+    section: 'Weather',
+    icon: '🌡️',
     keywords: ['weather', 'forecast', 'temperature', 'rain', 'storm']
   },
   {
@@ -90,7 +85,8 @@ const INTENT_MAP = [
     keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'peloton', 'spin', 'cyclist', 'trail run', 'track', 'sprint', 'workout', 'exercise', 'sports', 'game', 'match', 'tournament', 'practice', 'training', 'fitness'],
     fn: getSportsAdvice,
     priority: 1,
-    section: '🏃 Sports',
+    section: 'Sports',
+    icon: '🏃',
     keywords: ['bike', 'biking', 'ride', 'run', 'gym', 'exercise', 'sport', 'workout', 'training', 'game', 'football', 'tennis', 'swim', 'hike']
   },
   {
@@ -99,7 +95,8 @@ const INTENT_MAP = [
     keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear', 'dress code', 'fashion', 'style', 'formal', 'casual', 'sweatshirt', 't-shirt', 'sweatpants', 'leggings', 'athletic wear', 'running shoes', 'cycling kit'],
     fn: getClothingAdvice,
     priority: 2,
-    section: '👕 Clothing',
+    section: 'Clothing',
+    icon: '👕',
     keywords: ['wear', 'clothes', 'outfit', 'dress', 'jacket', 'fashion', 'style']
   },
   {
@@ -108,7 +105,8 @@ const INTENT_MAP = [
     keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate', 'direction', 'map', 'navigation', 'road trip', 'distance between', 'travel duration', 'way', 'bike route', 'cycling route', 'path', 'trail', 'route planner', 'shortest route', 'fastest route', 'scenic route'],
     fn: getRouteAdvice,
     priority: 2,
-    section: '🗺️ Route',
+    section: 'Route',
+    icon: '🗺️',
     keywords: ['route', 'distance', 'how long', 'get to', 'from', 'to', 'directions', 'map', 'navigate']
   },
   {
@@ -117,7 +115,8 @@ const INTENT_MAP = [
     keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report', 'bumper to bumper', 'delay', 'construction traffic', 'road closure', 'car crash', 'bike lane blocked', 'cycle lane', 'traffic jam', 'stuck in traffic', 'rush hour', 'commute traffic'],
     fn: getTrafficAdvice,
     priority: 2,
-    section: '🚦 Traffic',
+    section: 'Traffic',
+    icon: '🚦',
     keywords: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow']
   },
   {
@@ -126,7 +125,8 @@ const INTENT_MAP = [
     keys: ['drive', 'driving', 'road', 'car', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'vehicle', 'transport', 'freeway', 'intersection', 'road bike', 'bike on road', 'cycle lane', 'driving conditions', 'road conditions', 'pavement', 'roads'],
     fn: getDrivingAdvice,
     priority: 3,
-    section: '🚗 Driving',
+    section: 'Driving',
+    icon: '🚗',
     keywords: ['drive', 'driving', 'road', 'car', 'vehicle', 'highway']
   },
   {
@@ -135,7 +135,8 @@ const INTENT_MAP = [
     keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical', 'migraine', 'arthritis', 'heart', 'diabetes', 'copd', 'breathing', 'safe to go outside', 'doctor', 'hospital', 'symptoms', 'medicine', 'condition', 'chronic', 'pain', 'injury', 'wellness', 'air quality', 'pollution', 'allergies', 'pollen', 'dust', 'smoke', 'fever', 'cough', 'sneeze'],
     fn: getHealthAdvice,
     priority: 3,
-    section: '🏥 Health',
+    section: 'Health',
+    icon: '🏥',
     keywords: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'breathing', 'air quality', 'pain']
   },
   {
@@ -144,7 +145,8 @@ const INTENT_MAP = [
     keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga', 'outdoor activity', 'leisure', 'recreation', 'fun', 'relax', 'exercise light', 'walking', 'bike ride', 'casual ride', 'leisure bike', 'hammock', 'read outside', 'garden', 'bird watching'],
     fn: getLifestyleAdvice,
     priority: 3,
-    section: '🌿 Lifestyle',
+    section: 'Lifestyle',
+    icon: '🌿',
     keywords: ['lifestyle', 'mood', 'walk', 'park', 'picnic', 'relax', 'leisure', 'bike ride']
   },
   {
@@ -153,7 +155,8 @@ const INTENT_MAP = [
     keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star', 'celestial', 'observatory', 'night vision', 'astrophotography', 'deep space', 'see stars', 'clear sky', 'dark sky'],
     fn: getStargazingAdvice,
     priority: 3,
-    section: '🌙 Stargazing',
+    section: 'Stargazing',
+    icon: '🌙',
     keywords: ['star', 'moon', 'night sky', 'telescope', 'astronomy', 'galaxy', 'milky way', 'planet']
   },
   {
@@ -162,7 +165,8 @@ const INTENT_MAP = [
     keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse', 'cow', 'chicken', 'livestock', 'poultry', 'yield', 'tractor', 'agriculture', 'orchard', 'ranch', 'cultivation', 'compost', 'mulch', 'prune', 'weed', 'pesticide', 'fertilizer'],
     fn: getFarmingAdvice,
     priority: 3,
-    section: '🌾 Farming',
+    section: 'Farming',
+    icon: '🌾',
     keywords: ['farm', 'crop', 'plant', 'garden', 'soil', 'harvest']
   },
   {
@@ -171,7 +175,8 @@ const INTENT_MAP = [
     keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos', 'photographer', 'composition', 'exposure', 'aperture', 'shutter speed', 'videography', 'visual', 'image', 'RAW', 'lightroom', 'photoshop', 'editing', 'sunset photo', 'sunrise photo'],
     fn: getPhotographyAdvice,
     priority: 3,
-    section: '📸 Photography',
+    section: 'Photography',
+    icon: '📸',
     keywords: ['photo', 'camera', 'photography', 'shoot', 'picture', 'lens']
   },
   {
@@ -180,7 +185,8 @@ const INTENT_MAP = [
     keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue', 'birthday', 'anniversary', 'corporate', 'block party', 'fair', 'reception', 'social', 'occasion', 'gala', 'fundraiser', 'conference', 'meeting'],
     fn: getEventsAdvice,
     priority: 3,
-    section: '🎉 Events',
+    section: 'Events',
+    icon: '🎉',
     keywords: ['event', 'party', 'wedding', 'bbq', 'picnic', 'festival', 'concert']
   },
   {
@@ -189,7 +195,8 @@ const INTENT_MAP = [
     keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog', 'pet care', 'veterinarian', 'puppy training', 'cat care', 'dog walking', 'vet', 'animal shelter', 'wildlife', 'fish', 'hamster', 'guinea pig', 'reptile', 'snake'],
     fn: getPetsAdvice,
     priority: 3,
-    section: '🐾 Pets',
+    section: 'Pets',
+    icon: '🐾',
     keywords: ['pet', 'dog', 'cat', 'animal', 'walk my dog', 'puppy']
   },
   {
@@ -198,7 +205,8 @@ const INTENT_MAP = [
     keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying', 'home repair', 'fix', 'remodel', 'contractor', 'carpentry', 'plumbing', 'electrical', 'home improvement', 'handyman', 'project', 'saw', 'screwdriver', 'wrench', 'tool', 'workshop'],
     fn: getDIYConstructionAdvice,
     priority: 3,
-    section: '🔧 DIY',
+    section: 'DIY',
+    icon: '🔧',
     keywords: ['diy', 'build', 'construction', 'paint', 'renovation', 'repair']
   },
   {
@@ -207,7 +215,8 @@ const INTENT_MAP = [
     keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility', 'electric', 'gas', 'insulation', 'efficiency', 'smart home', 'temperature control', 'climate control', 'savings', 'kwh', 'solar panel', 'inverter', 'battery', 'generator'],
     fn: getEnergyHomeAdvice,
     priority: 3,
-    section: '⚡ Energy',
+    section: 'Energy',
+    icon: '⚡',
     keywords: ['energy', 'power', 'electricity', 'bill', 'ac', 'heating', 'solar']
   },
   {
@@ -216,7 +225,8 @@ const INTENT_MAP = [
     keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey', 'traveling', 'destination', 'tourism', 'business trip', 'holiday', 'abroad', 'international', 'domestic', 'itinerary', 'layover', 'baggage', 'luggage', 'suitcase'],
     fn: getTravelingAdvice,
     priority: 3,
-    section: '✈️ Travel',
+    section: 'Travel',
+    icon: '✈️',
     keywords: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport']
   },
   {
@@ -225,20 +235,18 @@ const INTENT_MAP = [
     keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty', 'skincare', 'hair care', 'beauty routine', 'cosmetics', 'face', 'scalp', 'complexion', 'rosacea', 'dandruff', 'oily skin', 'dry hair', 'curly hair', 'straight hair', 'shampoo', 'conditioner'],
     fn: getSkinHairAdvice,
     priority: 3,
-    section: '💄 Beauty',
+    section: 'Beauty',
+    icon: '💄',
     keywords: ['skin', 'hair', 'sunscreen', 'makeup', 'beauty', 'skincare']
   }
 ]
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── SCORING ENGINE ──────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SCORING ENGINE ──────────────────────────────────────────────────────
 
 const scoreQuestion = (question, intent) => {
   const q = question.toLowerCase()
   let score = 0
   const matched = []
-  const exactMatches = []
 
   for (const key of intent.keys) {
     const keyLower = key.toLowerCase()
@@ -247,7 +255,6 @@ const scoreQuestion = (question, intent) => {
       score += weight
       matched.push(keyLower)
       if (keyLower.length > 8 && q.split(/\s+/).some(w => w === keyLower)) {
-        exactMatches.push(keyLower)
         score += 3
       }
     }
@@ -264,13 +271,10 @@ const scoreQuestion = (question, intent) => {
   }
 
   score += (10 - intent.priority) * 0.5
-
-  return { score, matched, exactMatches }
+  return { score, matched }
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── INTENT DETECTION ────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── INTENT DETECTION ────────────────────────────────────────────────────
 
 const detectIntents = (question) => {
   const results = []
@@ -278,12 +282,7 @@ const detectIntents = (question) => {
   for (const intent of INTENT_MAP) {
     const { score, matched } = scoreQuestion(question, intent)
     if (score > CONFIG.MIN_SCORE_THRESHOLD) {
-      results.push({
-        intent,
-        score,
-        matched,
-        isPrimary: false
-      })
+      results.push({ intent, score, matched, isPrimary: false })
     }
   }
 
@@ -299,138 +298,211 @@ const detectIntents = (question) => {
   return selected.slice(0, CONFIG.MAX_INTENTS)
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── RESPONSE MERGER ──────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SMART RESPONSE MERGER ──────────────────────────────────────────────
 
 const mergeResponses = (responses, intents, question) => {
   if (responses.length === 0) return null
   if (responses.length === 1) return responses[0]
 
-  const sections = []
-  const allWarnings = []
-  const bottomLines = []
+  // Parse each response into structured sections
+  const parsedSections = []
 
   for (let i = 0; i < responses.length; i++) {
     const text = responses[i]
     const intent = intents[i]?.intent
     const isPrimary = intents[i]?.isPrimary || false
-
     const lines = text.split('\n').filter(l => l.trim())
-    const sectionHeader = intent?.section || `📌 ${intent?.name || 'Advice'}`
 
-    let sectionLines = []
-    let warningLines = []
-    let bottomLine = ''
+    const section = {
+      header: intent?.section || 'Advice',
+      icon: intent?.icon || '📌',
+      isPrimary,
+      score: intents[i]?.score || 0,
+      contentLines: [],
+      warnings: [],
+      bottomLine: '',
+      raw: text
+    }
+
+    let currentSection = 'content'
+    let warningBuffer = []
+    let bottomBuffer = []
 
     for (const line of lines) {
-      if (line.includes('⚠️') || line.includes('WARNING') || line.includes('🚨')) {
-        warningLines.push(line)
-      } else if (line.includes('BOTTOM LINE') || line.includes('Bottom Line') || line.includes('💡') || line.includes('🎯')) {
-        bottomLine = line
-      } else if (!line.includes('---') && !line.includes('===') && line.trim().length > 3) {
-        sectionLines.push(line)
+      const trimmed = line.trim()
+      
+      // Detect section headers
+      if (trimmed.includes('⚠️') && (trimmed.includes('WARNING') || trimmed.includes('Warning'))) {
+        currentSection = 'warnings'
+        warningBuffer = []
+        continue
+      }
+      
+      if (trimmed.includes('💡') && (trimmed.includes('BOTTOM') || trimmed.includes('Bottom') || trimmed.includes('Verdict'))) {
+        currentSection = 'bottom'
+        bottomBuffer = []
+        continue
+      }
+
+      // Skip divider lines
+      if (trimmed.includes('---') || trimmed.includes('===')) continue
+
+      // Route content to appropriate bucket
+      if (currentSection === 'warnings') {
+        if (trimmed && !trimmed.includes('⚠️') && !trimmed.includes('💡')) {
+          warningBuffer.push(trimmed)
+        }
+      } else if (currentSection === 'bottom') {
+        if (trimmed && !trimmed.includes('💡') && !trimmed.includes('⚠️')) {
+          bottomBuffer.push(trimmed)
+        }
+      } else {
+        // Content section - skip if it's a header line
+        if (!trimmed.includes('⚠️') && !trimmed.includes('💡') && 
+            !trimmed.includes('BOTTOM') && !trimmed.includes('Bottom') &&
+            trimmed.length > 2) {
+          section.contentLines.push(trimmed)
+        }
       }
     }
 
-    sections.push({
-      header: sectionHeader,
-      lines: sectionLines.slice(0, CONFIG.MAX_LINES_PER_SECTION),
-      warnings: warningLines,
-      bottomLine: bottomLine,
-      isPrimary,
-      raw: text
-    })
+    // If we didn't find warnings via header, search for warning patterns
+    if (warningBuffer.length === 0) {
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if ((trimmed.includes('⚠️') || trimmed.includes('WARNING') || trimmed.includes('🚨')) &&
+            !trimmed.includes('⚠️ **Warnings:**') && !trimmed.includes('⚠️ **Warning:')) {
+          warningBuffer.push(trimmed)
+        }
+      }
+    }
+
+    // If we didn't find bottom line via header, search for patterns
+    if (bottomBuffer.length === 0) {
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if ((trimmed.includes('BOTTOM LINE') || trimmed.includes('Bottom Line') || trimmed.includes('Verdict')) &&
+            !trimmed.includes('💡 **Bottom Line:**')) {
+          bottomBuffer.push(trimmed)
+        }
+      }
+    }
+
+    section.warnings = warningBuffer
+    section.bottomLine = bottomBuffer.join('\n')
+    parsedSections.push(section)
   }
 
+  // Sort by priority (primary first, then by score)
+  parsedSections.sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1
+    if (!a.isPrimary && b.isPrimary) return 1
+    return b.score - a.score
+  })
+
+  // Build merged response
   let merged = ''
-  
-  const primary = sections.find(s => s.isPrimary) || sections[0]
-  if (primary) {
-    merged += `${primary.header}\n`
-    merged += primary.lines.join('\n')
-    merged += '\n\n'
-  }
+  const primary = parsedSections.find(s => s.isPrimary) || parsedSections[0]
+  const secondary = parsedSections.filter(s => !s.isPrimary)
 
-  const secondary = sections.filter(s => !s.isPrimary)
+  // --- PRIMARY SECTION: FULL CONTENT ---
+  merged += `${primary.icon} ${primary.header}\n`
+  merged += primary.contentLines.join('\n')
+  
+  // Add primary warnings if any
+  if (primary.warnings.length > 0) {
+    merged += '\n\n⚠️ Warnings:\n'
+    merged += primary.warnings.join('\n')
+  }
+  
+  // Add primary bottom line if any
+  if (primary.bottomLine) {
+    merged += '\n\n💡 Bottom Line:\n'
+    merged += primary.bottomLine
+  }
+  merged += '\n\n'
+
+  // --- SECONDARY SECTIONS: CONDENSED ---
   if (secondary.length > 0) {
-    merged += `📋 **Also consider:**\n\n`
+    merged += `📋 Also consider:\n\n`
     for (const sec of secondary) {
-      merged += `${sec.header}\n`
-      const topLines = sec.lines.slice(0, 3)
+      merged += `${sec.icon} ${sec.header}\n`
+      // Show top 4 lines from secondary
+      const topLines = sec.contentLines.slice(0, CONFIG.MAX_SECONDARY_LINES)
       merged += topLines.join('\n')
-      if (sec.lines.length > 3) {
-        merged += `\n  ... and ${sec.lines.length - 3} more items`
+      if (sec.contentLines.length > CONFIG.MAX_SECONDARY_LINES) {
+        merged += `\n  ... and ${sec.contentLines.length - CONFIG.MAX_SECONDARY_LINES} more items`
       }
       merged += '\n\n'
     }
   }
 
-  for (const sec of sections) {
+  // --- GLOBAL WARNINGS (deduplicated, from all sources) ---
+  const allWarnings = []
+  for (const sec of parsedSections) {
     for (const w of sec.warnings) {
-      if (!allWarnings.some(existing => existing.includes(w.substring(0, 20)))) {
+      const key = w.substring(0, 30)
+      if (!allWarnings.some(existing => existing.includes(key) || key.includes(existing.substring(0, 30)))) {
         allWarnings.push(w)
       }
     }
   }
 
-  if (allWarnings.length > 0) {
-    merged += `⚠️ **Warnings:**\n`
+  // Only add global warnings if primary didn't already have them
+  if (allWarnings.length > 0 && primary.warnings.length === 0) {
+    merged += `⚠️ Warnings:\n`
     for (const w of allWarnings.slice(0, CONFIG.MAX_WARNINGS)) {
       merged += `${w}\n`
     }
     if (allWarnings.length > CONFIG.MAX_WARNINGS) {
-      merged += `... and ${allWarnings.length - CONFIG.MAX_WARNINGS} more warnings\n`
+      merged += `... and ${allWarnings.length - CONFIG.MAX_WARNINGS} more\n`
     }
     merged += '\n'
   }
 
-  const bottomLinesList = sections.map(s => s.bottomLine).filter(Boolean)
-  if (bottomLinesList.length > 0) {
-    merged += `💡 **Bottom Line:**\n`
-    merged += bottomLinesList[0]
-    if (bottomLinesList.length > 1) {
-      merged += `\n• ${bottomLinesList.slice(1).join('\n• ')}`
-    }
-    merged += '\n'
+  // --- GLOBAL BOTTOM LINE (choose best one) ---
+  const allBottomLines = parsedSections
+    .map(s => s.bottomLine)
+    .filter(Boolean)
+    .filter((line, index, self) => self.indexOf(line) === index) // deduplicate
+
+  if (allBottomLines.length > 0) {
+    // Prefer primary's bottom line, otherwise use first one
+    const primaryBottom = parsedSections.find(s => s.isPrimary)?.bottomLine
+    const bestBottom = primaryBottom || allBottomLines[0]
+    merged += `💡 Bottom Line:\n${bestBottom}\n`
   }
 
   return merged
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────────
 
 const getDynamicSuggestions = (savedLocations = []) => {
-  const baseSuggestions = [
+  const base = [
     'Ask "stargazing tonight" or "moon phase"',
     'Try "what should I wear" or "safe to run"',
     'Ask "will it rain" or "UV burn time"',
-    'Type "paint drying time" or "best photo hour"',
-    'Ask "will it rain tomorrow at 2 PM"',
-    'Try "farming advice" or "should I water"',
-    'Ask "can I go biking" or "traffic to work"'
+    'Type "paint drying time" or "best photo hour"'
   ]
   
-  const suggestions = [...baseSuggestions]
+  const suggestions = [...base]
   
   if (savedLocations.length > 0) {
     const locNames = savedLocations.map(l => l.label || 'Untitled').filter(Boolean)
     if (locNames.length > 0) {
-      suggestions.push(`Ask "route to ${locNames[0]}" or "traffic to ${locNames[0]}"`)
+      suggestions.push(`Route to ${locNames[0]}?`)
+      suggestions.push(`Traffic to ${locNames[0]}?`)
     }
     if (locNames.length > 1) {
-      suggestions.push(`Ask "route from ${locNames[0]} to ${locNames[1]}"`)
+      suggestions.push(`Route from ${locNames[0]} to ${locNames[1]}?`)
     }
   }
   
   return suggestions
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────
 
 export default function ZephyeFullScreen({
   isOpen,
@@ -454,15 +526,13 @@ export default function ZephyeFullScreen({
   const [moonPhase, setMoonPhase] = useState(0)
   const [activeTab, setActiveTab] = useState('ask')
   const [savedLocations, setSavedLocations] = useState([])
-  const [typingIndex, setTypingIndex] = useState(0)
 
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
-  const streamTimeoutRef = useRef(null)
   const ghostIntervalRef = useRef(null)
 
-  // ─── Derived Weather Data ──────────────────────────────────────────
-  
+  // ─── Weather Data ──────────────────────────────────────────────────────
+
   const weatherData = useMemo(() => ({
     temp: Math.round(weather?.current?.temperature_2m || 0),
     feelsLike: Math.round(weather?.current?.apparent_temperature || weather?.current?.temperature_2m || 0),
@@ -506,7 +576,7 @@ export default function ZephyeFullScreen({
     return { label: 'Hazardous', color: '#ef4444' }
   }, [aqi])
 
-  // ─── Effects ──────────────────────────────────────────────────────
+  // ─── Effects ──────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (isOpen) {
@@ -548,9 +618,7 @@ export default function ZephyeFullScreen({
     }, 3000)
     
     return () => {
-      if (ghostIntervalRef.current) {
-        clearInterval(ghostIntervalRef.current)
-      }
+      if (ghostIntervalRef.current) clearInterval(ghostIntervalRef.current)
     }
   }, [input, savedLocations])
 
@@ -558,14 +626,13 @@ export default function ZephyeFullScreen({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
 
-  // ─── Quick Action Chips ──────────────────────────────────────────
+  // ─── Quick Actions ────────────────────────────────────────────────────
 
   const quickActionChips = useMemo(() => {
     const chips = [
       'Will it rain tomorrow?',
       'What should I wear?',
       'Stargazing tonight?',
-      'Farming advice?',
       'Safe to drive?',
       'Traffic incidents near me?',
       'Can I go biking?'
@@ -573,9 +640,7 @@ export default function ZephyeFullScreen({
 
     const locs = savedLocations.slice(0, 2)
     if (locs.length > 0) {
-      const label = locs[0].label || 'saved location'
-      chips.push(`Route to ${label}?`)
-      chips.push(`Traffic to ${label}?`)
+      chips.push(`Route to ${locs[0].label || 'saved location'}?`)
     }
     if (locs.length > 1) {
       chips.push(`Route from ${locs[0].label} to ${locs[1].label}?`)
@@ -584,7 +649,7 @@ export default function ZephyeFullScreen({
     return chips
   }, [savedLocations])
 
-  // ─── Speaking ─────────────────────────────────────────────────────
+  // ─── Speaking ─────────────────────────────────────────────────────────
 
   const speakText = useCallback(async (text) => {
     if (isSpeaking) {
@@ -602,7 +667,7 @@ export default function ZephyeFullScreen({
         playGlobal(`https://hyezen.onrender.com${data.url}`, voiceToUse)
       }
     } catch {
-      // Silent fail - TTS is non-critical
+      // Silent fail
     }
   }, [isSpeaking, stopGlobal, playGlobal, voiceToUse])
 
@@ -610,7 +675,7 @@ export default function ZephyeFullScreen({
     navigator.clipboard.writeText(text)
   }, [])
 
-  // ─── Voice Recognition ────────────────────────────────────────────
+  // ─── Voice Recognition ───────────────────────────────────────────────
 
   const startListening = useCallback(() => {
     if (!('webkitSpeechRecognition' in window)) return
@@ -625,7 +690,7 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
-  // ─── Routing Engine ──────────────────────────────────────────────
+  // ─── Routing Engine ──────────────────────────────────────────────────
 
   const routeQuestion = useCallback(async (question) => {
     const q = question.toLowerCase()
@@ -633,13 +698,13 @@ export default function ZephyeFullScreen({
 
     const detectedIntents = detectIntents(q)
     
-    console.log(`🧠 Detected intents:`, detectedIntents.map(d => 
+    console.log(`🧠 Intents:`, detectedIntents.map(d => 
       `${d.intent.name} (${d.score.toFixed(1)})`
     ).join(', '))
 
     if (detectedIntents.length === 0) {
       const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
-      const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions']
+      const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill']
 
       const hasRoute = routeKeywords.some(k => q.includes(k))
       const hasTraffic = trafficKeywords.some(k => q.includes(k))
@@ -654,26 +719,16 @@ export default function ZephyeFullScreen({
         if (fromMatch) {
           const fromName = fromMatch[1].trim()
           const savedFrom = findSavedLocation(fromName)
-          if (savedFrom) {
-            fromLocation = { ...savedFrom, isSaved: true }
-          } else {
-            fromLocation = fromName
-          }
+          fromLocation = savedFrom ? { ...savedFrom, isSaved: true } : fromName
         }
 
         if (toMatch) {
           const toName = toMatch[1].trim()
           const savedTo = findSavedLocation(toName)
-          if (savedTo) {
-            toLocation = { ...savedTo, isSaved: true }
-          } else {
-            toLocation = toName
-          }
+          toLocation = savedTo ? { ...savedTo, isSaved: true } : toName
         }
 
-        if (toLocation && !fromLocation) {
-          fromLocation = 'home'
-        }
+        if (toLocation && !fromLocation) fromLocation = 'home'
 
         if (hasTraffic && !toLocation) {
           return await getTrafficAdvice(data, question, {})
@@ -700,7 +755,7 @@ export default function ZephyeFullScreen({
         responses.push(response)
         intents.push(detected)
       } catch (e) {
-        console.error(`Error getting advice for ${detected.intent.name}:`, e)
+        console.error(`Error in ${detected.intent.name}:`, e)
       }
     }
 
@@ -716,7 +771,7 @@ export default function ZephyeFullScreen({
     return merged || responses[0]
   }, [weatherData, savedLocations])
 
-  // ─── Handle Ask ──────────────────────────────────────────────────
+  // ─── Handle Ask ──────────────────────────────────────────────────────
 
   const handleAsk = useCallback(async (question) => {
     if (!question.trim()) return
@@ -749,7 +804,7 @@ export default function ZephyeFullScreen({
     }
   }, [routeQuestion, weatherData, voiceToUse, speakText])
 
-  // ─── Render ──────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────
 
   if (!isOpen) return null
 
@@ -780,11 +835,7 @@ export default function ZephyeFullScreen({
             >
               Ask Zephye
             </button>
-            <button
-              className="capsule-option pro"
-              onClick={() => {}}
-              title="Pro — coming soon"
-            >
+            <button className="capsule-option pro" onClick={() => {}} title="Pro — coming soon">
               Pro
             </button>
           </div>
@@ -798,7 +849,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* Quick Action Chips */}
+      {/* Quick Actions */}
       {messages.length <= 1 && (
         <div style={{ 
           display: 'flex', 
@@ -846,18 +897,10 @@ export default function ZephyeFullScreen({
               <div className={`chat-bubble ${msg.role}`}>
                 {msg.role === 'assistant' && (
                   <div className="msg-actions-top">
-                    <button
-                      className="speak-btn"
-                      onClick={() => speakText(msg.content)}
-                      title={isSpeaking ? 'Stop' : 'Speak'}
-                    >
+                    <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
                       {isSpeaking ? '⏹️' : '🔊'}
                     </button>
-                    <button
-                      className="speak-btn"
-                      onClick={() => copyText(msg.content)}
-                      title="Copy"
-                    >
+                    <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
                       📋
                     </button>
                   </div>
@@ -869,17 +912,13 @@ export default function ZephyeFullScreen({
 
           {streamingText && (
             <div style={{ display: 'flex', marginBottom: 12 }}>
-              <div className="chat-bubble ai">
-                {streamingText}▋
-              </div>
+              <div className="chat-bubble ai">{streamingText}▋</div>
             </div>
           )}
 
           {isLoading && !streamingText && (
             <div style={{ display: 'flex', marginBottom: 12 }}>
-              <div className="chat-bubble ai text-muted">
-                Thinking...
-              </div>
+              <div className="chat-bubble ai text-muted">Thinking...</div>
             </div>
           )}
 
@@ -887,7 +926,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* INPUT AREA */}
+      {/* INPUT */}
       <div className="ai-input-wrap">
         <div style={{ maxWidth: '768px', margin: '0 auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <div className="input-wrapper">
@@ -898,11 +937,7 @@ export default function ZephyeFullScreen({
               placeholder={ghostText || "Ask Zephye..."}
               disabled={isLoading}
             />
-            <button
-              className="mic-btn"
-              onClick={startListening}
-              title="Voice input"
-            >
+            <button className="mic-btn" onClick={startListening} title="Voice input">
               🎤
             </button>
           </div>
