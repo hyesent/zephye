@@ -110,7 +110,7 @@ export const sampleQuestions = [
 const SPORT_REQUIREMENTS = {
   football_soccer: {
     fieldType: 'grass_or_turf',
-    typicalDuration: 90, // minutes
+    typicalDuration: 90,
     intensity: 'high',
     playersOnField: 22,
     heatSensitivity: 8,
@@ -126,12 +126,12 @@ const SPORT_REQUIREMENTS = {
       'Stud length matters: soft ground vs firm ground cleats'
     ],
     cancellationThresholds: {
-      wbgt: 32.3, // black flag
+      wbgt: 32.3,
       windChill: -15,
-      wind: 50, // km/h
+      wind: 50,
       lightning: true,
-      visibility: 500, // meters
-      fieldSaturation: 80 // % water content
+      visibility: 500,
+      fieldSaturation: 80
     }
   },
   american_football: {
@@ -152,7 +152,7 @@ const SPORT_REQUIREMENTS = {
       'Hydration breaks mandatory above 28°C WBGT'
     ],
     cancellationThresholds: {
-      wbgt: 30.1, // more conservative due to equipment
+      wbgt: 30.1,
       windChill: -12,
       wind: 45,
       lightning: true,
@@ -230,7 +230,7 @@ const SPORT_REQUIREMENTS = {
       'Medical tent capacity must match conditions'
     ],
     cancellationThresholds: {
-      wbgt: 28.0, // more conservative for mass participation
+      wbgt: 28.0,
       windChill: -5,
       wind: 40,
       lightning: true,
@@ -256,12 +256,12 @@ const SPORT_REQUIREMENTS = {
       'Sun reflection off water doubles UV exposure'
     ],
     cancellationThresholds: {
-      waterTemp: 16, // °C minimum without wetsuit
+      waterTemp: 16,
       windChill: 0,
       wind: 30,
       lightning: true,
       visibility: 200,
-      waves: 1.5 // meters
+      waves: 1.5
     }
   },
   cycling: {
@@ -490,7 +490,7 @@ const SPORT_REQUIREMENTS = {
       'Breathing intensity = higher air pollution intake'
     ],
     cancellationThresholds: {
-      wbgt: 28.0, // very conservative for extreme intensity
+      wbgt: 28.0,
       windChill: -8,
       wind: 35,
       lightning: true,
@@ -668,7 +668,7 @@ function getColdRiskCategory(windChill) {
     warning: 'Keep moving - standing around = rapid cooling',
     special: 'Warm up 2x normal duration'
   };
-  return null; // No cold risk
+  return null;
 }
 
 // ============================================================================
@@ -681,10 +681,9 @@ function calculatePerformanceImpact(data, sportType) {
   const windChill = calcWindChill(temp, wind);
   const effectiveTemp = temp <= 10 ? windChill : temp >= 27 ? heatIndex : temp;
   
-  let impact = 0; // percentage performance change (negative = worse)
+  let impact = 0;
   let factors = [];
   
-  // Temperature impact
   if (effectiveTemp > 35) { impact -= 25; factors.push(`Extreme heat: -25% performance`); }
   else if (effectiveTemp > 30) { impact -= 15; factors.push(`High heat: -15% performance`); }
   else if (effectiveTemp > 27) { impact -= 8; factors.push(`Moderate heat: -8% performance`); }
@@ -692,20 +691,16 @@ function calculatePerformanceImpact(data, sportType) {
   else if (effectiveTemp < 5) { impact -= 10; factors.push(`Cold: -10% performance`); }
   else if (effectiveTemp < 10) { impact -= 5; factors.push(`Cool: -5% performance`); }
   
-  // Humidity impact
   if (humidity > 90 && temp > 25) { impact -= 10; factors.push(`Oppressive humidity: -10%`); }
   else if (humidity > 80 && temp > 28) { impact -= 5; factors.push(`High humidity: -5%`); }
   
-  // Wind impact on specific sports
   if (sportType === 'cycling' && wind > 30) { impact -= 20; factors.push(`Strong headwind: -20% cycling`); }
   else if (sportType === 'golf' && wind > 25) { impact -= 15; factors.push(`Wind affecting accuracy: -15%`); }
   else if (sportType === 'running' && wind > 30) { impact -= 10; factors.push(`Headwind resistance: -10%`); }
   
-  // Air quality impact
   if (aqi > 150) { impact -= 15; factors.push(`Poor air quality: -15%`); }
   else if (aqi > 100) { impact -= 8; factors.push(`Moderate air quality: -8%`); }
   
-  // UV impact (fatigue)
   if (uvIndex > 8 && sportType !== 'swimming_outdoor') { 
     impact -= 5; 
     factors.push(`High UV fatigue: -5%`); 
@@ -728,12 +723,10 @@ function getHydrationPlan(data, sportIntensity, durationMinutes) {
   
   let plan = [];
   
-  // Pre-activity hydration
   plan.push("PRE-ACTIVITY (2-3 hours before):");
   plan.push(`• Drink 500-600ml water`);
   plan.push(`• Urine should be light yellow`);
   
-  // During activity
   plan.push(`\nDURING ACTIVITY (every 15-20 minutes):`);
   if (heatIndex > 32) {
     plan.push(`• Drink 250-300ml water/sports drink`);
@@ -747,13 +740,11 @@ function getHydrationPlan(data, sportIntensity, durationMinutes) {
     plan.push(`• Water sufficient for <1 hour activity`);
   }
   
-  // Post-activity
   plan.push(`\nPOST-ACTIVITY:`);
   plan.push(`• Weigh yourself: drink 1.5L per kg lost`);
   plan.push(`• Sodium replacement: salty snack or electrolyte drink`);
   plan.push(`• Continue hydrating for 4-6 hours post-exercise`);
   
-  // Warning signs
   plan.push(`\n⚠️ DEHYDRATION WARNING SIGNS:`);
   plan.push(`• Thirst (already 1-2% dehydrated)`);
   plan.push(`• Dark urine (dehydrated)`);
@@ -775,7 +766,7 @@ function calculateSweatRate(temp, humidity, intensity) {
     'extreme': 2.5
   };
   
-  const baseRate = 0.5; // L/hour baseline
+  const baseRate = 0.5;
   const tempEffect = Math.max(0, (temp - 20) * 0.05);
   const humidityEffect = Math.max(0, (humidity - 50) * 0.02);
   
@@ -924,11 +915,40 @@ function getPregnancyExerciseAdvice(data) {
 export const getSportsAdvice = (data, question = '') => {
   if (!data) return "Loading weather data...";
 
-  const { 
+  let { 
     temp, feelsLike, humidity, wind, windGust, uvIndex, aqi, 
     visibility, condition, conditionCode, precipitation, city,
     tempMin, tempMax, dewPoint, pressure
   } = data;
+
+  // ═══ TIME-SHIFT AWARENESS ═══
+  if (data._hourIndex !== undefined && data.hourly) {
+    const idx = data._hourIndex
+    if (data.hourly.temperature_2m?.[idx] !== undefined) temp = Math.round(data.hourly.temperature_2m[idx])
+    if (data.hourly.apparent_temperature?.[idx] !== undefined) feelsLike = Math.round(data.hourly.apparent_temperature[idx])
+    if (data.hourly.relative_humidity_2m?.[idx] !== undefined) humidity = data.hourly.relative_humidity_2m[idx]
+    if (data.hourly.wind_speed_10m?.[idx] !== undefined) wind = data.hourly.wind_speed_10m[idx]
+    if (data.hourly.wind_gusts_10m?.[idx] !== undefined) windGust = data.hourly.wind_gusts_10m[idx]
+    if (data.hourly.weather_code?.[idx] !== undefined) {
+      conditionCode = data.hourly.weather_code[idx]
+      condition = mapWeatherCode(conditionCode)
+    }
+    if (data.hourly.precipitation?.[idx] !== undefined) precipitation = data.hourly.precipitation[idx]
+    if (data.hourly.uv_index?.[idx] !== undefined) uvIndex = data.hourly.uv_index[idx]
+    if (data.hourly.visibility?.[idx] !== undefined) visibility = data.hourly.visibility[idx] / 1000
+  }
+  if (data._dayOffset !== undefined && data.daily) {
+    const d = data._dayOffset > 0 ? data._dayOffset : 0
+    if (data.daily.temperature_2m_max?.[d] !== undefined) tempMax = Math.round(data.daily.temperature_2m_max[d])
+    if (data.daily.temperature_2m_min?.[d] !== undefined) tempMin = Math.round(data.daily.temperature_2m_min[d])
+    if (data.daily.weather_code?.[d] !== undefined) {
+      conditionCode = data.daily.weather_code[d]
+      condition = mapWeatherCode(conditionCode)
+    }
+    if (data.daily.precipitation_sum?.[d] !== undefined) precipitation = data.daily.precipitation_sum[d]
+    if (data.daily.uv_index_max?.[d] !== undefined) uvIndex = data.daily.uv_index_max[d]
+  }
+  // ═══ END TIME-SHIFT ═══
   
   const heatIndex = calcHeatIndex(temp, humidity);
   const windChill = calcWindChill(temp, wind);
@@ -941,9 +961,8 @@ export const getSportsAdvice = (data, question = '') => {
   const uvLevel = getUVLevel(uvIndex);
   const aqiLevel = getAQICategory(aqi);
   
-  // Detect sport type
   const q = question.toLowerCase();
-  let sportType = 'running_marathon'; // default
+  let sportType = 'running_marathon';
   for (const [key, config] of Object.entries(SPORT_REQUIREMENTS)) {
     const sportKey = key.replace(/_/g, ' ');
     if (q.includes(sportKey) || q.includes(key)) {
@@ -951,7 +970,6 @@ export const getSportsAdvice = (data, question = '') => {
       break;
     }
   }
-  // Override with specific question terms
   if (q.includes('football') || q.includes('soccer')) sportType = 'football_soccer';
   if (q.includes('tennis')) sportType = 'tennis';
   if (q.includes('basketball')) sportType = 'basketball_outdoor';
@@ -984,10 +1002,6 @@ export const getSportsAdvice = (data, question = '') => {
   let specialPopulationAdvice = [];
   let cancellationReason = null;
 
-  // ========================================================================
-  // IMMEDIATE CANCELLATION CHECKS
-  // ========================================================================
-  
   if (isStorm && sportConfig.lightningRisk >= 8) {
     cancellationReason = 'LIGHTNING DANGER';
     verdict.push("🚫 CANCEL IMMEDIATELY: Lightning risk.");
@@ -1027,12 +1041,7 @@ export const getSportsAdvice = (data, question = '') => {
     warnings.push("Cannot see field, players, or hazards.");
   }
 
-  // ========================================================================
-  // MAIN VERDICT (if not cancelled)
-  // ========================================================================
-  
   if (!cancellationReason) {
-    // WBGT Flag system
     if (wbgtCategory.flag === 'RED') {
       verdict.push(`🔴 RED FLAG: ${wbgtCategory.action}`);
       warnings.push(`WBGT ${wbgt.toFixed(1)}°C: ${wbgtCategory.risk}`);
@@ -1055,7 +1064,6 @@ export const getSportsAdvice = (data, question = '') => {
       verdict.push(`🟢 GREEN FLAG: ${wbgtCategory.action}`);
     }
     
-    // Cold risk
     if (coldRisk) {
       verdict.push(`❄️ ${coldRisk.level}: Frostbite in ${coldRisk.frostbiteTime}`);
       safety.push(coldRisk.warning);
@@ -1065,7 +1073,6 @@ export const getSportsAdvice = (data, question = '') => {
       }
     }
     
-    // Rain conditions
     if (isRaining && precipitation > 5) {
       safety.push("Heavy rain: field conditions dangerous, visibility reduced.");
       warnings.push("Slip/fall injuries increase 3x on wet surfaces.");
@@ -1082,7 +1089,6 @@ export const getSportsAdvice = (data, question = '') => {
       }
     }
     
-    // Wind
     if (wind > 30) {
       performanceAdvice.push(`Wind ${wind}km/h severely affects ball trajectory.`);
       if (sportType === 'golf') {
@@ -1098,7 +1104,6 @@ export const getSportsAdvice = (data, question = '') => {
       performanceAdvice.push(`Moderate wind ${wind}km/h: adjust for wind drift.`);
     }
     
-    // UV
     if (uvIndex >= 10) {
       warnings.push(`EXTREME UV ${uvIndex}: Burn in ${burnMin} minutes.`);
       safety.push("SPF 50+ mandatory. Reapply every 2 hours. UV-protective clothing.");
@@ -1108,7 +1113,6 @@ export const getSportsAdvice = (data, question = '') => {
       safety.push(`High UV ${uvIndex}: SPF 30+ required. Reapply frequently.`);
     }
     
-    // Air quality (non-cancellation levels)
     if (aqi > 150) {
       warnings.push(`Unhealthy air ${aqi}: Reduce intensity 50%.`);
       safety.push("Asthmatic athletes: DO NOT participate.");
@@ -1117,7 +1121,6 @@ export const getSportsAdvice = (data, question = '') => {
       safety.push(`Moderate air ${aqi}: Sensitive individuals reduce activity.`);
     }
     
-    // Surface conditions
     if (precipitation > 10 && sportConfig.fieldType.includes('grass')) {
       warnings.push("FIELD CONDITIONS: Waterlogged. Playing will destroy field.");
       warnings.push("Footing unstable: ankle/knee injury risk 5x higher.");
@@ -1125,16 +1128,8 @@ export const getSportsAdvice = (data, question = '') => {
     }
   }
 
-  // ========================================================================
-  // HYDRATION PLAN
-  // ========================================================================
-  
   hydration = getHydrationPlan(data, sportConfig.intensity, sportConfig.typicalDuration);
 
-  // ========================================================================
-  // EQUIPMENT RECOMMENDATIONS
-  // ========================================================================
-  
   if (wbgt > 25.7) {
     equipmentAdvice.push("Light-colored, breathable clothing essential.");
     equipmentAdvice.push("Cooling towel around neck during breaks.");
@@ -1156,10 +1151,6 @@ export const getSportsAdvice = (data, question = '') => {
     equipmentAdvice.push("Grip-enhancing products for wet equipment.");
   }
 
-  // ========================================================================
-  // TIMING ADVICE
-  // ========================================================================
-  
   if (wbgt > 28.0) {
     timingAdvice.push("Schedule for early morning (6-9am) or late evening (after 7pm).");
     timingAdvice.push("AVOID 11am-4pm when WBGT peaks.");
@@ -1171,10 +1162,6 @@ export const getSportsAdvice = (data, question = '') => {
     timingAdvice.push("Winds typically decrease after sunset.");
   }
 
-  // ========================================================================
-  // SPECIAL POPULATIONS
-  // ========================================================================
-  
   if (q.includes('kid') || q.includes('child') || q.includes('youth') || q.includes('pee wee')) {
     specialPopulationAdvice = getYouthSportsAdvice({...data, wbgt});
   }
@@ -1185,10 +1172,6 @@ export const getSportsAdvice = (data, question = '') => {
     specialPopulationAdvice = getPregnancyExerciseAdvice(data);
   }
 
-  // ========================================================================
-  // ASSEMBLE FINAL RESPONSE
-  // ========================================================================
-  
   const intros = [
     "🏃 Sports weather check:",
     "⚽ Athlete safety report:",
@@ -1201,89 +1184,79 @@ export const getSportsAdvice = (data, question = '') => {
 
   let response = `${random(intros)} ${city}\n\n`;
   
-  // Sport identified
+  if (data._timeLabel) {
+    response += `📅 **Time:** ${data._timeLabel}\n\n`;
+  }
+  
   response += `🎯 SPORT: ${sportType.replace(/_/g, ' ').toUpperCase()}\n`;
   response += `⏱️ Typical Duration: ${sportConfig.typicalDuration} min | Intensity: ${sportConfig.intensity}\n\n`;
   
-  // Verdict
   if (verdict.length > 0) {
     response += `📋 VERDICT:\n`;
     verdict.forEach(v => response += `${v}\n`);
     response += '\n';
   }
   
-  // WBGT Flag
   response += `🚩 HEAT STRESS FLAG: ${wbgtCategory.flag} (WBGT ${wbgt.toFixed(1)}°C)\n`;
   response += `Risk: ${wbgtCategory.risk}\n`;
   response += `Action: ${wbgtCategory.action}\n\n`;
   
-  // Performance Impact
   response += `📊 PERFORMANCE IMPACT: ${performance.performanceLevel}\n`;
   if (performance.factors.length > 0) {
     performance.factors.forEach(f => response += `  ${f}\n`);
   }
   response += '\n';
   
-  // Safety Instructions
   if (safety.length > 0 && !cancellationReason) {
     response += `🦺 SAFETY PROTOCOLS:\n`;
     safety.filter(s => !s.startsWith('⛈️')).forEach(s => response += `• ${s}\n`);
     response += '\n';
   }
   
-  // Lightning Protocol
   if (isStorm || condition === 'thunderstorm') {
     getLightningProtocol().forEach(line => response += `${line}\n`);
     response += '\n';
   }
   
-  // Equipment
   if (equipmentAdvice.length > 0) {
     response += `🎽 EQUIPMENT:\n`;
     equipmentAdvice.forEach(e => response += `• ${e}\n`);
     response += '\n';
   }
   
-  // Performance Tips
   if (performanceAdvice.length > 0) {
     response += `💪 PERFORMANCE NOTES:\n`;
     performanceAdvice.forEach(p => response += `• ${p}\n`);
     response += '\n';
   }
   
-  // Timing
   if (timingAdvice.length > 0) {
     response += `⏰ TIMING:\n`;
     timingAdvice.forEach(t => response += `• ${t}\n`);
     response += '\n';
   }
   
-  // Hydration
   if (hydration.length > 0 && !cancellationReason) {
     response += `💧 HYDRATION PLAN:\n`;
     hydration.forEach(h => response += `${h}\n`);
     response += '\n';
   }
   
-  // Special Populations
   if (specialPopulationAdvice.length > 0) {
     specialPopulationAdvice.forEach(s => response += `${s}\n`);
     response += '\n';
   }
   
-  // Sport-Specific
   response += `🎯 ${sportType.replace(/_/g, ' ').toUpperCase()} SPECIFIC:\n`;
   sportConfig.special.forEach(s => response += `• ${s}\n`);
   response += '\n';
   
-  // Warnings
   if (warnings.length > 0) {
     response += `⚠️ WARNINGS:\n`;
     warnings.forEach(w => response += `• ${w}\n`);
     response += '\n';
   }
   
-  // Weather Summary
   response += `🌡️ CONDITIONS:\n`;
   response += `• Temp: ${temp}°C (feels like ${effectiveTemp.toFixed(0)}°C)\n`;
   if (heatIndex > temp + 3) response += `• Heat Index: ${heatIndex.toFixed(0)}°C\n`;
@@ -1295,7 +1268,6 @@ export const getSportsAdvice = (data, question = '') => {
   if (precipitation > 0) response += `• Precipitation: ${precipitation}mm\n`;
   response += '\n';
   
-  // Final Recommendation
   response += `💡 BOTTOM LINE:\n`;
   if (cancellationReason) {
     response += `${cancellationReason}. Cancel or move indoors. No exceptions.\n`;
@@ -1312,7 +1284,6 @@ export const getSportsAdvice = (data, question = '') => {
     response += `Favorable conditions. Normal activity with standard precautions.\n`;
   }
   
-  // Coach's reminder
   const coachTips = [
     "When in doubt, sit them out. No game is worth a life.",
     "Hydration starts 24 hours before, not on game day.",
@@ -1325,10 +1296,6 @@ export const getSportsAdvice = (data, question = '') => {
 
   return response;
 };
-
-// ============================================================================
-// SPECIALIZED EXPORT FUNCTIONS
-// ============================================================================
 
 export { 
   getHydrationPlan, 
