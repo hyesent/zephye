@@ -1,1150 +1,1060 @@
-// ============================================================================
-// COMPREHENSIVE ASTRONOMY & STARGAZING WEATHER SYSTEM
-// ============================================================================
-
-import {
-  getMoonPhase as getMoonPhaseAsync,
-  getMoonIllumination,
-  getMoonRiseSet,
-  getPlanetVisibility,
-  getCloudCover,
-  mapWeatherCode,
+import { 
+  calcDewPoint, 
+  getBurnTime, 
+  calcHeatIndex,
+  calcWindChill,
+  getUVLevel,
+  getComfortScore,
   random,
   getSeason,
   getTimeOfDay,
-  getSunPosition,
-  calculateDewPoint,
-  getSeeingConditions,
-  getTransparency,
-  getDarkSkyRating,
-  getLightPollutionMap,
-  getMilkyWayVisibility,
-  getConstellationVisibility,
-  getMeteorShowerCalendar,
-  getISSFlyoverTimes,
-  getSatelliteVisibility,
-  getAuroraForecast,
-  getZodiacalLightVisibility,
-  getAstronomicalTwilight
-} from './calculations'
+  calculateHumidityCategory,
+  getAQICategory,
+  getPollenIndex
+} from './calculations';
 
 // ============================================================================
-// SAMPLE QUESTIONS
+// COMPREHENSIVE BEAUTY, SKIN & HAIR WEATHER ADVISORY SYSTEM
 // ============================================================================
 
 export const sampleQuestions = [
-  "Can I see stars tonight?",
-  "Is it good for stargazing?",
-  "Will the moon ruin stargazing?",
-  "Can I see the Milky Way?",
-  "Is it clear enough for a telescope?",
-  "Best time to stargaze tonight?",
-  "Will clouds block the stars?",
-  "Can I see planets tonight?",
-  "Is it good for meteor watching?",
-  "Can I see the ISS tonight?",
-  "Is Jupiter visible?",
-  "Can I see Saturn's rings?",
-  "Will fog be an issue?",
-  "Is the seeing good for astrophotography?",
-  "Can I see the Northern Lights?",
-  "Is it worth setting up my telescope?",
-  "Will humidity fog my lens?",
-  "Can I see Venus tonight?",
-  "Is Mars visible?",
-  "Can I see the Orion Nebula?",
-  "Is it dark enough for deep sky?",
-  "Will the moon be up during viewing?",
-  "Can I see the Andromeda Galaxy?",
-  "Is it good for a star party?",
-  "Will dew be a problem?",
-  "Can I see the Pleiades?",
-  "Is the transparency good?",
-  "Can I see the zodiacal light?",
-  "Will there be aurora activity?",
-  "Is tonight good for comet watching?",
-  "Can I see shooting stars?",
-  "Will light pollution ruin viewing?",
-  "Is the atmosphere stable?",
-  "Can I photograph the Milky Way?",
-  "Will moonlight wash out photos?",
-  "Is it worth driving to dark sky site?",
-  "Can I see any galaxies tonight?",
-  "Will the seeing support high magnification?",
-  "Is it good for planetary imaging?",
-  "Can I see Mercury?",
-  "Will twilight affect viewing?",
-  "Is the sky transparency good tonight?",
-  "Can I see Neptune or Uranus?",
-  "Will there be any eclipses?",
-  "Is it good for solar observing tomorrow?",
-  "Can I see the summer triangle?",
-  "Will wildfire smoke affect viewing?",
-  "Is the jet stream affecting seeing?",
-  "Can I see the gegenschein?",
-  "Should I use a dew heater?",
-  "Is it good for binocular astronomy?",
-  "Can I see the Beehive Cluster?",
-  "Will there be satellite flares?",
-  "Is tonight good for a Messier marathon?",
-  "Can I see Omega Centauri?",
-  "Will clouds clear after midnight?",
-  "Is it worth staying up late?",
-  "Can I see the Lagoon Nebula?",
-  "Will fog roll in from the coast?",
-  "Is it clear at higher elevation?",
-  "Can I see the Hercules Cluster?",
-  "Will Starlink trains be visible?",
-  "Is it good for radio astronomy?",
-  "Can I see the Ring Nebula?",
-  "Will the aurora be visible this far south?",
-  "Is tonight good for citizen science?",
-  "Can I see the Dumbbell Nebula?",
-  "Should I acclimate my telescope?",
-  "Is the moon too bright for DSOs?",
-  "Can I see the Whirlpool Galaxy?",
-  "Will there be iridium flares?",
-  "Is it good for spectroscopy?",
-  "Can I see the Leo Triplet?",
-  "Will temperature inversion affect seeing?",
-  "Is tonight good for a star trail photo?",
-  "Can I see the Veil Nebula?",
-  "Will the monsoon moisture clear?",
-  "Is it transparent enough for faint fuzzies?",
-  "Can I see the Double Cluster?",
-  "Will Sahara dust affect viewing?",
-  "Is it good for lunar photography?",
-  "Can I see the Sculptor Galaxy?",
-  "Will marine layer be an issue?",
-  "Is tonight good for the Perseids?",
-  "Can I see the Geminids?",
-  "Will there be noctilucent clouds?",
-  "Is it good for solar system observing?",
-  "Can I see the Bode's Galaxy?",
-  "Will volcanic aerosols affect sunset/sunrise colors?",
-  "Is tonight transparent enough for UHC filter?",
-  "Can I see the Crab Nebula?",
-  "Should I bring my Ethos eyepiece?",
-  "Will my SCT need extra cool-down time?"
-]
+  "Will my hair get frizzy today?",
+  "Do I need sunscreen?",
+  "Is it bad for my skin today?",
+  "Will my makeup melt?",
+  "Should I moisturize more?",
+  "Is the air drying my skin?",
+  "Do I need a hat?",
+  "Will I get sunburned?",
+  "Is it humid enough for curly hair?",
+  "What's my skin type's weather risk?",
+  "Will my acne flare up?",
+  "Should I exfoliate today?",
+  "Is it good weather for a facial?",
+  "Will my rosacea act up?",
+  "Should I use retinol tonight?",
+  "Is the UV high enough to damage my skin indoors?",
+  "Will my eczema be triggered?",
+  "Should I do a hair mask today?",
+  "Will my color-treated hair fade faster?",
+  "Is it a good day for a blowout?",
+  "Should I use heat protectant?",
+  "Will my keratin treatment last?",
+  "Is it too humid for straight hair?",
+  "Should I wash my hair today?",
+  "Will my scalp get sunburned?",
+  "Do I need UV protection for my hair?",
+  "Will pollution age my skin today?",
+  "Should I double cleanse tonight?",
+  "Is it a good day for chemical peel?",
+  "Will my Botox/fillers be affected?",
+  "Should I use vitamin C serum?",
+  "Is hyaluronic acid good for today?",
+  "Will my psoriasis flare?",
+  "Should I use a face oil today?",
+  "Is it too hot for makeup?",
+  "Will my sunscreen sweat off?",
+  "Should I use waterproof makeup?",
+  "Is it a good brow day?",
+  "Will my lash extensions last?",
+  "Should I get a spray tan?",
+  "Will my self-tanner streak?",
+  "Is it good weather for laser treatment?",
+  "Should I avoid the sun after my facial?",
+  "Will my lips chap today?",
+  "Do I need hand cream?",
+  "Should I use cuticle oil?",
+  "Will my feet get dry?",
+  "Is it good weather for body scrub?",
+  "Should I shave today?",
+  "Will I get razor burn?",
+  "Is it too dry for waxing?",
+  "Should I use body oil or lotion?",
+  "Will my perfume last?",
+  "Is it a good curl day?",
+  "Should I use gel or mousse?",
+  "Will my edges lay down?",
+  "Is it good for box braids?",
+  "Should I wear a protective style?",
+  "Will my silk press last?",
+  "Is it too humid for a wig?",
+  "Should I use edge control?",
+  "Will my natural hair shrink?",
+  "Is it good for a wash and go?",
+  "Should I use a leave-in conditioner?",
+  "Will my hair be static?",
+  "Is it good for air drying?",
+  "Should I diffuse or air dry?",
+  "Will my hair get oily faster?",
+  "Should I use dry shampoo?",
+  "Is it a good scalp oil day?",
+  "Will dandruff be worse?",
+  "Should I use anti-dandruff shampoo?",
+  "Is it good for hair growth treatment?",
+  "Will my alopecia be affected?",
+  "Should I cover my hair?",
+  "Is it good for a hair appointment?",
+  "Will my color process differently?",
+  "Should I get a trim today?",
+  "Is it good weather for a haircut?",
+  "Will my bangs behave?",
+  "Should I use anti-frizz serum?",
+  "Is it a good ponytail day?",
+  "Will my baby hairs curl?",
+  "Should I use a bonnet tonight?",
+  "Is it good for overnight curls?",
+  "Will humidity ruin my blowout?",
+  "Should I use hair spray?",
+  "Is it good for beach waves?",
+  "Will sea salt spray work today?"
+];
 
 // ============================================================================
-// ASTRONOMICAL SEEING SCALE (Pickering Scale)
+// SKIN TYPE DATABASE
 // ============================================================================
 
-const PICKERING_SCALE = {
-  1: {
-    description: 'Perfect seeing',
-    starAppearance: 'Star image motionless, diffraction rings complete',
-    magnification: '40x per inch of aperture or more',
-    rating: 'Exceptional - rare',
-    suitability: 'Planetary detail, double stars, high-resolution imaging'
+const SKIN_TYPES = {
+  oily: {
+    characteristics: 'Excess sebum, large pores, prone to acne and shine',
+    weatherTriggers: {
+      heat: 'Increases oil production 10% per 1°C rise',
+      humidity: 'Traps oil on skin surface, clogs pores',
+      wind: 'Can strip surface oils = rebound oil production',
+      cold: 'Less oil production, but dry indoor heating = dehydration',
+      uvIndex: 'UV thickens skin (more clogging), but initially dries acne'
+    },
+    routine: {
+      morning: 'Gel cleanser → Niacinamide → Lightweight moisturizer → SPF (matte finish)',
+      evening: 'Double cleanse → Salicylic acid (2-3x/week) → Niacinamide → Oil-free moisturizer',
+      weekly: 'Clay mask (kaolin/bentonite) 1-2x/week. BHAs for pore clearing.',
+      avoid: 'Heavy creams, facial oils, occlusives in T-zone. Coconut oil (comedogenic).'
+    },
+    products: {
+      cleanser: 'Foaming/gel with salicylic acid or tea tree',
+      moisturizer: 'Oil-free, gel-based, hyaluronic acid',
+      sunscreen: 'Matte finish, zinc oxide (anti-inflammatory)',
+      treatment: 'Niacinamide (oil control), retinol (pore refinement)',
+      mask: 'Clay, charcoal, sulfur'
+    }
   },
-  2: {
-    description: 'Slightly imperfect',
-    starAppearance: 'Slight undulations, moments of calm lasting several seconds',
-    magnification: '32-40x per inch',
-    rating: 'Excellent',
-    suitability: 'Lunar/planetary, deep sky, photography'
+  dry: {
+    characteristics: 'Tight, flaky, rough texture, fine lines more visible',
+    weatherTriggers: {
+      cold: 'Strips natural oils, damages moisture barrier',
+      wind: 'Accelerates moisture loss (transepidermal water loss)',
+      humidity: 'High humidity helps! Dry skin loves moisture in air',
+      heat: 'Dehydration from sweating without oil production',
+      indoorHeating: 'Dries air to < 20% humidity = moisture vampire'
+    },
+    routine: {
+      morning: 'Cream/lotion cleanser → Hyaluronic acid → Rich moisturizer → SPF (hydrating)',
+      evening: 'Oil/balm cleanse → Cream cleanser → Hydrating toner → Face oil → Heavy night cream',
+      weekly: 'Gentle enzyme exfoliant (no scrubs!). Hydrating sheet mask.',
+      avoid: 'Foaming cleansers, alcohol toners, physical scrubs, clay masks'
+    },
+    products: {
+      cleanser: 'Cream, milk, or oil-based. No sulfates.',
+      moisturizer: 'Ceramides, shea butter, squalane, peptides',
+      sunscreen: 'Hydrating formula with glycerin',
+      treatment: 'Lactic acid (gentle AHA), ceramide serums',
+      mask: 'Sheet masks, honey, aloe, oatmeal'
+    }
   },
-  3: {
-    description: 'Good seeing',
-    starAppearance: 'Moderate undulations, diffraction rings visible but in motion',
-    magnification: '24-32x per inch',
-    rating: 'Good',
-    suitability: 'Most observing, medium-high power acceptable'
+  combination: {
+    characteristics: 'Oily T-zone, dry/normal cheeks. Pores larger in center.',
+    weatherTriggers: {
+      heat: 'T-zone becomes oilier, cheeks stay normal',
+      humidity: 'T-zone congestion, cheeks may be fine',
+      cold: 'Cheeks become dry/flaky, T-zone less oily',
+      seasonal: 'Spring/summer = more oily. Fall/winter = more dry.'
+    },
+    routine: {
+      morning: 'Gentle cleanser → Niacinamide → Light lotion (T-zone less, cheeks more) → SPF',
+      evening: 'Double cleanse T-zone, single cleanse cheeks → Exfoliate T-zone only → Moisturize',
+      weekly: 'Clay mask on T-zone, hydrating mask on cheeks (multi-masking!)',
+      avoid: 'One-product-fits-all approach. Treat different zones differently.'
+    },
+    products: {
+      cleanser: 'Gentle foaming or gel (not stripping)',
+      moisturizer: 'Lightweight lotion, gel-cream hybrid',
+      sunscreen: 'Lightweight, non-greasy',
+      treatment: 'BHA on T-zone, AHA on cheeks. Niacinamide everywhere.',
+      mask: 'Multi-masking: clay on nose/chin, hydrating on cheeks'
+    }
   },
-  4: {
-    description: 'Fair seeing',
-    starAppearance: 'Diffraction rings often blurred, central disk visible',
-    magnification: '16-24x per inch',
-    rating: 'Average',
-    suitability: 'Deep sky objects, low-medium power'
+  sensitive: {
+    characteristics: 'Easily irritated, redness, stinging, reactive to products/weather',
+    weatherTriggers: {
+      wind: 'Major trigger - windburn and barrier damage',
+      temperatureExtremes: 'Both heat and cold trigger flushing, irritation',
+      uvIndex: 'Sun is number one rosacea/redness trigger',
+      pollution: 'Particulates cause inflammation and oxidative stress',
+      humidity: 'Rapid changes in humidity trigger reactions'
+    },
+    routine: {
+      morning: 'Lukewarm water rinse → Minimal products → Barrier cream → Mineral SPF',
+      evening: 'Gentle cream cleanser → One treatment max → Rich barrier cream',
+      weekly: 'No physical exfoliation. Enzyme mask if tolerated.',
+      avoid: 'Fragrance, essential oils, alcohol, acids, retinoids (start very slow)'
+    },
+    products: {
+      cleanser: 'Cream, non-foaming, fragrance-free, minimal ingredients',
+      moisturizer: 'Ceramides, centella asiatica, panthenol, minimal ingredients',
+      sunscreen: '100% mineral (zinc oxide, titanium dioxide). NO chemical filters.',
+      treatment: 'Azelaic acid, centella, green tea (anti-inflammatory)',
+      mask: 'Colloidal oatmeal, honey, plain yogurt'
+    }
   },
-  5: {
-    description: 'Poor seeing',
-    starAppearance: 'Diffraction rings barely visible, star image boiling',
-    magnification: '12-16x per inch',
-    rating: 'Below average',
-    suitability: 'Low power wide field, not for planets'
+  acne_prone: {
+    characteristics: 'Active breakouts, clogged pores, post-inflammatory hyperpigmentation',
+    weatherTriggers: {
+      humidity: 'Trap bacteria, oil, and dead skin cells = breakouts',
+      sweating: 'Sweat + oil + bacteria = body acne, face congestion',
+      masks: 'Mask wearing + humidity = maskne (acne mechanica)',
+      uvIndex: 'Sun darkens PIH/PIE marks. Some acne meds cause photosensitivity.',
+      pollution: 'Particulates oxidize sebum = more inflammatory acne'
+    },
+    routine: {
+      morning: 'Salicylic acid cleanser → Niacinamide → Oil-free SPF',
+      evening: 'Double cleanse → Treatment (alternate: retinoid, BHA, rest night) → Light moisturizer',
+      weekly: 'Clay mask. Pimple patches for active spots. NO picking.',
+      avoid: 'Coconut oil, shea butter, isopropyl myristate, heavy occlusives'
+    },
+    products: {
+      cleanser: 'Salicylic acid 2% or benzoyl peroxide 4-5%',
+      moisturizer: 'Oil-free, non-comedogenic, gel texture',
+      sunscreen: 'Matte, oil-free, non-comedogenic',
+      treatment: 'Adapalene (Differin), benzoyl peroxide, salicylic acid, tea tree',
+      mask: 'Sulfur, clay, salicylic acid'
+    }
   },
-  6: {
-    description: 'Very poor seeing',
-    starAppearance: 'Star image a blurry blob, no diffraction features',
-    magnification: '8-12x per inch',
-    rating: 'Poor',
-    suitability: 'Very low power, casual observing only'
+  mature: {
+    characteristics: 'Fine lines, wrinkles, loss of elasticity, thinner, drier',
+    weatherTriggers: {
+      uvIndex: 'CUMULATIVE damage. Every UV exposure adds up over decades.',
+      cold: 'Increases appearance of lines (dehydrated skin shows lines more)',
+      dryAir: 'Accelerates transepidermal water loss',
+      pollution: 'Accelerates aging (free radicals, collagen breakdown)',
+      heat: 'Can increase collagen breakdown (inflammation)'
+    },
+    routine: {
+      morning: 'Gentle cleanser → Vitamin C serum → Peptide moisturizer → SPF 50+',
+      evening: 'Double cleanse → Retinoid (alternate nights) → Rich night cream → Face oil',
+      weekly: 'Gentle AHA exfoliation. Hydrating mask. Facial massage.',
+      avoid: 'Harsh cleansers, skipping SPF, aggressive treatments'
+    },
+    products: {
+      cleanser: 'Cream or oil-based, hydrating',
+      moisturizer: 'Peptides, ceramides, shea butter, squalane',
+      sunscreen: 'SPF 50+ broad spectrum. Tinted for blue light protection.',
+      treatment: 'Retinoids (tretinoin), vitamin C, peptides, growth factors',
+      mask: 'Hydrating, collagen, honey, avocado'
+    }
   },
-  7: {
-    description: 'Extremely poor',
-    starAppearance: 'Stars 2-3x normal size, constant rapid motion',
-    magnification: 'Under 8x per inch',
-    rating: 'Very poor',
-    suitability: 'Binoculars only, not worth telescope setup'
-  },
-  8: {
-    description: 'Worthless for astronomy',
-    starAppearance: 'Stars shimmering violently, no detail visible',
-    magnification: 'Naked eye only',
-    rating: 'Terrible',
-    suitability: 'Stay inside, watch astronomy documentaries'
-  },
-  9: {
-    description: 'Impossible',
-    starAppearance: 'Stars twinkling so badly you feel dizzy',
-    magnification: 'Don\'t bother',
-    rating: 'Worst',
-    suitability: 'Netflix and planetarium apps'
-  },
-  10: {
-    description: 'Completely unusable',
-    starAppearance: 'Stars look like they\'re having a rave',
-    magnification: 'Forget it',
-    rating: 'Why are you outside?',
-    suitability: 'Indoor activities only'
+  hyperpigmentation: {
+    characteristics: 'Dark spots, melasma, uneven skin tone, post-inflammatory marks',
+    weatherTriggers: {
+      uvIndex: 'NUMBER ONE TRIGGER. UV stimulates melanin production.',
+      heat: 'Heat alone can trigger melasma (not just UV!)',
+      visibleLight: 'Blue light from sun/screens can worsen melasma',
+      hormones: 'Weather stress can affect cortisol = hormonal pigmentation'
+    },
+    routine: {
+      morning: 'Vitamin C → Tranexamic acid/niacinamide → SPF 50+ (tinted for blue light)',
+      evening: 'Double cleanse → Brightening treatment (alternate: retinoid, AHA, kojic acid) → Moisturizer',
+      weekly: 'Gentle chemical exfoliation. Vitamin C mask.',
+      avoid: 'Sun exposure. Picking. Harsh physical scrubs. Heat (saunas, hot yoga).'
+    },
+    products: {
+      cleanser: 'Gentle, non-stripping',
+      moisturizer: 'With niacinamide, licorice root, vitamin E',
+      sunscreen: 'SPF 50+ TINTED mineral (iron oxides block visible light). Reapply every 2 hours.',
+      treatment: 'Hydroquinone (Rx), azelaic acid, kojic acid, tranexamic acid, alpha arbutin',
+      mask: 'Turmeric, vitamin C, licorice, niacinamide'
+    }
   }
-}
+};
 
 // ============================================================================
-// BORTLE DARK SKY SCALE
+// HAIR TYPE DATABASE
 // ============================================================================
 
-const BORTLE_SCALE = {
-  1: {
-    name: 'Excellent Dark Sky Site',
-    description: 'Zodiacal light visible, gegenschein visible, Milky Way casts shadows',
-    limiting: '7.6-8.0',
-    color: '#000000',
-    milkyWay: 'Casts obvious shadows',
-    zodiacalLight: 'Visible, colorful',
-    airglow: 'Visible along horizon',
-    clouds: 'Black holes in the sky'
+const HAIR_TYPES = {
+  straight: {
+    porosity: 'Low to normal',
+    weatherResponse: {
+      humidity: 'Goes limp, loses volume, gets greasy faster',
+      dryAir: 'Static electricity, flyaways',
+      rain: 'Goes completely flat, water marks',
+      wind: 'Tangles, knots',
+      heat: 'Scalp gets oily faster, hair goes limp'
+    },
+    styling: {
+      goodWeather: 'Low dew point (0-10°C): volume holds, smooth, no static',
+      badWeather: 'High dew point (>16°C): flat, greasy, no volume',
+      products: 'Volumizing mousse, dry shampoo, texturizing spray, light hairspray',
+      avoid: 'Heavy oils, thick creams (weigh down), humidity = no blowout'
+    },
+    tips: [
+      'Dew point > 16°C: embrace your natural texture, heat styling won\'t hold',
+      'Dew point < 0°C: static city - dryer sheet on brush, anti-static spray',
+      'Rain: silk scarf under hood/umbrella preserves style',
+      'Oily scalp day: dry shampoo at night (absorbs oil while you sleep)'
+    ]
   },
-  2: {
-    name: 'Typical Truly Dark Site',
-    description: 'Milky Way highly structured, zodiacal light visible',
-    limiting: '7.1-7.5',
-    color: '#0a0a0a',
-    milkyWay: 'Highly structured, summer Milky Way shows detail',
-    zodiacalLight: 'Still bright enough to cast shadows at dusk/dawn',
-    airglow: 'Weakly visible near horizon'
+  wavy: {
+    porosity: 'Normal to high',
+    weatherResponse: {
+      humidity: 'Frizzes, waves become undefined, expands',
+      dryAir: 'Waves fall flat, lacks definition',
+      rain: 'Frizz explosion, waves disappear or go wild',
+      wind: 'Tangles, knots, breakage',
+      heat: 'Scalp oil + humidity = weighed down waves'
+    },
+    styling: {
+      goodWeather: 'Dew point 10-16°C: defined waves, minimal frizz, holds style',
+      badWeather: 'Dew point > 18°C: undefined, frizzy, unpredictable',
+      products: 'Curl cream (light), mousse, sea salt spray, anti-humidity spray',
+      avoid: 'Heavy butters (weigh down), brushing dry (poof), touching hair'
+    },
+    tips: [
+      'Dew point 10-16°C: PERFECT wave day. Scrunch and go.',
+      'Dew point > 18°C: gel cast method (apply gel wet, don\'t touch until dry, scrunch out crunch)',
+      'Wind: protective style (braid, bun, scarf)',
+      'Refreshing: water + leave-in in spray bottle, scrunch'
+    ]
   },
-  3: {
-    name: 'Rural Sky',
-    description: 'Some light pollution at horizon, Milky Way still detailed',
-    limiting: '6.6-7.0',
-    color: '#1a1a2e',
-    milkyWay: 'Still shows complex structure',
-    zodiacalLight: 'Visible in spring/autumn',
-    lightPollution: 'Visible on horizon'
+  curly: {
+    porosity: 'Normal to high',
+    weatherResponse: {
+      humidity: 'THE ENEMY. Frizz, undefined, expands 2x normal size',
+      dryAir: 'Curls fall flat, no volume, brittle',
+      rain: 'Instant frizz reset. Day ruined.',
+      wind: 'Tangles = breakage. Ruins curl pattern.',
+      heat: 'Frizz + sweat = scalp issues'
+    },
+    styling: {
+      goodWeather: 'Dew point 10-16°C: defined, bouncy, minimal frizz (unicorn day)',
+      badWeather: 'Dew point > 18°C: undefined, frizzy, shrinkage, triangle shape',
+      products: 'Leave-in conditioner, curl cream, gel, anti-humidity serum',
+      avoid: 'Sulfates, drying alcohols, touching hair, brushing dry'
+    },
+    tips: [
+      'Dew point > 21°C: use HUMIDITY-BLOCKING products. Glycerin-free if high humidity.',
+      'Dew point 10-16°C: glycerin-based products work beautifully (attracts moisture)',
+      'Rain: satin-lined hood/hat. Refresh with steam (shower) not water.',
+      'Pineapple at night (loose high ponytail). Satin pillowcase.',
+      'Shrinkage: embrace it or stretch with banding method'
+    ]
   },
-  4: {
-    name: 'Rural/Suburban Transition',
-    description: 'Light pollution domes visible in several directions',
-    limiting: '6.1-6.5',
-    color: '#16213e',
-    milkyWay: 'Visible but less detailed, washed out near horizon',
-    zodiacalLight: 'Visible but extends less than 45 degrees',
-    lightDomes: 'Visible over population centers'
+  coily: {
+    porosity: 'High',
+    weatherResponse: {
+      humidity: 'Frizz, shrinkage (up to 75% of length!), undefined',
+      dryAir: 'Extremely dry, brittle, breakage risk high',
+      rain: 'Massive shrinkage. Hours of work undone.',
+      wind: 'Tangles severely. Breakage risk.',
+      heat: 'Scalp issues, dryness, breakage'
+    },
+    styling: {
+      goodWeather: 'Dew point 10-16°C: defined, moisturized, manageable',
+      badWeather: 'Dew point > 18°C: massive shrinkage, frizz. Dew point < 0°C: extreme dryness.',
+      products: 'Heavy creams, butters, oils, leave-in conditioner, gel',
+      avoid: 'Sulfates, drying alcohols, mineral oil, petrolatum (builds up)'
+    },
+    tips: [
+      'LOC/LCO method: Liquid → Oil → Cream (or Liquid → Cream → Oil)',
+      'Dew point > 21°C: protective style (braids, twists, bun, wig)',
+      'Dew point < 0°C: deep condition weekly, hot oil treatments, protective styles',
+      'Satin-lined EVERYTHING (bonnet, pillowcase, scarf, hood)',
+      'Shrinkage: banding, threading, or embrace. It means healthy hair!'
+    ]
   },
-  5: {
-    name: 'Suburban Sky',
-    description: 'Light pollution visible in most directions',
-    limiting: '5.6-6.0',
-    color: '#1a1a3e',
-    milkyWay: 'Visible only overhead, washed out',
-    zodiacalLight: 'Rarely visible',
-    lightDomes: 'Obvious in several directions'
+  chemically_treated: {
+    porosity: 'Very high (damaged cuticle)',
+    weatherResponse: {
+      humidity: 'Frizz extreme, keratin/relaxer reverses slightly, color fades',
+      dryAir: 'Already porous hair loses moisture rapidly',
+      rain: 'Keratin treatment can spot, color can bleed',
+      uvIndex: 'UV fades color, damages already compromised structure',
+      wind: 'Tangles and breaks easily'
+    },
+    styling: {
+      goodWeather: 'Dry, cool days. Minimal humidity.',
+      badWeather: 'Any extreme. Chemically treated hair is always compromised.',
+      products: 'Bond builders (Olaplex, K18), protein treatments, sulfate-free everything',
+      avoid: 'Heat styling without protection, sulfates, salt water, chlorine'
+    },
+    tips: [
+      'UV protection: hair SPF or hat. Color fades 2x faster in high UV.',
+      'Swimming: wet hair with clean water + leave-in before pool/ocean',
+      'Bond builder every wash. Your hair structure is compromised.',
+      'Satin pillowcase/bonnet ALWAYS. Already fragile.',
+      'Keratin: wait 72 hours before moisture (rain, sweat, washing)'
+    ]
   },
-  6: {
-    name: 'Bright Suburban Sky',
-    description: 'Milky Way barely visible, only at zenith',
-    limiting: '5.1-5.5',
-    color: '#2d2d44',
-    milkyWay: 'Only visible near zenith',
-    m33: 'Difficult with averted vision',
-    clouds: 'Brightly lit'
-  },
-  7: {
-    name: 'Suburban/Urban Transition',
-    description: 'Milky Way invisible, M31 barely detectable',
-    limiting: '4.6-5.0',
-    color: '#4a4a5a',
-    milkyWay: 'Invisible',
-    m31: 'Barely visible with averted vision',
-    clouds: 'Brightly lit, some stars visible'
-  },
-  8: {
-    name: 'City Sky',
-    description: 'Sky grayish-white, can read newspaper headlines outside',
-    limiting: '4.1-4.5',
-    color: '#6b6b7b',
-    stars: 'Only brightest constellations recognizable',
-    m31: 'Not visible',
-    telescope: 'Good for moon and planets only'
-  },
-  9: {
-    name: 'Inner City Sky',
-    description: 'Sky bright white, only moon and planets visible',
-    limiting: '3.6-4.0',
-    color: '#8b8b9b',
-    stars: 'Fewer than 100 visible',
-    pleiades: 'Barely detectable',
-    observing: 'Moon, planets, double stars only'
+  gray_silver: {
+    porosity: 'Low to normal (coarser texture)',
+    weatherResponse: {
+      humidity: 'Frizzes, yellows from pollution, goes brassy',
+      uvIndex: 'Photodamage = yellowing, brassiness',
+      pollution: 'Particulates deposit on hair = dull, yellow-gray',
+      hardWater: 'Mineral deposits = brassy, dull',
+      wind: 'Tangles, flyaways'
+    },
+    styling: {
+      goodWeather: 'Cool, dry, low UV',
+      badWeather: 'High UV, high humidity, high pollution',
+      products: 'Purple/blue shampoo, anti-brass conditioner, UV protectant',
+      avoid: 'Chlorine (turns green-yellow), excessive heat'
+    },
+    tips: [
+      'Purple shampoo 1-2x/week (neutralizes yellow). Don\'t overuse (purple tint).',
+      'UV protectant spray essential. Gray hair has no melanin protection.',
+      'Filter shower water if hard water. Minerals = brassy.',
+      'Silk/satin pillowcase (reduces friction = less yellowing at friction points)'
+    ]
   }
-}
+};
 
 // ============================================================================
-// PLANET VISIBILITY CALCULATOR
+// MAKEUP WEATHER INDEX
 // ============================================================================
 
-function getDetailedPlanetVisibility(data) {
-  const { cloudPercent, moonPhase } = data
-  const planets = []
-  const currentMonth = new Date().getMonth()
+function getMakeupAdvice(data) {
+  const { temp, humidity, wind, condition, uvIndex, dewPoint } = data;
+  const heatIndex = calcHeatIndex(temp, humidity);
+  const advice = {
+    base: [],
+    eyes: [],
+    lips: [],
+    setting: [],
+    touchUp: []
+  };
   
-  if (currentMonth === 2 || currentMonth === 3 || currentMonth === 8 || currentMonth === 9) {
-    planets.push({
-      name: 'Mercury',
-      visible: true,
-      when: 'Just after sunset or before sunrise (elongation period)',
-      where: 'Low on horizon, West (evening) or East (morning)',
-      brightness: '-0.5 to +5.0',
-      telescope: 'Phase visible (like tiny moon). Low power best.',
-      difficulty: 'Challenging - never far from sun',
-      special: 'Only visible during greatest elongation (check exact dates)'
-    })
-  }
-  
-  planets.push({
-    name: 'Venus',
-    visible: currentMonth !== 5 && currentMonth !== 6,
-    when: currentMonth < 6 ? 'Evening star (after sunset)' : 'Morning star (before sunrise)',
-    where: 'Brightest object after sun/moon. Cannot miss it.',
-    brightness: '-4.9 to -3.8',
-    telescope: 'Phase clearly visible. Cloud tops featureless but beautiful crescent.',
-    difficulty: 'Impossible to miss',
-    special: 'Can cast shadows in dark locations. Visible in daylight if you know where to look.'
-  })
-  
-  planets.push({
-    name: 'Mars',
-    visible: true,
-    when: 'Varies by opposition (every 26 months)',
-    where: 'Red/orange color distinctive. Brightens dramatically near opposition.',
-    brightness: '-2.9 to +1.8',
-    telescope: 'Polar caps, dark markings visible near opposition. Detail requires good seeing.',
-    difficulty: 'Easy to find when bright',
-    special: 'Opposition every 26 months = best viewing. Dust storms can obscure surface.'
-  })
-  
-  planets.push({
-    name: 'Jupiter',
-    visible: true,
-    when: 'Most of year except when near conjunction with sun',
-    where: 'Bright, steady, cream-colored. Follows ecliptic.',
-    brightness: '-2.9 to -1.6',
-    telescope: 'Cloud bands, Great Red Spot, 4 Galilean moons. Transit/shadow events.',
-    difficulty: 'Easy - second brightest planet',
-    special: 'Moons visible in binoculars. GRS visible with 6 inch+ scope in good seeing.'
-  })
-  
-  planets.push({
-    name: 'Saturn',
-    visible: true,
-    when: 'Evening or morning depending on season',
-    where: 'Golden color. Follows ecliptic near Jupiter.',
-    brightness: '-0.5 to +1.2',
-    telescope: 'Rings! Cassini Division, Titan moon. Multiple moons visible.',
-    difficulty: 'Easy to identify',
-    special: 'Ring tilt varies. Edge-on every 15 years. Currently good tilt for viewing.'
-  })
-  
-  if (cloudPercent < 40) {
-    planets.push({
-      name: 'Uranus',
-      visible: true,
-      when: 'Best when at opposition',
-      where: 'Requires finder chart. Blue-green disk.',
-      brightness: '+5.7 to +5.9',
-      telescope: 'Tiny blue-green disk. Moons with large scope.',
-      difficulty: 'Challenging - needs dark skies and knowing where to look',
-      special: 'Barely naked eye in perfect conditions. Binoculars show it easily.'
-    })
-  }
-  
-  if (cloudPercent < 20) {
-    planets.push({
-      name: 'Neptune',
-      visible: true,
-      when: 'Requires telescope and finder chart',
-      where: 'Finder chart essential. Tiny blue disk.',
-      brightness: '+7.8 to +8.0',
-      telescope: 'Tiny blue disk. Triton moon with 12 inch+ scope.',
-      difficulty: 'Very challenging - requires dark sky and telescope',
-      special: 'Only planet discovered mathematically before visually.'
-    })
-  }
-  
-  return planets
-}
-
-// ============================================================================
-// DEEP SKY OBJECT VISIBILITY
-// ============================================================================
-
-function getDeepSkyObjectVisibility(data) {
-  const { cloudPercent, moonPhase, bortleScale, season } = data
-  const objects = []
-  const moonIllumination = getMoonIllumination(
-    typeof moonPhase === 'string' ? 0 : moonPhase
-  )
-  
-  if (cloudPercent > 40 || moonIllumination > 70) {
-    return [{ category: 'Limited', objects: 'Bright clusters and double stars only. Wait for darker conditions.' }]
-  }
-  
-  if (season === 'winter') {
-    objects.push({
-      name: 'Orion Nebula (M42)',
-      type: 'Emission Nebula',
-      magnitude: 4.0,
-      visibility: 'Naked eye visible. Spectacular in any scope.',
-      bestWith: 'Any telescope or binoculars. UHC filter enhances.',
-      special: 'Trapezium cluster at center. Best in winter.'
-    })
-    objects.push({
-      name: 'Pleiades (M45)',
-      type: 'Open Cluster',
-      magnitude: 1.6,
-      visibility: 'Naked eye obvious. Best in binoculars.',
-      bestWith: 'Binoculars or wide-field refractor.',
-      special: 'Subaru in Japanese. Contains reflection nebulosity.'
-    })
-    objects.push({
-      name: 'Andromeda Galaxy (M31)',
-      type: 'Spiral Galaxy',
-      magnitude: 3.4,
-      visibility: 'Naked eye in dark skies. 6x larger than full moon!',
-      bestWith: 'Binoculars or wide-field scope. Low power essential.',
-      special: 'Closest major galaxy. Satellite galaxies M32, M110 visible nearby.'
-    })
-  }
-  
-  if (season === 'spring') {
-    objects.push({
-      name: 'Whirlpool Galaxy (M51)',
-      type: 'Spiral Galaxy',
-      magnitude: 8.4,
-      visibility: 'Requires telescope. Spiral arms visible with 8 inch+ scope.',
-      bestWith: '8 inch+ telescope, dark skies.',
-      special: 'First galaxy where spiral structure was observed (Lord Rosse, 1845).'
-    })
-    objects.push({
-      name: 'Leo Triplet (M65, M66, NGC 3628)',
-      type: 'Galaxy Group',
-      magnitude: 9.3,
-      visibility: 'Three galaxies in one field. 8 inch+ scope recommended.',
-      bestWith: 'Medium-high power, dark skies.',
-      special: 'All three visible in same low-power field.'
-    })
-  }
-  
-  if (season === 'summer') {
-    objects.push({
-      name: 'Ring Nebula (M57)',
-      type: 'Planetary Nebula',
-      magnitude: 8.8,
-      visibility: 'Smoke ring appearance. Visible in 4 inch+ scope.',
-      bestWith: 'Medium-high power. OIII filter enhances.',
-      special: 'Central star magnitude 15 - very challenging.'
-    })
-    objects.push({
-      name: 'Hercules Cluster (M13)',
-      type: 'Globular Cluster',
-      magnitude: 5.8,
-      visibility: 'Naked eye in dark skies. Spectacular in any scope.',
-      bestWith: 'Medium power. Resolves into individual stars in 6 inch+ scope.',
-      special: 'Over 300,000 stars. 25,000 light years away.'
-    })
-    objects.push({
-      name: 'Lagoon Nebula (M8)',
-      type: 'Emission Nebula',
-      magnitude: 6.0,
-      visibility: 'Naked eye in dark skies. Cluster + nebulosity.',
-      bestWith: 'Any telescope or binoculars. UHC filter.',
-      special: 'Contains open cluster NGC 6530.'
-    })
-  }
-  
-  if (season === 'fall') {
-    objects.push({
-      name: 'Double Cluster (NGC 869/884)',
-      type: 'Open Clusters',
-      magnitude: 4.3,
-      visibility: 'Naked eye visible. Stunning in binoculars or wide-field scope.',
-      bestWith: 'Binoculars or low-power, wide-field eyepiece.',
-      special: 'Two clusters side by side. Each contains hundreds of stars.'
-    })
-    objects.push({
-      name: 'Dumbbell Nebula (M27)',
-      type: 'Planetary Nebula',
-      magnitude: 7.5,
-      visibility: 'Apple-core shape. Visible in 4 inch+ scope.',
-      bestWith: 'Medium power. OIII filter reveals detail.',
-      special: 'First planetary nebula discovered (Messier, 1764).'
-    })
-  }
-  
-  return objects
-}
-
-// ============================================================================
-// ASTRONOMICAL TWILIGHT CALCULATOR
-// ============================================================================
-
-function getTwilightPeriods(data) {
-  const { sunset, sunrise } = data
-  if (!sunset || !sunrise) return []
-  
-  const sunsetTime = new Date(sunset)
-  const sunriseTime = new Date(sunrise)
-  const periods = []
-  
-  const civilEnd = new Date(sunsetTime.getTime() + 30 * 60000)
-  const civilStart = new Date(sunriseTime.getTime() - 30 * 60000)
-  const nauticalEnd = new Date(sunsetTime.getTime() + 60 * 60000)
-  const nauticalStart = new Date(sunriseTime.getTime() - 60 * 60000)
-  const astroEnd = new Date(sunsetTime.getTime() + 90 * 60000)
-  const astroStart = new Date(sunriseTime.getTime() - 90 * 60000)
-  
-  const format = (d) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  
-  periods.push({
-    phase: 'Sunset',
-    time: format(sunsetTime),
-    description: 'Sun at horizon. Brightest planets/stars appear.',
-    darkness: 'Daylight to civil twilight'
-  })
-  
-  periods.push({
-    phase: 'Civil Twilight',
-    time: `${format(sunsetTime)} - ${format(civilEnd)}`,
-    description: 'Brightest stars visible. Planets clear.',
-    darkness: 'Too bright for deep sky',
-    photography: 'Landscape astrophotography possible'
-  })
-  
-  periods.push({
-    phase: 'Nautical Twilight',
-    time: `${format(civilEnd)} - ${format(nauticalEnd)}`,
-    description: 'Milky Way becoming visible. Most stars out.',
-    darkness: 'Deep sky becoming possible',
-    photography: 'Milky Way photography begins'
-  })
-  
-  periods.push({
-    phase: 'Astronomical Twilight',
-    time: `${format(nauticalEnd)} - ${format(astroEnd)}`,
-    description: 'Sky fully dark to naked eye. Faint objects visible.',
-    darkness: 'Best deep sky observing',
-    photography: 'Deep sky astrophotography optimal'
-  })
-  
-  const trueNightStart = astroEnd
-  const trueNightEnd = astroStart
-  
-  if (trueNightStart < trueNightEnd) {
-    periods.push({
-      phase: 'True Night',
-      time: `${format(trueNightStart)} - ${format(trueNightEnd)}`,
-      description: 'DARKEST PERIOD. All astronomical objects visible.',
-      darkness: 'Maximum darkness for location',
-      photography: 'Best for narrowband and faint object imaging'
-    })
-  } else {
-    periods.push({
-      phase: 'Astronomical Twilight',
-      time: `${format(astroEnd)} - ${format(astroStart)}`,
-      description: 'Night sky never reaches full darkness (summer months)',
-      darkness: 'Limited darkness',
-      photography: 'Narrowband imaging still possible'
-    })
-  }
-  
-  return periods
-}
-
-// ============================================================================
-// DEW & EQUIPMENT MANAGEMENT
-// ============================================================================
-
-function getDewAdvice(data) {
-  const { temp, humidity, dewPoint } = data
-  const advice = []
-  const dewSpread = temp - (dewPoint || temp - 5)
-  
-  if (dewSpread <= 1) {
-    advice.push("CRITICAL DEW RISK: Temperature within 1C of dew point.")
-    advice.push("Dew will form rapidly on all exposed optics.")
-    advice.push("DEW HEATERS MANDATORY for all optical surfaces.")
-    advice.push("- Telrad/Rigel finder will fog first (large exposed surface)")
-    advice.push("- Eyepieces will fog from body heat/breath")
-    advice.push("- Corrector plate/lens will dew over in minutes")
-    advice.push("Equipment: Dew heater strips + controller for main scope")
-    advice.push("Equipment: Dew heater for eyepiece/finder")
-    advice.push("Equipment: Dew shield extends dew-free time ~2x")
-    advice.push("Portable: 12V hair dryer for emergency defogging")
-    advice.push("Tactic: Keep eyepieces in pocket (body heat) when not in use")
-    advice.push("Tactic: Point scope down when not observing")
-  } else if (dewSpread <= 3) {
-    advice.push("MODERATE DEW RISK: Dew likely by midnight.")
-    advice.push("Dew heaters recommended. Dew shield minimum.")
-    advice.push("Expect to need defogging 2-3 times during session.")
-  } else if (dewSpread <= 5) {
-    advice.push("Low dew risk. Dew shield should suffice.")
-    advice.push("May see some dew after 2-3 hours observing.")
-  } else {
-    advice.push("Minimal dew risk tonight. Optics should stay clear.")
+  if (heatIndex > 35) {
+    advice.base.push("EXTREME HEAT: Foundation will melt. Consider skipping or tinted moisturizer.");
+    advice.base.push("Primer: mattifying, gripping. Foundation: long-wear, oil-free.");
+    advice.setting.push("Setting spray: mattifying. Setting powder: translucent, baking method.");
+    advice.touchUp.push("Blotting papers every 2 hours. Powder compact for touch-ups.");
+    advice.eyes.push("Waterproof EVERYTHING. Cream shadows (powder creases in heat).");
+    advice.lips.push("Lip stain > lipstick. Gloss will melt. Tinted balm with SPF.");
+  } else if (heatIndex > 28) {
+    advice.base.push("Hot day: lightweight base. BB cream or skin tint.");
+    advice.setting.push("Setting spray essential. Light powder on T-zone.");
+    advice.touchUp.push("Blotting papers. Avoid layering powder (cakey).");
+  } else if (temp < 5) {
+    advice.base.push("Cold: hydrating primer. Dewy foundation (skin looks dry in cold).");
+    advice.base.push("Mix facial oil with foundation for extra hydration.");
+    advice.lips.push("Heavy lip balm under lipstick. Matte lips will crack.");
+    advice.setting.push("Setting spray (dewy finish). Avoid heavy powder (settles in dry patches).");
   }
   
   if (humidity > 80) {
-    advice.push("High humidity: paper star charts will become damp. Use laminated charts or tablet.")
-    advice.push("Electronics: consider silica gel packets in accessory case.")
+    advice.base.push("HIGH HUMIDITY: Oil-free everything. Silicone-based primer.");
+    advice.setting.push("Setting powder crucial. Sandwich method: powder → setting spray → powder.");
+    advice.eyes.push("Eyeshadow primer essential (even for no shadow look).");
+    advice.eyes.push("Waterproof mascara. Tubing mascara best (doesn't smudge).");
+    advice.touchUp.push("Blotting papers. Oil-absorbing roller (Clean & Clear, Revlon).");
   }
   
-  return advice
+  if (wind > 20) {
+    advice.eyes.push("Wind: contacts dry out. Glasses or eye drops. Waterproof mascara.");
+    advice.base.push("Wind = watery eyes. Concealer under eyes. No lower lash mascara.");
+    advice.lips.push("Sticky gloss = hair in lip gloss. Lipstick or stain only.");
+  }
+  
+  if (condition === 'rain') {
+    advice.base.push("Rain: waterproof face. Cream products > powder (more durable).");
+    advice.eyes.push("Waterproof mascara + eyeliner MANDATORY. Tubing mascara = zero smudge.");
+    advice.setting.push("Setting spray (waterproof type). Extra layer.");
+    advice.lips.push("Long-wear liquid lipstick. No gloss.");
+  }
+  
+  return advice;
 }
 
 // ============================================================================
-// EQUIPMENT RECOMMENDATIONS
+// SKIN BARRIER ASSESSMENT
 // ============================================================================
 
-function getEquipmentRecommendations(data) {
-  const { cloudPercent, moonPhase, seeing, transparency, bortleScale, temp } = data
-  const recommendations = []
-  const moonIllumination = getMoonIllumination(
-    typeof moonPhase === 'string' ? 0 : moonPhase
-  )
+function getBarrierHealth(data) {
+  const { temp, humidity, wind, uvIndex, condition, dewPoint, aqi } = data;
+  const assessment = {
+    score: 100,
+    threats: [],
+    protection: [],
+    recovery: []
+  };
   
-  if (cloudPercent < 20 && seeing < 3 && bortleScale < 4) {
-    recommendations.push("PRIME CONDITIONS: Any telescope will perform well tonight.")
-    recommendations.push("- Large Dobsonian (12 inch+): Galaxies, nebulae, globulars")
-    recommendations.push("- APO Refractor (4-6 inch): Wide field, planetary, astrophotography")
-    recommendations.push("- SCT/Maksutov (8-14 inch): Planetary detail, double stars")
+  // Temperature stress
+  if (temp < 0) {
+    assessment.score -= 25;
+    assessment.threats.push("Freezing temperatures damage skin barrier lipids");
+    assessment.protection.push("Occlusive balm (Vaseline, Aquaphor, CeraVe Healing Ointment)");
+    assessment.recovery.push("Ceramide-rich cream at night");
+  } else if (temp > 32) {
+    assessment.score -= 15;
+    assessment.threats.push("Heat increases inflammation and oxidative stress");
+    assessment.protection.push("Antioxidant serum (Vitamin C, ferulic acid) under SPF");
   }
   
-  if (moonIllumination > 60) {
-    recommendations.push("Bright moon: Focus on lunar, planetary, double stars.")
-    recommendations.push("- Moon filter essential (reduces glare, increases contrast)")
-    recommendations.push("- High magnification for lunar detail")
-    recommendations.push("- Color filters for planetary detail enhancement")
-    recommendations.push("- Skip deep sky - moonlight will wash out faint objects")
-  } else if (moonIllumination < 20) {
-    recommendations.push("Dark sky window: Deep sky objects will be at their best.")
-    recommendations.push("- UHC/OIII filters for emission nebulae")
-    recommendations.push("- Lowest power widest field eyepiece for Milky Way sweeping")
-    recommendations.push("- Consider dark adaptation (no white light for 30+ minutes)")
+  // Wind damage
+  if (wind > 25) {
+    assessment.score -= 20;
+    assessment.threats.push("Wind strips moisture barrier, causes windburn");
+    assessment.protection.push("Thick occlusive layer. Scarf/face covering.");
+    assessment.recovery.push("Centella asiatica, panthenol, allantoin (barrier repair)");
   }
   
-  if (seeing <= 2) {
-    recommendations.push("Excellent seeing: Crank up the magnification!")
-    recommendations.push("- Planetary eyepieces (200-300x depending on aperture)")
-    recommendations.push("- Try for difficult double star splits")
-    recommendations.push("- Lucky imaging technique for planetary photography")
-  } else if (seeing >= 5) {
-    recommendations.push("Poor seeing: Lower your expectations on magnification.")
-    recommendations.push("- Limit magnification to 150x or less")
-    recommendations.push("- Focus on wide-field, low-power observing")
-    recommendations.push("- Binocular observing may be more rewarding than telescope")
+  // UV damage
+  if (uvIndex > 6) {
+    assessment.score -= 15;
+    assessment.threats.push("UV radiation degrades collagen and damages barrier");
+    assessment.protection.push("SPF 50+ PA++++. Reapply every 2 hours. Hat + sunglasses.");
+    assessment.recovery.push("Antioxidant serum PM. Aloe vera for any redness.");
   }
   
-  if (Math.abs(temp - 20) > 15) {
-    recommendations.push(`Temperature ${temp}C: Allow telescope to acclimate.`)
-    if (temp < 5) {
-      recommendations.push("- Cold: Allow 60-90 minutes for optics to reach thermal equilibrium")
-      recommendations.push("- Cold: Battery life reduced - bring spares for dew heaters/mount")
-      recommendations.push("- Cold: Lubricants stiffen - mounts may be sluggish")
-    } else if (temp > 30) {
-      recommendations.push("- Hot: Tube currents will degrade images until scope cools")
-      recommendations.push("- Hot: Allow 45-60 minutes cooldown (fans help)")
-    }
+  // Dry air
+  if (humidity < 30) {
+    assessment.score -= 15;
+    assessment.threats.push("Dry air pulls moisture from skin (transepidermal water loss)");
+    assessment.protection.push("Hyaluronic acid on damp skin + occlusive to seal");
+    assessment.recovery.push("Humidifier at night. Sheet mask. Layer hydrating products.");
   }
   
-  if (bortleScale >= 7) {
-    recommendations.push("Light polluted skies: Work with what you can see.")
-    recommendations.push("- Moon, planets, double stars are your best targets")
-    recommendations.push("- Light pollution reduction (LPR) filter helps slightly")
-    recommendations.push("- Consider Electronically Assisted Astronomy (EAA)")
-    recommendations.push("- Live stacking with camera can reveal objects invisible visually")
+  // Pollution
+  if (aqi > 100) {
+    assessment.score -= 10;
+    assessment.threats.push("Particulate matter causes oxidative stress and barrier damage");
+    assessment.protection.push("Antioxidant serum AM. Double cleanse PM.");
+    assessment.recovery.push("Detoxifying mask (charcoal, clay). Niacinamide for barrier repair.");
   }
   
-  return recommendations
+  return assessment;
 }
 
 // ============================================================================
-// ASTROPHOTOGRAPHY CONDITIONS
+// DEW POINT HAIR BEHAVIOR PREDICTOR
 // ============================================================================
 
-function getAstrophotographyAdvice(data) {
-  const { cloudPercent, seeing, transparency, moonPhase, wind, humidity } = data
-  const advice = []
-  const moonIllumination = getMoonIllumination(
-    typeof moonPhase === 'string' ? 0 : moonPhase
-  )
+function getDewPointHairBehavior(dewPoint, hairType) {
+  const behavior = {
+    frizz: '',
+    definition: '',
+    volume: '',
+    moisture: '',
+    styling: '',
+    products: []
+  };
   
-  if (cloudPercent > 20) {
-    advice.push("Clouds: Astrophotography requires clear skies. Wait for better conditions.")
-    advice.push(`${cloudPercent}% cloud cover will ruin long exposures.`)
+  if (dewPoint > 21) {
+    behavior.frizz = 'EXTREME - Hair will absorb moisture from air, cuticle swells, frizz inevitable';
+    behavior.definition = 'Curly/coily: curl pattern disrupted. Straight/wavy: goes flat and fuzzy.';
+    behavior.volume = 'Curly/coily: VOLUME EXPLOSION (2-3x normal). Straight: limp, no volume.';
+    behavior.moisture = 'Hair absorbs so much moisture it becomes over-moisturized (hygral fatigue)';
+    behavior.styling = 'Do NOT heat style. Embrace natural texture. Protective styles best.';
+    behavior.products = [
+      'Anti-humectant products (block moisture absorption)',
+      'Silicone-based serums (seal cuticle)',
+      'Avoid glycerin (attracts moisture)',
+      'Hard-hold gel for curly/coily',
+      'Dry shampoo for straight (absorbs excess moisture)'
+    ];
+  } else if (dewPoint > 16) {
+    behavior.frizz = 'MODERATE-HIGH - Some frizz, especially for curly/coily hair';
+    behavior.definition = 'Curly: some definition possible. Wavy: may lose pattern. Straight: ok.';
+    behavior.volume = 'Slight expansion. Manageable.';
+    behavior.moisture = 'Slightly over-moisturized. Hair feels soft but can get limp.';
+    behavior.styling = 'Heat style with anti-humidity products. Will hold moderately.';
+    behavior.products = [
+      'Light anti-humidity spray',
+      'Curl cream with hold',
+      'Mousse for volume',
+      'Leave-in conditioner (light)'
+    ];
+  } else if (dewPoint > 10) {
+    behavior.frizz = 'LOW - IDEAL dew point range';
+    behavior.definition = 'PERFECT definition for all hair types';
+    behavior.volume = 'Optimal volume and body';
+    behavior.moisture = 'Balanced. Hair retains proper moisture without frizz.';
+    behavior.styling = 'Anything works! Heat style, air dry, whatever you want.';
+    behavior.products = [
+      'Normal routine works perfectly',
+      'Glycerin-based products work well (attracts right amount of moisture)',
+      'Light hold products sufficient'
+    ];
+  } else if (dewPoint > 0) {
+    behavior.frizz = 'LOW - But static may begin';
+    behavior.definition = 'Good definition. Slightly drier than ideal.';
+    behavior.volume = 'Good volume. May start to get flyaways.';
+    behavior.moisture = 'Starting to dry out. Hair may feel slightly brittle.';
+    behavior.styling = 'Heat style with heat protectant. Air dry ok but slower.';
+    behavior.products = [
+      'Leave-in conditioner',
+      'Light oil for ends',
+      'Anti-static spray',
+      'Cream-based stylers > gels'
+    ];
+  } else {
+    behavior.frizz = 'NONE - But extreme static and brittleness';
+    behavior.definition = 'Hair is dry, brittle, may break. Doesn\'t hold curl well.';
+    behavior.volume = 'Flyaways and static. Hair stands up.';
+    behavior.moisture = 'CRITICALLY DRY. Moisture is being pulled OUT of hair.';
+    behavior.styling = 'Avoid heat. Deep condition. Protective styles. No tight styles.';
+    behavior.products = [
+      'Heavy leave-in conditioner',
+      'Hair oil (argan, jojoba, castor)',
+      'Deep conditioning mask',
+      'Humidifier at night',
+      'Anti-static spray',
+      'Avoid alcohol-based products'
+    ];
   }
   
-  if (seeing > 3) {
-    advice.push("Poor seeing: Not suitable for high-resolution planetary/lunar imaging.")
-    advice.push("Consider wide-field shots instead of high-magnification work.")
-  }
-  
-  if (transparency < 5) {
-    advice.push("Poor transparency: Faint objects will be significantly dimmed.")
-    advice.push("Expect to need 30-50% longer exposures for same signal.")
-  }
-  
-  if (wind > 15) {
-    advice.push(`Wind ${wind}km/h: Telescope shake will blur images.`)
-    advice.push("- Wind protection/shelter needed for long exposures")
-    advice.push("- Autoguiding may struggle to correct")
-    advice.push("- Consider shorter exposures and stack more frames")
-  }
-  
-  if (moonIllumination > 50) {
-    advice.push("Moonlight: Broadband imaging will be compromised.")
-    advice.push("- Narrowband imaging (Ha, OIII, SII) still possible")
-    advice.push("- Lunar/planetary imaging ideal")
-    advice.push("- Wait for moon to set before imaging faint targets")
-  } else if (moonIllumination < 10) {
-    advice.push("PERFECT: Dark skies for broadband deep sky imaging.")
-    advice.push("- RGB, LRGB, or OSC imaging will work well")
-    advice.push("- Shoot your faintest targets tonight")
-  }
-  
-  if (humidity > 80) {
-    advice.push("High humidity: Dew will form on lens/corrector plate.")
-    advice.push("- Dew heaters absolutely essential")
-    advice.push("- Camera sensor may fog if not sealed")
-    advice.push("- Flat frames may show changing dust patterns")
-  }
-  
-  return advice
+  return behavior;
 }
 
 // ============================================================================
-// MAIN STARGAZING ADVICE FUNCTION
+// UV SKIN DAMAGE CALCULATOR
 // ============================================================================
 
-export const getStargazingAdvice = async (data, question = '') => {
-  if (!data) return "Loading weather data..."
+function getUVSkinAdvice(uvIndex, skinType) {
+  const advice = {
+    spf: '',
+    reapply: '',
+    extra: [],
+    burnRisk: '',
+    longTerm: []
+  };
+  
+  const fitzpatrickTypes = {
+    'type1': { description: 'Very fair, always burns, never tans', burnTime: 5, spf: '50+', risk: 'Extreme' },
+    'type2': { description: 'Fair, usually burns, tans minimally', burnTime: 10, spf: '50+', risk: 'Very High' },
+    'type3': { description: 'Medium, sometimes burns, tans gradually', burnTime: 15, spf: '30+', risk: 'High' },
+    'type4': { description: 'Olive, rarely burns, tans easily', burnTime: 20, spf: '30', risk: 'Moderate' },
+    'type5': { description: 'Brown, very rarely burns, tans very easily', burnTime: 30, spf: '15-30', risk: 'Lower' },
+    'type6': { description: 'Deeply pigmented, almost never burns', burnTime: 45, spf: '15+', risk: 'Low but present' }
+  };
+  
+  // Default to type 3 if not specified
+  const fitz = fitzpatrickTypes[skinType] || fitzpatrickTypes['type3'];
+  
+  const actualBurnTime = fitz.burnTime * (1 / (uvIndex / 3));
+  
+  advice.burnRisk = `${fitz.description}. Estimated burn time: ${Math.round(actualBurnTime)} minutes at UV ${uvIndex}.`;
+  advice.spf = `SPF ${fitz.spf} minimum. Broad spectrum (UVA + UVB). PA++++ rating.`;
+  
+  if (uvIndex > 10) {
+    advice.reapply = 'Every 60-80 minutes. Set phone timer. UV this high breaks down sunscreen faster.';
+    advice.extra.push('UPF 50+ clothing if outside > 30 minutes');
+    advice.extra.push('Wide-brim hat (10cm+ brim)');
+    advice.extra.push('UV-blocking sunglasses (protects eyes and delicate eye area)');
+    advice.extra.push('Seek shade 10am-4pm');
+    advice.longTerm.push('This UV level causes DNA damage in skin cells. Cumulative.');
+  } else if (uvIndex > 7) {
+    advice.reapply = 'Every 2 hours. After swimming/sweating: immediately.';
+    advice.extra.push('Hat and sunglasses recommended');
+    advice.extra.push('Limit direct exposure 11am-3pm');
+  } else if (uvIndex > 5) {
+    advice.reapply = 'Every 2 hours if outside continuously.';
+    advice.extra.push('Sunglasses recommended');
+  } else if (uvIndex > 2) {
+    advice.reapply = 'Reapply if outside > 4 hours.';
+  } else {
+    advice.reapply = 'Standard application sufficient.';
+  }
+  
+  advice.longTerm.push('UVA rays (aging) penetrate clouds and glass. Daily SPF even indoors.');
+  advice.longTerm.push('Skin cancer: 90% of non-melanoma skin cancers caused by UV exposure.');
+  advice.longTerm.push('Photoaging: 80% of visible skin aging is from UV damage.');
+  
+  return advice;
+}
 
-  // --- USE TIME-SHIFTED DATA ---
-  // If _hourIndex is provided, use hourly data directly
-  let cloudPercent = data.cloudCover !== undefined ? data.cloudCover : 0
-  let temp = data.temp || 0
-  let humidity = data.humidity || 0
-  let wind = data.wind || 0
-  let condition = data.condition || 'clear'
-  let conditionCode = data.conditionCode || 0
-  let precipitationProb = data.precipitationProb || 0
-  
-  // If hourly data is available in the data object, use it
-  if (data._hourIndex !== undefined && data.hourly) {
-    const idx = data._hourIndex
-    if (data.hourly.cloud_cover?.[idx] !== undefined) {
-      cloudPercent = data.hourly.cloud_cover[idx]
-    }
-    if (data.hourly.temperature_2m?.[idx] !== undefined) {
-      temp = Math.round(data.hourly.temperature_2m[idx])
-    }
-    if (data.hourly.relative_humidity_2m?.[idx] !== undefined) {
-      humidity = data.hourly.relative_humidity_2m[idx]
-    }
-    if (data.hourly.wind_speed_10m?.[idx] !== undefined) {
-      wind = data.hourly.wind_speed_10m[idx]
-    }
-    if (data.hourly.weather_code?.[idx] !== undefined) {
-      conditionCode = data.hourly.weather_code[idx]
-      condition = mapWeatherCode(conditionCode)
-    }
-    if (data.hourly.precipitation_probability?.[idx] !== undefined) {
-      precipitationProb = data.hourly.precipitation_probability[idx]
-    }
-  }
-  
-  // If daily data is available for day offset
-  if (data._dayOffset !== undefined && data.daily) {
-    const dayIdx = data._dayOffset > 0 ? data._dayOffset : 0
-    if (data.daily.weather_code?.[dayIdx] !== undefined) {
-      conditionCode = data.daily.weather_code[dayIdx]
-      condition = mapWeatherCode(conditionCode)
-    }
-    if (data.daily.cloud_cover?.[dayIdx] !== undefined) {
-      cloudPercent = data.daily.cloud_cover[dayIdx]
-    }
-    if (data.daily.temperature_2m_max?.[dayIdx] !== undefined) {
-      temp = Math.round(data.daily.temperature_2m_max[dayIdx])
-    }
-    if (data.daily.precipitation_probability_max?.[dayIdx] !== undefined) {
-      precipitationProb = data.daily.precipitation_probability_max[dayIdx]
-    }
-  }
+// ============================================================================
+// MAIN SKIN & HAIR ADVICE FUNCTION
+// ============================================================================
+
+export const getSkinHairAdvice = (data, question = '') => {
+  if (!data) return "Loading weather data...";
 
   const { 
-    sunset, sunrise, city, lat, lon, moonPhase: passedMoonPhase,
-    visibility, dewPoint, pressure, tempMin, tempMax
-  } = data
+    temp, humidity, uvIndex, wind, condition, feelsLike,
+    aqi, dewPoint, visibility, tempMin, tempMax
+  } = data;
   
-  // Use passed moon phase or calculate it
-  let moonPhase = passedMoonPhase !== undefined ? passedMoonPhase : 0
-  let moonPhaseName = 'Unknown'
+  const calculatedDewPoint = dewPoint || calcDewPoint(temp, humidity);
+  const heatIndex = calcHeatIndex(temp, humidity);
+  const windChill = calcWindChill(temp, wind);
+  const effectiveTemp = temp <= 10 ? windChill : temp >= 27 ? heatIndex : feelsLike;
+  const burnMin = getBurnTime(uvIndex);
+  const isRaining = ['rain', 'drizzle', 'thunderstorm'].includes(condition);
+  const season = getSeason();
   
-  try {
-    if (passedMoonPhase === undefined && lat && lon) {
-      moonPhase = await getMoonPhaseAsync(lat, lon)
-    }
-    moonPhaseName = ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 
-                     'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent']
-                     [Math.round(moonPhase * 7) % 8] || 'New Moon'
-  } catch {
-    moonPhase = 0
-    moonPhaseName = 'New Moon'
-  }
+  // Detect skin/hair type from question
+  const q = question.toLowerCase();
+  let skinType = 'type3'; // default
+  let hairType = 'wavy'; // default
   
-  const moonIllumination = getMoonIllumination(moonPhase)
-  const moonRiseSet = getMoonRiseSet(data)
-  const seeing = getSeeingConditions({ ...data, temp, humidity, wind })
-  const transparency = getTransparency({ ...data, humidity, wind, cloudPercent })
-  const bortleScale = getDarkSkyRating({ ...data, cloudPercent, moonPhase })
-  const bortle = BORTLE_SCALE[bortleScale] || BORTLE_SCALE[5]
-  const planetVis = getDetailedPlanetVisibility({ ...data, cloudPercent, moonPhase })
-  const milkyWayVis = getMilkyWayVisibility({ ...data, cloudPercent, moonPhase })
-  const isssPasses = getISSFlyoverTimes(data)
-  const auroraForecast = getAuroraForecast({ ...data, cloudPercent })
-  const twilightPeriods = getTwilightPeriods(data)
-  const meteorShowers = getMeteorShowerCalendar(new Date())
-  const deepSkyObjects = getDeepSkyObjectVisibility({...data, cloudPercent, moonPhase, bortleScale})
-  const dewAdvice = getDewAdvice({ ...data, temp, humidity, dewPoint })
-  const equipmentRecs = getEquipmentRecommendations({...data, cloudPercent, moonPhase, seeing, transparency, bortleScale, temp})
-  const photoAdvice = getAstrophotographyAdvice({...data, cloudPercent, moonPhase, seeing, transparency, temp, humidity, wind})
+  if (q.includes('oily') || q.includes('acne') || q.includes('breakout')) skinType = 'oily';
+  if (q.includes('dry skin') || q.includes('flake')) skinType = 'dry';
+  if (q.includes('combination') || q.includes('t zone')) skinType = 'combination';
+  if (q.includes('sensitive') || q.includes('rosacea') || q.includes('redness')) skinType = 'sensitive';
+  if (q.includes('mature') || q.includes('aging') || q.includes('wrinkle')) skinType = 'mature';
+  if (q.includes('dark spot') || q.includes('melasma') || q.includes('hyperpigmentation')) skinType = 'hyperpigmentation';
   
-  let nightDuration = 'N/A'
-  if (sunrise && sunset) {
-    const rise = new Date(sunrise)
-    const set = new Date(sunset)
-    if (set > rise) {
-      const duration = (set - rise) / 3600000
-      nightDuration = duration.toFixed(1) + ' hours'
-    } else {
-      const duration = (new Date(rise.getTime() + 86400000) - set) / 3600000
-      nightDuration = duration.toFixed(1) + ' hours'
-    }
-  }
+  if (q.includes('curly') || q.includes('curl')) hairType = 'curly';
+  if (q.includes('coily') || q.includes('kinky') || q.includes('4c') || q.includes('afro')) hairType = 'coily';
+  if (q.includes('straight') || q.includes('flat iron')) hairType = 'straight';
+  if (q.includes('color') || q.includes('dye') || q.includes('bleach') || q.includes('keratin') || q.includes('relaxer')) hairType = 'chemically_treated';
+  if (q.includes('gray') || q.includes('grey') || q.includes('silver') || q.includes('white hair')) hairType = 'gray_silver';
   
-  const pickeringRating = PICKERING_SCALE[seeing] || PICKERING_SCALE[5]
+  const skinConfig = SKIN_TYPES[skinType] || SKIN_TYPES['combination'];
+  const hairConfig = HAIR_TYPES[hairType] || HAIR_TYPES['wavy'];
+  const dewBehavior = getDewPointHairBehavior(calculatedDewPoint, hairType);
+  const uvAdvice = getUVSkinAdvice(uvIndex, skinType);
+  const makeupAdvice = getMakeupAdvice(data);
+  const barrier = getBarrierHealth(data);
   
-  let verdict = []
-  let viewing = []
-  let timing = []
-  let warnings = []
-  let objects = []
-  let equipment = []
-  let comfort = []
+  let verdict = [];
+  let hairTips = [];
+  let skinTips = [];
+  let warnings = [];
+  let routineAdjustments = [];
 
-  // --- Check for rain/snow based on CONDITION, not just conditionCode ---
-  const isRainy = condition === 'rain' || condition === 'thunderstorm' || condition === 'drizzle' || condition === 'snow'
+  // ========================================================================
+  // OVERALL BEAUTY WEATHER RATING
+  // ========================================================================
   
-  if (isRainy) {
-    verdict.push("ASTRONOMY CANCELLED: Active precipitation. No observing possible.")
-    warnings.push("Telescopes and electronics + water = expensive disaster.")
-    warnings.push("Check forecast for tomorrow night.")
-    viewing.push("Tonight: Read about the objects you will observe tomorrow.")
-    viewing.push("Great night for: collimation practice, equipment maintenance.")
-  }
+  const beautyScore = Math.max(0, 100 - 
+    (calculatedDewPoint > 18 ? 30 : calculatedDewPoint > 14 ? 10 : calculatedDewPoint < 0 ? 20 : 0) -
+    (uvIndex > 7 ? 15 : 0) -
+    (wind > 25 ? 15 : 0) -
+    (temp > 32 ? 15 : temp < 0 ? 15 : 0) -
+    (aqi > 100 ? 10 : 0)
+  );
   
-  if (cloudPercent >= 95) {
-    verdict.push("COMPLETELY OVERCAST: 95%+ cloud cover. Nothing visible.")
-    warnings.push("Do not waste time setting up. Check satellite imagery for breaks.")
-  }
-
-  if (!verdict.length) {
-    if (cloudPercent >= 80) {
-      verdict.push("MOSTLY CLOUDY: Only brief sucker holes possible.")
-      viewing.push("Bright planets and moon might peek through occasionally.")
-      viewing.push("Not worth setting up telescope. Binoculars ready for quick looks.")
-    } else if (cloudPercent >= 60) {
-      verdict.push("PARTLY CLOUDY: Frustrating but possible with patience.")
-      viewing.push("Gaps in clouds will come and go. Have targets ready.")
-      viewing.push("Best strategy: observe bright objects that can be found quickly.")
-    } else if (cloudPercent >= 30) {
-      verdict.push("MOSTLY CLEAR: Good conditions with some cloud interference.")
-      viewing.push("Stars visible in most directions. Some clouds passing.")
-      viewing.push("Worth setting up. Plan targets away from cloud paths.")
-    } else if (cloudPercent >= 10) {
-      verdict.push("CLEAR SKIES: Excellent conditions for astronomy.")
-      viewing.push("Minimal cloud interference. Most of sky accessible.")
-      viewing.push("Telescope time! Deep sky objects will be visible.")
-    } else {
-      verdict.push("PERFECTLY CLEAR: Crystal clear skies. Rare conditions.")
-      viewing.push("Transparency likely excellent. Every astronomical target available.")
-      viewing.push("CANCEL YOUR PLANS. These nights are precious.")
-    }
-  }
-
-  if (moonIllumination > 90) {
-    warnings.push(`${moonPhaseName}: ${Math.round(moonIllumination)}% illuminated. Sky brightly lit.`)
-    warnings.push("Deep sky observing severely compromised. Only brightest DSOs visible.")
-    viewing.push("EXCELLENT for: Lunar observation (craters along terminator are spectacular).")
-    viewing.push("EXCELLENT for: Planetary observation.")
-    viewing.push("POOR for: Galaxies, nebulae, faint star clusters, Milky Way.")
-    if (moonRiseSet && moonRiseSet.rise) {
-      timing.push("Moon visible all night. No dark sky window.")
-    }
-  } else if (moonIllumination > 60) {
-    warnings.push(`${moonPhaseName}: ${Math.round(moonIllumination)}% illuminated. Significant sky brightness.`)
-    viewing.push("Good for: Moon, planets, bright star clusters, double stars.")
-    if (moonRiseSet && moonRiseSet.set) {
-      timing.push(`Moon sets at ${moonRiseSet.set}. Dark window after moonset.`)
-    }
-  } else if (moonIllumination > 30) {
-    viewing.push(`${moonPhaseName}: Moderate moonlight. Good compromise conditions.`)
-    objects.push("Lunar terminator: Best detail at first/last quarter.")
-    if (moonRiseSet && moonRiseSet.set) {
-      timing.push(`Moon sets at ${moonRiseSet.set}. Deep sky window opens after.`)
-    }
-  } else if (moonIllumination > 5) {
-    viewing.push(`${moonPhaseName}: Thin crescent. Dark sky dominant.`)
-    viewing.push("EXCELLENT for: Deep sky objects, Milky Way, faint galaxies.")
-    objects.push("Earthshine on dark limb of moon visible.")
+  if (beautyScore > 80) {
+    verdict.push("✨ PERFECT BEAUTY DAY: Ideal conditions for skin and hair.");
+  } else if (beautyScore > 60) {
+    verdict.push("💫 GOOD BEAUTY DAY: Minor adjustments needed.");
+  } else if (beautyScore > 40) {
+    verdict.push("⚠️ CHALLENGING BEAUTY DAY: Several weather factors working against you.");
   } else {
-    viewing.push(`${moonPhaseName}: DARKEST SKIES POSSIBLE.`)
-    viewing.push("PERFECT for: Everything. Galaxies, nebulae, Milky Way, faint objects.")
-    warnings.push("No moonlight means you NEED red flashlight. White light destroys night vision.")
+    verdict.push("🚨 DIFFICULT BEAUTY DAY: Weather is actively fighting your beauty routine.");
   }
 
-  viewing.push(`SEEING: ${pickeringRating.description} (Pickering ${seeing}/10)`)
-  viewing.push(`Magnification limit: ${pickeringRating.magnification}`)
+  // ========================================================================
+  // DEW POINT ANALYSIS
+  // ========================================================================
   
-  if (seeing <= 2) {
-    viewing.push("EXCELLENT seeing: Stars will be pinpoints. Planetary detail at its best.")
-  } else if (seeing <= 3) {
-    viewing.push("Good seeing: High power usable. Detail visible on planets.")
-  } else if (seeing >= 5) {
-    viewing.push("Poor seeing: Stars will twinkle violently. Low power only.")
-    warnings.push("Poor seeing will make planets look like boiling blobs.")
-  }
-
-  if (transparency >= 8) {
-    viewing.push("EXCELLENT transparency: Faint objects at their best.")
-  } else if (transparency < 5) {
-    viewing.push("Poor transparency: Only brightest objects visible.")
-    warnings.push("Significant dimming of all objects. Deep sky work impossible.")
-  }
-
-  viewing.push(`SKY DARKNESS: Bortle ${bortleScale} - ${bortle.name}`)
-  viewing.push(`Naked eye limiting magnitude: ~${bortle.limiting}`)
+  hairTips.push(`💧 DEW POINT: ${calculatedDewPoint.toFixed(1)}°C`);
   
-  if (bortleScale >= 7) {
-    warnings.push("SEVERE light pollution. Only moon, planets, and brightest stars visible.")
-    viewing.push("Drive to darker skies for Milky Way/galaxies.")
-  } else if (bortleScale <= 3) {
-    viewing.push("DARK SKIES: Milky Way casts shadows. Galaxies accessible.")
+  if (calculatedDewPoint > 21) {
+    hairTips.push("EXTREME HUMIDITY: Hair cuticle is wide open absorbing moisture.");
+    hairTips.push(`Frizz level: ${dewBehavior.frizz}`);
+    hairTips.push(`Styling: ${dewBehavior.styling}`);
+    skinTips.push("Skin will feel sticky. Pores will look larger. Oil production increases.");
+    warnings.push("Heat styling will NOT hold. Don't waste your time.");
+  } else if (calculatedDewPoint > 16) {
+    hairTips.push("MODERATE HUMIDITY: Some frizz for curly/coily. Manageable for straight.");
+    hairTips.push(`Styling: ${dewBehavior.styling}`);
+  } else if (calculatedDewPoint > 10) {
+    hairTips.push("IDEAL DEW POINT: Perfect hair weather!");
+    hairTips.push(`${dewBehavior.definition} Minimal frizz, maximum style hold.`);
+    skinTips.push("Skin balanced. Not too oily, not too dry. Perfect skin day.");
+  } else if (calculatedDewPoint > 0) {
+    hairTips.push("DRYING: Hair losing moisture. Static may begin.");
+    skinTips.push("Skin beginning to feel tight. Switch to richer moisturizer.");
+  } else {
+    hairTips.push("EXTREMELY DRY: Moisture being pulled from hair and skin.");
+    hairTips.push(`${dewBehavior.frizz} Hair brittle, static, breakage risk.`);
+    skinTips.push("Skin barrier under stress. Flaking, tightness, irritation possible.");
+    warnings.push("Deep condition hair. Slug skin with occlusive tonight.");
+  }
+  
+  // Hair product recommendations
+  if (dewBehavior.products.length > 0) {
+    hairTips.push("🎯 RECOMMENDED PRODUCTS:");
+    dewBehavior.products.forEach(p => hairTips.push(`  • ${p}`));
   }
 
-  if (planetVis.length > 0) {
-    objects.push("PLANETS VISIBLE TONIGHT:")
-    planetVis.forEach(planet => {
-      if (planet.visible) {
-        objects.push(`${planet.name}: ${planet.where}`)
-        objects.push(`  Brightness: ${planet.brightness} | Best: ${planet.telescope}`)
-        if (planet.special) objects.push(`  ${planet.special}`)
-      }
-    })
-  }
-
-  if (deepSkyObjects.length > 0 && cloudPercent < 50 && moonIllumination < 60) {
-    objects.push("DEEP SKY OBJECTS VISIBLE:")
-    deepSkyObjects.forEach(obj => {
-      if (obj.name) {
-        objects.push(`${obj.name} (${obj.type})`)
-        objects.push(`  Magnitude ${obj.magnitude} | ${obj.visibility}`)
-        if (obj.special) objects.push(`  ${obj.special}`)
-      } else {
-        objects.push(obj.objects || obj.category)
-      }
-    })
-  }
-
-  if (meteorShowers && meteorShowers.active) {
-    objects.push("ACTIVE METEOR SHOWER:")
-    objects.push(`${meteorShowers.name}: Peak ${meteorShowers.peak}, Rate ${meteorShowers.rate}/hr`)
-    objects.push(`Radiant: ${meteorShowers.constellation} | ${meteorShowers.notes}`)
-    if (moonIllumination > 50) {
-      warnings.push("Moonlight will reduce visible meteors by 50-70%.")
+  // ========================================================================
+  // UV & SUN PROTECTION
+  // ========================================================================
+  
+  skinTips.push(`☀️ UV INDEX: ${uvIndex} (${getUVLevel(uvIndex)})`);
+  skinTips.push(`BURN TIME: ~${burnMin} minutes for unprotected skin.`);
+  skinTips.push(`SPF: ${uvAdvice.spf}`);
+  skinTips.push(`Reapply: ${uvAdvice.reapply}`);
+  uvAdvice.extra.forEach(e => skinTips.push(`• ${e}`));
+  
+  if (uvIndex > 5) {
+    hairTips.push("HAIR UV DAMAGE: Yes, hair gets sun damage too.");
+    hairTips.push("• UV degrades hair protein (keratin) = weaker, duller hair");
+    hairTips.push("• Color-treated hair: UV fades color 2x faster");
+    hairTips.push("• Hair SPF spray or hat recommended");
+    hairTips.push("• Scalp burns! Part line, hairline = skin cancer spots");
+    if (hairType === 'chemically_treated' || hairType === 'gray_silver') {
+      warnings.push("Your hair type is ESPECIALLY vulnerable to UV. Protect it.");
     }
   }
   
-  if (isssPasses && isssPasses.length > 0) {
-    objects.push("ISS FLYOVERS TONIGHT:")
-    isssPasses.forEach(pass => {
-      objects.push(`${pass.time} - ${pass.direction || 'NW→SE'} - Magnitude ${pass.magnitude || -3.5}`)
-    })
-  }
+  // ========================================================================
+  // TEMPERATURE EFFECTS
+  // ========================================================================
   
-  if (auroraForecast && auroraForecast.kp >= 5) {
-    objects.push(`AURORA FORECAST: Kp ${auroraForecast.kp} - Possible aurora activity!`)
-    if (auroraForecast.kp >= 7) {
-      viewing.push("STRONG AURORA POSSIBLE: Even at mid-latitudes. Look north!")
+  if (heatIndex > 35) {
+    skinTips.push("🔥 EXTREME HEAT: Makeup will melt. Skin will sweat profusely.");
+    skinTips.push("• Lightest possible base (tinted moisturizer or nothing)");
+    skinTips.push("• Setting spray your BFF. Blotting papers every 2 hours.");
+    skinTips.push("• Avoid heavy creams. Oil-free gel moisturizer only.");
+    hairTips.push("• Scalp will sweat = oily roots. Dry shampoo at hairline.");
+    hairTips.push("• Updo > down. Hair on neck = more sweat.");
+    warnings.push(`Heat index ${heatIndex.toFixed(0)}°C: Heat rash, clogged pores, makeup meltdown.`);
+  } else if (heatIndex > 28) {
+    skinTips.push("HOT: Lightweight skincare and makeup. Mattifying products for T-zone.");
+    hairTips.push("Warm: hair may get greasy faster. Dry shampoo in bag.");
+  } else if (temp < 5) {
+    skinTips.push("❄️ COLD: Skin barrier under attack.");
+    skinTips.push("• Switch to cream cleanser (foaming = too stripping)");
+    skinTips.push("• Richer moisturizer. Add face oil to routine.");
+    skinTips.push("• Lips WILL chap. Heavy balm (lanolin, petrolatum).");
+    skinTips.push("• Hands: cream after every wash. Cuticle oil daily.");
+    hairTips.push("• Cold makes hair brittle. No tight styles. Deep condition.");
+    hairTips.push("• Static: humidifier, anti-static spray, dryer sheet on brush.");
+    warnings.push("Extreme cold = frostbite on exposed skin. Cover face, ears, hands.");
+  } else if (temp < 10) {
+    skinTips.push("COOL: Transition to richer moisturizer. Lip balm in every bag.");
+    hairTips.push("Cool air = less humidity. Hair may be more manageable.");
+  }
+
+  // ========================================================================
+  // WIND EFFECTS
+  // ========================================================================
+  
+  if (wind > 30) {
+    warnings.push(`💨 STRONG WIND ${wind}km/h: Beauty nightmare.`);
+    skinTips.push("Windburn: skin red, raw, irritated. Occlusive balm before going out.");
+    skinTips.push("Wind + cold = moisture stripped. Heavy barrier cream.");
+    hairTips.push("HAIR EMERGENCY: Tangles, breakage, style destruction.");
+    hairTips.push("• Protective style ONLY: braid, bun, scarf, hat");
+    hairTips.push("• No loose hair. You WILL regret it.");
+    hairTips.push("• Leave-in conditioner + oil on ends for slip");
+    warnings.push("Wind chill makes it feel even colder. Frostbite on ears/nose possible.");
+  } else if (wind > 15) {
+    hairTips.push("BREEZY: Hair will move. Style accordingly.");
+    hairTips.push("• Ponytail, braid, or half-up to control");
+    hairTips.push("• Leave-in conditioner prevents wind tangles");
+    skinTips.push("Lips will dry faster. Keep balm handy.");
+  } else if (wind < 5 && temp > 25) {
+    skinTips.push("STAGNANT AIR: No breeze + heat = sweat doesn't evaporate.");
+    skinTips.push("Pores clog faster. Double cleanse tonight.");
+  }
+
+  // ========================================================================
+  // HUMIDITY DIRECT EFFECTS
+  // ========================================================================
+  
+  if (humidity > 85) {
+    skinTips.push("💦 VERY HIGH HUMIDITY: Air is saturated with moisture.");
+    skinTips.push("• Skin can't release moisture = sweat trapped on surface");
+    skinTips.push("• Pores clog: double cleanse PM essential");
+    skinTips.push("• Fungal acne prone? Humidity makes it worse. Ketoconazole wash.");
+    skinTips.push("• Body acne: shower immediately after sweating");
+    hairTips.push("• Hair absorbs moisture = frizz, loss of style");
+    hairTips.push("• Anti-humidity products critical");
+    if (hairType === 'curly' || hairType === 'coily') {
+      warnings.push("Your hair type + this humidity = extreme shrinkage and frizz.");
+      warnings.push("Protective style or anti-humectant products mandatory.");
+    }
+  } else if (humidity < 25) {
+    skinTips.push("🏜️ VERY DRY AIR: Moisture being pulled from your skin.");
+    skinTips.push("• Hyaluronic acid on DAMP skin (not dry!) sealed with occlusive");
+    skinTips.push("• Humidifier running at home/work. 40-50% humidity ideal.");
+    skinTips.push("• No foaming cleansers. No physical exfoliation.");
+    skinTips.push("• Static: cotton/natural fiber clothing. Synthetic = more static.");
+    hairTips.push("• Static hair: anti-static spray, dryer sheet, ionic dryer");
+    hairTips.push("• Leave-in conditioner + hair oil on ends");
+    warnings.push("Skin barrier compromised. Be gentle. No actives tonight.");
+  }
+
+  // ========================================================================
+  // RAIN EFFECTS
+  // ========================================================================
+  
+  if (isRaining) {
+    warnings.push("🌧️ RAIN: Immediate beauty impact if you step outside.");
+    hairTips.push("• Umbrella or hood ESSENTIAL. Rain = instant frizz reset.");
+    hairTips.push("• Silk/satin-lined hood or scarf over hair");
+    if (hairType === 'chemically_treated') {
+      warnings.push("KERATIN/RELAXER: Do not let hair get wet. 72-hour rule absolute.");
+    }
+    skinTips.push("• Waterproof mascara only. Tubing mascara best.");
+    skinTips.push("• Skip lower lash mascara (will run)");
+    if (temp < 15) {
+      warnings.push("Cold rain = wet + cold = hypothermia risk. Affects skin barrier.");
     }
   }
 
-  if (twilightPeriods.length > 0) {
-    timing.push("TWILIGHT SCHEDULE:")
-    twilightPeriods.forEach(period => {
-      timing.push(`${period.phase}: ${period.time}`)
-      timing.push(`  ${period.description}`)
-      if (period.photography) timing.push(`  ${period.photography}`)
-    })
-  }
+  // ========================================================================
+  // AIR QUALITY
+  // ========================================================================
   
-  if (moonRiseSet) {
-    if (moonRiseSet.rise) timing.push(`Moon rises: ${moonRiseSet.rise}`)
-    if (moonRiseSet.set) timing.push(`Moon sets: ${moonRiseSet.set}`)
-  }
-  
-  timing.push(`Total darkness window: ${nightDuration}`)
-
-  equipment = equipmentRecs
-  
-  if (dewAdvice.length > 0) {
-    equipment.push("DEW MANAGEMENT:")
-    dewAdvice.forEach(d => equipment.push(d))
-  }
-  
-  if (temp < 5) {
-    comfort.push(`Cold ${temp}C: Dress in layers. Insulated boots, hand warmers essential.`)
-    comfort.push("Battery life reduced: bring spares for everything.")
-  } else if (temp < 15) {
-    comfort.push(`Cool ${temp}C: Jacket and warm shoes recommended.`)
-  } else if (temp > 25) {
-    comfort.push(`Warm ${temp}C: Insect repellent if near water/woods.`)
-  }
-  
-  if (photoAdvice.length > 0 && !verdict[0]?.includes('CANCELLED')) {
-    equipment.push("ASTROPHOTOGRAPHY CONDITIONS:")
-    photoAdvice.forEach(p => equipment.push(p))
+  if (aqi > 100) {
+    warnings.push(`😷 POLLUTION: AQI ${aqi}. Skin is breathing this.`);
+    skinTips.push("• PM2.5 particulates = 20x smaller than pores. They get IN.");
+    skinTips.push("• Oxidative stress = accelerated aging, hyperpigmentation");
+    skinTips.push("• DOUBLE CLEANSE tonight (oil cleanser + water-based)");
+    skinTips.push("• Antioxidant serum AM (Vitamin C, E, ferulic acid)");
+    skinTips.push("• Niacinamide strengthens barrier against pollution");
+    hairTips.push("• Pollution deposits on hair = dull, dirty-looking");
+    hairTips.push("• Clarifying shampoo this week");
   }
 
+  // ========================================================================
+  // SEASONAL ADVICE
+  // ========================================================================
+  
+  if (season === 'winter') {
+    routineAdjustments.push("❄️ WINTER ROUTINE SWITCH:");
+    routineAdjustments.push("• Cleanse: cream/milk cleanser (not foaming)");
+    routineAdjustments.push("• Moisturize: heavier cream. Add face oil.");
+    routineAdjustments.push("• SPF: still essential! Snow reflects 80% UV = double exposure.");
+    routineAdjustments.push("• Hair: deep condition weekly. Humidifier at night.");
+  } else if (season === 'summer') {
+    routineAdjustments.push("☀️ SUMMER ROUTINE SWITCH:");
+    routineAdjustments.push("• Cleanse: gel or foaming (oil control)");
+    routineAdjustments.push("• Moisturize: lightweight, oil-free, gel texture");
+    routineAdjustments.push("• SPF: water-resistant for sweat/swimming");
+    routineAdjustments.push("• Hair: anti-humidity products. Clarify weekly.");
+  }
+
+  // ========================================================================
+  // MAKEUP ADVICE
+  // ========================================================================
+  
+  if (temp > 28 || humidity > 75 || wind > 20 || isRaining) {
+    skinTips.push("💄 MAKEUP STRATEGY:");
+    if (makeupAdvice.base.length) makeupAdvice.base.forEach(b => skinTips.push(`  Base: ${b}`));
+    if (makeupAdvice.eyes.length) makeupAdvice.eyes.forEach(e => skinTips.push(`  Eyes: ${e}`));
+    if (makeupAdvice.lips.length) makeupAdvice.lips.forEach(l => skinTips.push(`  Lips: ${l}`));
+    if (makeupAdvice.setting.length) makeupAdvice.setting.forEach(s => skinTips.push(`  Set: ${s}`));
+    if (makeupAdvice.touchUp.length) makeupAdvice.touchUp.forEach(t => skinTips.push(`  Touch-up: ${t}`));
+  }
+
+  // ========================================================================
+  // BARRIER HEALTH
+  // ========================================================================
+  
+  if (barrier.threats.length > 0) {
+    skinTips.push(`🛡️ SKIN BARRIER: Under attack (Score: ${barrier.score}/100)`);
+    barrier.threats.forEach(t => skinTips.push(`  ⚠️ ${t}`));
+    barrier.protection.forEach(p => skinTips.push(`  🛡️ ${p}`));
+    barrier.recovery.forEach(r => skinTips.push(`  🔧 ${r}`));
+  }
+
+  // ========================================================================
+  // LONG-TERM ADVICE
+  // ========================================================================
+  
+  uvAdvice.longTerm.forEach(lt => {
+    if (!skinTips.includes(lt)) skinTips.push(`📚 ${lt}`);
+  });
+
+  // ========================================================================
+  // ASSEMBLE FINAL RESPONSE
+  // ========================================================================
+  
   const intros = [
-    "Sky report:",
-    "Stargazing forecast:",
-    "Night sky conditions:",
-    "Astronomy check:",
-    "Zephye sky advisory:",
-    "Observatory report:",
-    "Celestial conditions:"
-  ]
+    "💅 Beauty weather report:",
+    "💇 Skin + hair forecast:",
+    "✨ For your glow-up:",
+    "💄 Beauty conditions:",
+    "🧴 Zephye's beauty advisory:",
+    "💋 Glam weather check:",
+    "🪞 Mirror check conditions:"
+  ];
 
-  let response = `${random(intros)} ${city || 'Your location'}\n\n`
+  let response = `${random(intros)}\n\n`;
   
-  // Show the time context if available
-  if (data._timeLabel) {
-    response += `📅 **Time:** ${data._timeLabel}\n\n`
+  // Verdict
+  response += `📊 BEAUTY WEATHER SCORE: ${beautyScore}/100\n`;
+  verdict.forEach(v => response += `${v}\n`);
+  response += '\n';
+  
+  // Current Conditions
+  response += `🌡️ CONDITIONS:\n`;
+  response += `• Temp: ${temp}°C (feels like ${Math.round(effectiveTemp)}°C)\n`;
+  response += `• Dew Point: ${calculatedDewPoint.toFixed(1)}°C (${calculatedDewPoint > 16 ? 'HUMID' : calculatedDewPoint > 10 ? 'IDEAL' : calculatedDewPoint > 0 ? 'DRY' : 'VERY DRY'})\n`;
+  response += `• Humidity: ${humidity}%\n`;
+  response += `• Wind: ${wind}km/h\n`;
+  response += `• UV Index: ${uvIndex} (burn ~${burnMin} min)\n`;
+  if (aqi > 50) response += `• AQI: ${aqi}\n`;
+  response += '\n';
+  
+  // Hair Section
+  if (hairTips.length > 0) {
+    response += `💇 HAIR:\n`;
+    hairTips.forEach(h => response += `${h}\n`);
+    response += '\n';
   }
   
-  response += `OVERALL: ${verdict.join(' ')}\n\n`
-  
-  response += `SKY QUALITY:\n`
-  response += `- Cloud Cover: ${cloudPercent}%\n`
-  response += `- Seeing (Pickering): ${seeing}/10 - ${pickeringRating.description}\n`
-  response += `- Transparency: ${transparency}/10\n`
-  response += `- Bortle Class: ${bortleScale} - ${bortle.name}\n`
-  response += `- Limiting Magnitude: ~${bortle.limiting}\n\n`
-  
-  response += `MOON:\n`
-  response += `- Phase: ${moonPhaseName} (${Math.round(moonIllumination)}% illuminated)\n`
-  if (moonRiseSet) {
-    if (moonRiseSet.rise) response += `- Rises: ${moonRiseSet.rise}\n`
-    if (moonRiseSet.set) response += `- Sets: ${moonRiseSet.set}\n`
-  }
-  response += '\n'
-  
-  if (viewing.length > 0) {
-    viewing.forEach(v => response += `${v}\n`)
-    response += '\n'
+  // Skin Section
+  if (skinTips.length > 0) {
+    response += `🧴 SKIN:\n`;
+    skinTips.forEach(s => response += `${s}\n`);
+    response += '\n';
   }
   
-  if (objects.length > 0) {
-    response += `OBSERVING TARGETS:\n`
-    objects.forEach(o => response += `${o}\n`)
-    response += '\n'
+  // Routine Adjustments
+  if (routineAdjustments.length > 0) {
+    response += `🔄 ROUTINE ADJUSTMENTS:\n`;
+    routineAdjustments.forEach(r => response += `${r}\n`);
+    response += '\n';
   }
   
-  if (timing.length > 0) {
-    response += `TIMING:\n`
-    timing.forEach(t => response += `${t}\n`)
-    response += '\n'
-  }
-  
-  if (equipment.length > 0 && !verdict[0]?.includes('CANCELLED')) {
-    response += `EQUIPMENT:\n`
-    equipment.forEach(e => response += `${e}\n`)
-    response += '\n'
-  }
-  
-  if (comfort.length > 0) {
-    response += `OBSERVER COMFORT:\n`
-    comfort.forEach(c => response += `${c}\n`)
-    response += '\n'
-  }
-  
+  // Warnings
   if (warnings.length > 0) {
-    response += `⚠️ **Warnings:**\n`
-    warnings.forEach(w => response += `${w}\n`)
-    response += '\n'
+    response += `⚠️ WARNINGS:\n`;
+    warnings.forEach(w => response += `${w}\n`);
+    response += '\n';
   }
   
-  response += `CONDITIONS:\n`
-  response += `- Temperature: ${temp}C (${tempMin || temp - 2}C to ${tempMax || temp + 2}C)\n`
-  response += `- Humidity: ${humidity}%\n`
-  response += `- Wind: ${wind}km/h\n`
-  response += `- Visibility: ${visibility || 10}km\n`
-  if (dewPoint) response += `- Dew Point: ${dewPoint}C (Spread: ${(temp - dewPoint).toFixed(1)}C)\n`
-  response += '\n'
-  
-  response += `💡 **Bottom Line:**\n`
-  if (cloudPercent > 80 || isRainy) {
-    response += `Keep telescope inside tonight. Use time for astronomy reading/planning.\n`
-  } else if (cloudPercent > 40) {
-    response += `Risky conditions. Quick setup for bright objects only.\n`
-  } else if (seeing <= 3 && transparency >= 6 && moonIllumination < 30) {
-    response += `EXCEPTIONAL CONDITIONS. Drop everything and get outside.\n`
-  } else if (moonIllumination > 80) {
-    response += `Good night for lunar and planetary. Skip the faint stuff.\n`
+  // Final Verdict
+  response += `💡 BOTTOM LINE:\n`;
+  if (beautyScore > 80) {
+    response += `Today is your beauty day! Hair and skin will cooperate.\n`;
+    response += `Perfect for: important events, photos, date night.\n`;
+  } else if (beautyScore > 60) {
+    response += `Good beauty day with minor adjustments. Follow recommendations.\n`;
+  } else if (beautyScore > 40) {
+    response += `Challenging day. Prioritize protective styles and barrier care.\n`;
   } else {
-    response += `Worth setting up. Good astronomy conditions await.\n`
+    response += `Stay inside if possible. If you must go out: protect, protect, protect.\n`;
+    response += `Tonight: deep condition hair, intensive skin barrier treatment.\n`;
   }
   
+  // Beauty wisdom
   const wisdom = [
-    "The universe is under no obligation to make sense to you. - Neil deGrasse Tyson",
-    "Somewhere, something incredible is waiting to be known. - Carl Sagan",
-    "Keep looking up... that is the secret of life. - Snoopy",
-    "Every star may be a sun to someone. - Carl Sagan"
-  ]
-  response += `\n${random(wisdom)}`
+    "Invest in your skin. It's going to represent you for a very long time. - Linden Tyler",
+    "Beautiful skin requires commitment, not a miracle. - Erno Laszlo",
+    "Your skin is your best accessory. Take care of it.",
+    "Healthy hair is a crown you never take off.",
+    "Beauty is about being comfortable in your own skin.",
+    "The best foundation you can wear is healthy, glowing skin.",
+    "Take care of your hair; it's the only crown you never take off."
+  ];
+  response += `\n💋 ${random(wisdom)}`;
 
-  return response
-}
+  return response;
+};
 
-export const getMeteorShowerInfo = getMeteorShowerCalendar
-export const getPlanetVisibilityDetailed = getDetailedPlanetVisibility
-export const getDeepSkyObjects = getDeepSkyObjectVisibility
-export const getAstrophotographyConditions = getAstrophotographyAdvice
-export const getDewManagement = getDewAdvice
+// ============================================================================
+// EXPORT HELPER FUNCTIONS
+// ============================================================================
 
-export default getStargazingAdvice
+export { getDewPointHairBehavior, getUVSkinAdvice, getBarrierHealth, getMakeupAdvice };
+
+export default getSkinHairAdvice;
