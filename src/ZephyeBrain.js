@@ -189,18 +189,6 @@ const fetchWeatherForLocation = async (lat, lon) => {
 
 const ASYNC_INTENTS = ['farming', 'stargazing']
 
-const callIntentFn = async (fn, data, question, extra = null) => {
-  const isAsync = ASYNC_INTENTS.some(id => 
-    fn.name === `get${id.charAt(0).toUpperCase() + id.slice(1)}Advice` ||
-    fn.name === `get${id.charAt(0).toUpperCase() + id.slice(1)}`
-  )
-  
-  if (extra !== null) {
-    return isAsync ? await fn(data, question, extra) : fn(data, question, extra)
-  }
-  return isAsync ? await fn(data, question) : fn(data, question)
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. TIME SHIFTING ENGINE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -587,7 +575,6 @@ const detectComparison = (question) => {
     'rush hour', 'commute time', 'lunch time'
   ]
   
-  // ─── Get saved locations from localStorage ──────────────────────────────
   const savedLocs = getSavedLocations()
   const locationLabels = savedLocs.map(l => l.label?.toLowerCase()).filter(Boolean)
   const locationNames = savedLocs.map(l => l.name?.toLowerCase()).filter(Boolean)
@@ -608,18 +595,16 @@ const detectComparison = (question) => {
     }
   }
   
-  // ─── Location comparison - FIXED ──────────────────────────────────────────
+  // ─── Location comparison ────────────────────────────────────────────────
   const foundLocationWords = allLocationWords.filter(w => q.includes(w))
   
-  // Also check for "vs" with location names that might not be saved yet
+  // Check for "vs" with location names
   let unsavedLocations = []
-  const vsPattern = /(?:vs|versus|or|and)\s+([\w\s]+?)(?:\?|$)/i
   const locationMatch = q.match(/(?:compare|vs|versus)\s+([\w\s]+?)\s+(?:and|vs|versus|or)\s+([\w\s]+?)(?:\?|$)/i)
   
   if (locationMatch) {
     const loc1 = locationMatch[1].trim()
     const loc2 = locationMatch[2].trim()
-    // Check if they're saved locations
     const saved1 = findSavedLocation(loc1)
     const saved2 = findSavedLocation(loc2)
     if (saved1 && saved2) {
@@ -630,7 +615,6 @@ const detectComparison = (question) => {
         count: 2
       }
     } else {
-      // They might be random locations - we'll geocode them
       unsavedLocations = [loc1, loc2]
     }
   }
@@ -1538,7 +1522,7 @@ class ZephyeBrain {
       }
     }
     
-    // ─── Location comparison - SUPPORTS BOTH SAVED AND RANDOM ──────────────
+    // ─── Location comparison - FULLY FIXED ──────────────────────────────────
     if (comparison.type === 'location' || comparison.type === 'location_unsaved') {
       const isUnsaved = comparison.type === 'location_unsaved'
       const locations = comparison.locations || comparison.locationNames || []
@@ -1560,23 +1544,68 @@ class ZephyeBrain {
       if (!isUnsaved && locationObjects.length >= 2) {
         for (const savedLoc of locationObjects) {
           const locData = await fetchWeatherForLocation(savedLoc.lat, savedLoc.lon)
-          if (!locData) continue
+          if (!locData) {
+            results.push({
+              location: savedLoc.label || savedLoc.name,
+              response: "❌ Could not fetch weather for this location.",
+              temp: null,
+              rain: null,
+              cloudCover: null,
+              isSaved: true,
+              error: true
+            })
+            continue
+          }
           
-          locData.city = savedLoc.label || savedLoc.name
-          locData.savedLocations = savedLocations
-          locData._fromSavedLocation = true
-          locData._savedLabel = savedLoc.label || savedLoc.name
+          const completeData = {
+            ...locData,
+            temp: locData.temp || 0,
+            feelsLike: locData.feelsLike || locData.temp || 0,
+            humidity: locData.humidity || 50,
+            wind: locData.wind || 0,
+            windGust: locData.windGust || 0,
+            uvIndex: locData.uvIndex || 0,
+            aqi: locData.aqi || 0,
+            visibility: locData.visibility || 10,
+            condition: locData.condition || 'clear',
+            conditionCode: locData.conditionCode || 0,
+            cloudCover: locData.cloudCover || 0,
+            precipitation: locData.precipitation || 0,
+            precipitationProb: locData.precipitationProb || 0,
+            pressure: locData.pressure || 1013,
+            dewPoint: locData.dewPoint || 0,
+            sunrise: locData.sunrise || '',
+            sunset: locData.sunset || '',
+            city: savedLoc.label || savedLoc.name,
+            hourly: locData.hourly || {},
+            daily: locData.daily || {}
+          }
           
-          const response = isAsync ? await fn(locData, question) : fn(locData, question)
-          const tempMatch = response.match(/(\d+)°C/)
-          results.push({
-            location: savedLoc.label || savedLoc.name,
-            response: extractKeyPoints(response, 4),
-            temp: tempMatch ? parseInt(tempMatch[1]) : locData.temp,
-            rain: locData.precipitationProb,
-            cloudCover: locData.cloudCover,
-            isSaved: true
-          })
+          try {
+            const response = isAsync ? await fn(completeData, question) : fn(completeData, question)
+            const tempMatch = response.match(/(\d+)°C/)
+            results.push({
+              location: savedLoc.label || savedLoc.name,
+              response: extractKeyPoints(response, 4),
+              temp: tempMatch ? parseInt(tempMatch[1]) : completeData.temp,
+              rain: completeData.precipitationProb,
+              cloudCover: completeData.cloudCover,
+              isSaved: true,
+              error: false,
+              fullResponse: response
+            })
+          } catch (e) {
+            console.error(`Error getting advice for ${savedLoc.label}:`, e)
+            results.push({
+              location: savedLoc.label || savedLoc.name,
+              response: "❌ Error getting weather advice for this location.",
+              temp: null,
+              rain: null,
+              cloudCover: null,
+              isSaved: true,
+              error: true
+            })
+          }
         }
       }
       
@@ -1588,60 +1617,165 @@ class ZephyeBrain {
           const savedLoc = findSavedLocation(locName)
           if (savedLoc) {
             const locData = await fetchWeatherForLocation(savedLoc.lat, savedLoc.lon)
-            if (!locData) continue
+            if (!locData) {
+              results.push({
+                location: savedLoc.label || savedLoc.name,
+                response: "❌ Could not fetch weather for this location.",
+                temp: null,
+                rain: null,
+                cloudCover: null,
+                isSaved: true,
+                error: true
+              })
+              continue
+            }
             
-            locData.city = savedLoc.label || savedLoc.name
-            locData.savedLocations = savedLocations
-            locData._fromSavedLocation = true
-            locData._savedLabel = savedLoc.label || savedLoc.name
+            const completeData = {
+              ...locData,
+              temp: locData.temp || 0,
+              feelsLike: locData.feelsLike || locData.temp || 0,
+              humidity: locData.humidity || 50,
+              wind: locData.wind || 0,
+              windGust: locData.windGust || 0,
+              uvIndex: locData.uvIndex || 0,
+              aqi: locData.aqi || 0,
+              visibility: locData.visibility || 10,
+              condition: locData.condition || 'clear',
+              conditionCode: locData.conditionCode || 0,
+              cloudCover: locData.cloudCover || 0,
+              precipitation: locData.precipitation || 0,
+              precipitationProb: locData.precipitationProb || 0,
+              pressure: locData.pressure || 1013,
+              dewPoint: locData.dewPoint || 0,
+              sunrise: locData.sunrise || '',
+              sunset: locData.sunset || '',
+              city: savedLoc.label || savedLoc.name,
+              hourly: locData.hourly || {},
+              daily: locData.daily || {}
+            }
             
-            const response = isAsync ? await fn(locData, question) : fn(locData, question)
-            const tempMatch = response.match(/(\d+)°C/)
-            results.push({
-              location: savedLoc.label || savedLoc.name,
-              response: extractKeyPoints(response, 4),
-              temp: tempMatch ? parseInt(tempMatch[1]) : locData.temp,
-              rain: locData.precipitationProb,
-              cloudCover: locData.cloudCover,
-              isSaved: true
-            })
+            try {
+              const response = isAsync ? await fn(completeData, question) : fn(completeData, question)
+              const tempMatch = response.match(/(\d+)°C/)
+              results.push({
+                location: savedLoc.label || savedLoc.name,
+                response: extractKeyPoints(response, 4),
+                temp: tempMatch ? parseInt(tempMatch[1]) : completeData.temp,
+                rain: completeData.precipitationProb,
+                cloudCover: completeData.cloudCover,
+                isSaved: true,
+                error: false,
+                fullResponse: response
+              })
+            } catch (e) {
+              results.push({
+                location: savedLoc.label || savedLoc.name,
+                response: "❌ Error getting advice for this location.",
+                temp: null,
+                rain: null,
+                cloudCover: null,
+                isSaved: true,
+                error: true
+              })
+            }
           } else {
             // ─── Geocode the random location ──────────────────────────────────
             const geoResult = await geocodeLocation(locName)
-            if (geoResult) {
-              const locData = await fetchWeatherForLocation(geoResult.lat, geoResult.lon)
-              if (locData) {
-                locData.city = geoResult.name
-                locData.savedLocations = savedLocations
-                
-                const response = isAsync ? await fn(locData, question) : fn(locData, question)
-                const tempMatch = response.match(/(\d+)°C/)
-                results.push({
-                  location: geoResult.name,
-                  response: extractKeyPoints(response, 4),
-                  temp: tempMatch ? parseInt(tempMatch[1]) : locData.temp,
-                  rain: locData.precipitationProb,
-                  cloudCover: locData.cloudCover,
-                  isSaved: false
-                })
-              }
+            if (!geoResult) {
+              results.push({
+                location: locName,
+                response: "❌ Could not find this location. Please check the name.",
+                temp: null,
+                rain: null,
+                cloudCover: null,
+                isSaved: false,
+                error: true
+              })
+              continue
+            }
+            
+            const locData = await fetchWeatherForLocation(geoResult.lat, geoResult.lon)
+            if (!locData) {
+              results.push({
+                location: geoResult.name,
+                response: "❌ Could not fetch weather for this location.",
+                temp: null,
+                rain: null,
+                cloudCover: null,
+                isSaved: false,
+                error: true
+              })
+              continue
+            }
+            
+            const completeData = {
+              ...locData,
+              temp: locData.temp || 0,
+              feelsLike: locData.feelsLike || locData.temp || 0,
+              humidity: locData.humidity || 50,
+              wind: locData.wind || 0,
+              windGust: locData.windGust || 0,
+              uvIndex: locData.uvIndex || 0,
+              aqi: locData.aqi || 0,
+              visibility: locData.visibility || 10,
+              condition: locData.condition || 'clear',
+              conditionCode: locData.conditionCode || 0,
+              cloudCover: locData.cloudCover || 0,
+              precipitation: locData.precipitation || 0,
+              precipitationProb: locData.precipitationProb || 0,
+              pressure: locData.pressure || 1013,
+              dewPoint: locData.dewPoint || 0,
+              sunrise: locData.sunrise || '',
+              sunset: locData.sunset || '',
+              city: geoResult.name,
+              hourly: locData.hourly || {},
+              daily: locData.daily || {}
+            }
+            
+            try {
+              const response = isAsync ? await fn(completeData, question) : fn(completeData, question)
+              const tempMatch = response.match(/(\d+)°C/)
+              results.push({
+                location: geoResult.name,
+                response: extractKeyPoints(response, 4),
+                temp: tempMatch ? parseInt(tempMatch[1]) : completeData.temp,
+                rain: completeData.precipitationProb,
+                cloudCover: completeData.cloudCover,
+                isSaved: false,
+                error: false,
+                fullResponse: response
+              })
+            } catch (e) {
+              results.push({
+                location: geoResult.name,
+                response: "❌ Error getting advice for this location.",
+                temp: null,
+                rain: null,
+                cloudCover: null,
+                isSaved: false,
+                error: true
+              })
             }
           }
         }
       }
       
-      if (!results.length) {
+      // ─── Filter out errors ──────────────────────────────────────────────────
+      const validResults = results.filter(r => !r.error)
+      
+      if (!validResults.length) {
         return { 
-          response: "Could not find those locations. Please try again with valid city names." 
+          response: "Could not get weather for those locations. Please try again." 
         }
       }
       
+      // ─── Build response ──────────────────────────────────────────────────────
       let comparisonResponse = `📍 Location Comparison:\n\n`
-      for (const result of results) {
+      for (const result of validResults) {
         const savedBadge = result.isSaved ? ' ⭐' : ''
         comparisonResponse += `${result.location.toUpperCase()}${savedBadge}:\n${result.response}\n\n`
       }
-      comparisonResponse += `Verdict: ${generateComparisonVerdict(results, comparison, primaryIntent)}`
+      comparisonResponse += `Verdict: ${generateComparisonVerdict(validResults, comparison, primaryIntent)}`
       
       return { response: comparisonResponse }
     }
