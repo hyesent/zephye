@@ -1,6 +1,6 @@
 // ============================================================================
-// COMPREHENSIVE WEATHER CALCULATIONS MODULE
-// Supports all 14+ domain-specific advice modules
+// COMPREHENSIVE WEATHER CALCULATIONS MODULE v2.0
+// Supports all 17 domain-specific advice modules
 // ============================================================================
 
 // WMO Weather codes → condition string
@@ -89,7 +89,7 @@ export const getBeaufortScale = (windSpeed) => {
  */
 export const calcHeatIndex = (temp, humidity) => {
   if (temp < 27 || humidity == null) return temp;
-  const T = (temp * 9/5) + 32; // Convert to Fahrenheit
+  const T = (temp * 9/5) + 32;
   const R = humidity;
   
   let HI = 0.5 * (T + 61.0 + ((T - 68.0) * 1.2) + (R * 0.094));
@@ -100,7 +100,6 @@ export const calcHeatIndex = (temp, humidity) => {
          - 0.05481717 * R * R + 0.00122874 * T * T * R 
          + 0.00085282 * T * R * R - 0.00000199 * T * T * R * R;
     
-    // Adjustments
     if (R < 13 && T >= 80 && T <= 112) {
       HI -= ((13 - R) / 4) * Math.sqrt((17 - Math.abs(T - 95)) / 17);
     }
@@ -139,29 +138,26 @@ export const calculateDewPoint = calcDewPoint;
 
 /**
  * Wet Bulb Globe Temperature - Heat stress indicator for sports/military
- * Combines temp, humidity, wind, and solar radiation
  */
 export const calcWetBulbGlobeTemp = (temp, humidity, wind, solarRadiation = 0) => {
   if (humidity == null) return temp;
   
-  // Natural wet-bulb temperature (Stull approximation)
   const Tw = temp * Math.atan(0.151977 * Math.sqrt(humidity + 8.313659)) 
            + Math.atan(temp + humidity) 
            - Math.atan(humidity - 1.676331) 
            + 0.00391838 * Math.pow(humidity, 1.5) * Math.atan(0.023101 * humidity) 
            - 4.686035;
   
-  // Globe temperature (simplified)
   const Tg = temp + (solarRadiation / 25) * (1 / (wind * 0.1 + 1));
-  
-  // WBGT formula
   const wbgt = 0.7 * Tw + 0.2 * Tg + 0.1 * temp;
   return Math.round(wbgt * 10) / 10;
 };
 
+// Alias for backward compatibility
+export const calculateWetBulbGlobeTemp = calcWetBulbGlobeTemp;
+
 /**
  * Apparent Temperature - Australian Bureau of Meteorology formula
- * Combines temp, humidity, and wind for general "feels like"
  */
 export const calcApparentTemp = (temp, humidity, wind) => {
   const e = (humidity / 100) * 6.105 * Math.exp((17.27 * temp) / (237.7 + temp));
@@ -200,7 +196,6 @@ export const getComfortScore = ({ temp, humidity, wind }) => {
 export const getComfortIndex = (temp, humidity, wind, uvIndex) => {
   let score = 100;
   
-  // Temperature penalties
   if (temp < -10) score -= 35;
   else if (temp < 0) score -= 20;
   else if (temp < 10) score -= 10;
@@ -208,20 +203,17 @@ export const getComfortIndex = (temp, humidity, wind, uvIndex) => {
   else if (temp > 30) score -= 20;
   else if (temp > 28) score -= 10;
   
-  // Humidity penalties
   if (humidity > 90) score -= 15;
   else if (humidity > 80) score -= 10;
   else if (humidity > 70) score -= 5;
   else if (humidity < 20) score -= 10;
   else if (humidity < 30) score -= 5;
   
-  // Wind penalties
   if (wind > 50) score -= 20;
   else if (wind > 40) score -= 15;
   else if (wind > 30) score -= 10;
   else if (wind > 20) score -= 5;
   
-  // UV penalties
   if (uvIndex > 11) score -= 15;
   else if (uvIndex > 8) score -= 10;
   else if (uvIndex > 6) score -= 5;
@@ -230,12 +222,30 @@ export const getComfortIndex = (temp, humidity, wind, uvIndex) => {
 };
 
 // ============================================================================
+// HUMIDITY CATEGORY (NEW — was missing)
+// ============================================================================
+
+/**
+ * Get humidity category description
+ * Used by: SkinHair.js
+ */
+export const calculateHumidityCategory = (humidity) => {
+  if (humidity == null) return 'Normal';
+  if (humidity >= 90) return 'Oppressive';
+  if (humidity >= 80) return 'Very Humid';
+  if (humidity >= 70) return 'Humid';
+  if (humidity >= 50) return 'Comfortable';
+  if (humidity >= 30) return 'Dry';
+  if (humidity >= 20) return 'Very Dry';
+  return 'Arid';
+};
+
+// ============================================================================
 // PAVEMENT & SURFACE TEMPERATURES
 // ============================================================================
 
 /**
  * Pavement temperature estimation
- * Asphalt can be 20-30°C hotter than air in direct sun
  */
 export const getPavementTemp = (temp, condition) => {
   const isSunny = condition === 'clear' || condition === 'partly-cloudy';
@@ -248,7 +258,7 @@ export const getPavementTemp = (temp, condition) => {
  */
 export const getSurfaceTemp = (temp, condition, surfaceType = 'dark') => {
   const multipliers = {
-    dark: 1.6,    // Dark surfaces absorb more heat
+    dark: 1.6,
     light: 1.2,
     wood: 1.3,
     metal: 1.8,
@@ -297,9 +307,6 @@ export const getSolarNoon = (sunrise, sunset) => {
 // AIR QUALITY
 // ============================================================================
 
-/**
- * Get AQI category
- */
 export const getAQICategory = (aqi) => {
   if (aqi <= 50) return 'Good';
   if (aqi <= 100) return 'Moderate';
@@ -309,9 +316,6 @@ export const getAQICategory = (aqi) => {
   return 'Hazardous';
 };
 
-/**
- * Get AQI health effects summary
- */
 export const getAQIHealthSummary = (aqi) => {
   if (aqi <= 50) return 'Air quality satisfactory. No health risks.';
   if (aqi <= 100) return 'Acceptable. Sensitive individuals may experience minor effects.';
@@ -325,9 +329,6 @@ export const getAQIHealthSummary = (aqi) => {
 // VISIBILITY
 // ============================================================================
 
-/**
- * Get visibility category
- */
 export const getVisibilityCategory = (visibility) => {
   if (visibility >= 10) return 'Excellent';
   if (visibility >= 5) return 'Good';
@@ -341,9 +342,6 @@ export const getVisibilityCategory = (visibility) => {
 // TIME & SEASON CALCULATIONS
 // ============================================================================
 
-/**
- * Get time of day category
- */
 export const getTimeOfDay = () => {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 9) return 'morning';
@@ -354,9 +352,6 @@ export const getTimeOfDay = () => {
   return 'night';
 };
 
-/**
- * Get current season
- */
 export const getSeason = () => {
   const month = new Date().getMonth();
   if (month >= 2 && month <= 4) return 'spring';
@@ -365,9 +360,6 @@ export const getSeason = () => {
   return 'winter';
 };
 
-/**
- * Get day length in hours
- */
 export const getDayLength = (data) => {
   if (!data?.sunrise || !data?.sunset) return 0;
   const rise = new Date(data.sunrise).getTime();
@@ -375,9 +367,6 @@ export const getDayLength = (data) => {
   return Math.round(((set - rise) / 3600000) * 10) / 10;
 };
 
-/**
- * Get sun position (approximate)
- */
 export const getSunPosition = (data) => {
   if (!data) return 'unknown';
   const hour = new Date().getHours();
@@ -397,9 +386,6 @@ export const getSunPosition = (data) => {
   return 'night';
 };
 
-/**
- * Get sun angle (approximate degrees)
- */
 export const getSunAngle = (data) => {
   if (!data?.sunrise || !data?.sunset) return 45;
   const now = new Date();
@@ -415,24 +401,113 @@ export const getSunAngle = (data) => {
 // PRESSURE & TRENDS
 // ============================================================================
 
-/**
- * Get pressure trend description
- */
 export const getPressureTrend = (data) => {
   if (!data?.pressure) return 'stable';
-  // In production, compare with previous reading
   if (data.pressure < 1005) return 'falling';
   if (data.pressure > 1020) return 'rising';
   return 'stable';
 };
 
 // ============================================================================
-// MOON & ASTRONOMY
+// ALTITUDE DENSITY (NEW — was missing)
 // ============================================================================
 
 /**
- * Get moon phase from API
+ * Calculate altitude density effects
+ * Used by: Health.js, Photography.js, Sports.js
  */
+export const getAltitudeDensity = (altitude, temp, pressure) => {
+  const stdTemp = 15 - (altitude * 0.0065); // Standard temp at altitude
+  const stdPressure = 1013.25 * Math.pow(1 - (altitude * 0.00002256), 5.256); // Standard pressure
+  
+  const actualPressure = pressure || stdPressure;
+  const actualTemp = temp || stdTemp;
+  
+  // Density altitude formula
+  const pressureAlt = altitude + ((1013.25 - actualPressure) * 30); // ft approximation
+  const densityAlt = pressureAlt + (120 * (actualTemp - stdTemp));
+  
+  const ratio = Math.pow(1 - (densityAlt * 0.00000688), 4.256); // Density ratio
+  
+  return {
+    densityAltitude: Math.round(densityAlt),
+    densityRatio: Math.round(ratio * 100) / 100,
+    oxygenLevel: Math.round(ratio * 21 * 100) / 100, // Effective O2 %
+    effect: ratio > 0.95 ? 'Minimal' : ratio > 0.85 ? 'Noticeable' : ratio > 0.75 ? 'Significant' : 'Severe',
+    recommendation: ratio > 0.9 ? 'Normal activity' : ratio > 0.8 ? 'Reduce exertion' : 'Significant performance reduction',
+    acclimatizationDays: ratio > 0.9 ? 0 : ratio > 0.8 ? 1 : ratio > 0.7 ? 3 : 7
+  };
+};
+
+// Alias for backward compatibility
+export const calculateAltitudeDensity = getAltitudeDensity;
+
+// ============================================================================
+// JET LAG CALCULATOR (NEW — was missing)
+// ============================================================================
+
+/**
+ * Calculate jet lag severity and adjustment advice
+ * Used by: Traveling.js
+ */
+export const calculateJetLag = (timezoneDiff, direction, flightDuration) => {
+  const absDiff = Math.abs(timezoneDiff || 0);
+  const dir = direction || (timezoneDiff > 0 ? 'east' : 'west');
+  
+  let severity, recoveryDays, advice;
+  
+  if (absDiff <= 2) {
+    severity = 'Minimal';
+    recoveryDays = 0;
+    advice = 'No significant jet lag expected. Minor adjustment within 24 hours.';
+  } else if (absDiff <= 5) {
+    severity = 'Moderate';
+    recoveryDays = Math.ceil(absDiff / 2);
+    advice = `Expect ${recoveryDays} day(s) to fully adjust. ${dir === 'east' ? 'Eastward travel is harder to adjust to.' : 'Westward travel allows easier adjustment.'}`;
+  } else if (absDiff <= 8) {
+    severity = 'Significant';
+    recoveryDays = Math.ceil(absDiff * 0.7);
+    advice = `Expect ${recoveryDays} days for full adjustment. Sleep disruption likely. Schedule light activities first 2 days.`;
+  } else {
+    severity = 'Severe';
+    recoveryDays = Math.ceil(absDiff * 0.8);
+    advice = `Expect ${recoveryDays}+ days for full adjustment. Body clock completely disrupted. Allow recovery time before important events.`;
+  }
+  
+  // Direction-specific tips
+  const eastTips = [
+    'Seek morning light, avoid afternoon light',
+    'Advance bedtime 1 hour/night for 3 nights before departure',
+    'Melatonin at desired bedtime at destination',
+    'Avoid naps longer than 20 minutes'
+  ];
+  
+  const westTips = [
+    'Seek evening light exposure',
+    'Delay bedtime 1 hour/night for 3 nights before departure',
+    'Physical activity upon arrival helps reset clock',
+    'Stay awake until local bedtime (no napping!)'
+  ];
+  
+  // Flight duration factors
+  if (flightDuration > 12) {
+    advice += ' Long-haul flight compounds jet lag. Hydrate heavily and move every 2 hours.';
+  }
+  
+  return {
+    severity,
+    recoveryDays,
+    advice,
+    tips: dir === 'east' ? eastTips : westTips,
+    timezoneDiff: absDiff,
+    direction: dir
+  };
+};
+
+// ============================================================================
+// MOON & ASTRONOMY
+// ============================================================================
+
 export const getMoonPhase = async (lat, lon) => {
   if (lat == null || lon == null) return 0;
   try {
@@ -448,9 +523,6 @@ export const getMoonPhase = async (lat, lon) => {
   }
 };
 
-/**
- * Get moon phase name from fraction
- */
 export const getMoonPhaseName = (phase) => {
   if (phase < 0.03) return 'New Moon';
   if (phase < 0.22) return 'Waxing Crescent';
@@ -463,23 +535,13 @@ export const getMoonPhaseName = (phase) => {
   return 'New Moon';
 };
 
-/**
- * Get moon illumination percentage from phase
- */
 export const getMoonIllumination = (phase) => {
   return Math.round(Math.sin(phase * Math.PI) * 100);
 };
 
-/**
- * Get moon rise and set times (simplified)
- */
 export const getMoonRiseSet = (data) => {
-  // In production, use actual ephemeris calculations
-  // For now, return approximate times based on date
   const now = new Date();
   const phase = data?.moonPhase || 0;
-  
-  // Approximate moon rise/set based on phase
   const riseHour = (phase * 24 + 6) % 24;
   const setHour = (riseHour + 12) % 24;
   
@@ -493,16 +555,10 @@ export const getMoonRiseSet = (data) => {
 // ASTRONOMY FUNCTIONS
 // ============================================================================
 
-/**
- * Get planet visibility (simplified)
- */
 export const getPlanetVisibility = (lat, lon, date) => {
-  // In production, use actual ephemeris
-  // For now, return simplified visibility data
   const month = new Date().getMonth();
   const planets = [];
   
-  // Venus - visible most of year
   planets.push({
     name: 'Venus',
     visible: month !== 5 && month !== 6,
@@ -512,7 +568,6 @@ export const getPlanetVisibility = (lat, lon, date) => {
     description: 'Brightest planet, easily visible to naked eye'
   });
   
-  // Jupiter - visible except when near conjunction
   planets.push({
     name: 'Jupiter',
     visible: true,
@@ -522,7 +577,6 @@ export const getPlanetVisibility = (lat, lon, date) => {
     description: 'Bright, steady, cream-colored. 4 Galilean moons visible in binoculars'
   });
   
-  // Saturn
   planets.push({
     name: 'Saturn',
     visible: true,
@@ -532,7 +586,6 @@ export const getPlanetVisibility = (lat, lon, date) => {
     description: 'Golden color. Rings visible in small telescope'
   });
   
-  // Mars - visible near opposition (every 26 months)
   const marsOppositionMonths = [2, 4, 6, 8, 10, 12];
   planets.push({
     name: 'Mars',
@@ -546,12 +599,7 @@ export const getPlanetVisibility = (lat, lon, date) => {
   return planets;
 };
 
-/**
- * Get ISS flyover times
- */
 export const getISSFlyoverTimes = (lat, lon, date) => {
-  // In production, fetch from API or use calculations
-  // For now, return simulated flyovers
   const now = new Date();
   const hour = now.getHours();
   
@@ -564,22 +612,14 @@ export const getISSFlyoverTimes = (lat, lon, date) => {
   return [];
 };
 
-/**
- * Get satellite visibility
- */
 export const getSatelliteVisibility = (lat, lon, date) => {
-  // Simulated satellite visibility
   return [
     { name: 'HST', time: 'Visible at 22:15', magnitude: 2.5 },
     { name: 'GPS', time: 'Visible at 23:30', magnitude: 3.0 }
   ];
 };
 
-/**
- * Get aurora forecast
- */
 export const getAuroraForecast = (lat, lon, date) => {
-  // Simulated aurora forecast based on latitude
   const absLat = Math.abs(lat || 45);
   const kp = Math.random() * 9;
   
@@ -593,31 +633,22 @@ export const getAuroraForecast = (lat, lon, date) => {
   return { kp: Math.round(kp * 10) / 10, level: 'Low', visibility: 'Not visible at this latitude' };
 };
 
-/**
- * Get zodiacal light visibility
- */
 export const getZodiacalLightVisibility = (data) => {
   const { lat, moonPhase, cloudCover } = data || {};
   const moonIllum = getMoonIllumination(moonPhase || 0);
-  
-  // Zodiacal light visible in dark skies, moonless, around equinox
   const month = new Date().getMonth();
-  const equinoxMonths = [2, 3, 8, 9]; // March and September
+  const equinoxMonths = [2, 3, 8, 9];
   const isEquinox = equinoxMonths.includes(month);
   
   return moonIllum < 20 && cloudCover < 20 && isEquinox && Math.abs(lat || 45) < 45;
 };
 
-/**
- * Get astronomical twilight
- */
 export const getAstronomicalTwilight = (sunrise, sunset, lat) => {
   if (!sunrise || !sunset) return { start: 'N/A', end: 'N/A' };
   
   const rise = new Date(sunrise);
   const set = new Date(sunset);
   
-  // Simplified: astronomical twilight is ~90 minutes before sunrise/after sunset
   const start = new Date(rise.getTime() - 90 * 60000);
   const end = new Date(set.getTime() + 90 * 60000);
   
@@ -628,9 +659,6 @@ export const getAstronomicalTwilight = (sunrise, sunset, lat) => {
   };
 };
 
-/**
- * Get constellation visibility
- */
 export const getConstellationVisibility = (season, lat) => {
   const constellations = {
     winter: ['Orion', 'Taurus', 'Gemini', 'Canis Major', 'Perseus', 'Auriga'],
@@ -642,12 +670,7 @@ export const getConstellationVisibility = (season, lat) => {
   return constellations[season] || ['Ursa Major', 'Cassiopeia'];
 };
 
-/**
- * Get dark sky rating (Bortle scale)
- */
 export const getDarkSkyRating = (data) => {
-  // In production, use light pollution maps
-  // For now, simulate based on city/population
   const population = data?.population || 100000;
   if (population < 1000) return 1;
   if (population < 10000) return 2;
@@ -659,14 +682,8 @@ export const getDarkSkyRating = (data) => {
   return 8;
 };
 
-/**
- * Get light pollution map (simplified)
- */
 export const getLightPollutionMap = (data) => {
-  const { lat, lon, population } = data || {};
-  
-  // Simulate light pollution level based on population
-  const pop = population || 100000;
+  const pop = (data?.population) || 100000;
   if (pop < 1000) return 'Excellent - No light pollution';
   if (pop < 10000) return 'Good - Minimal light pollution';
   if (pop < 50000) return 'Moderate - Some light pollution';
@@ -675,37 +692,27 @@ export const getLightPollutionMap = (data) => {
   return 'Severe - Extreme light pollution';
 };
 
-/**
- * Get seeing conditions (Pickering scale)
- */
 export const getSeeingConditions = (data) => {
   const { wind, temp, humidity, altitude } = data || {};
-  let seeing = 5; // Average (5 on Pickering scale, 1 = best, 10 = worst)
+  let seeing = 5;
   
-  // Wind degrades seeing
   if (wind > 30) seeing += 2;
   else if (wind > 20) seeing += 1;
   else if (wind < 10) seeing -= 1;
   
-  // Temperature stability (larger swings = worse)
   if (Math.abs(temp - 20) > 15) seeing += 1;
   
-  // High altitude = better seeing (usually)
   if (altitude > 1500) seeing -= 1;
   if (altitude > 2500) seeing -= 1;
   
-  // Humidity affects seeing
   if (humidity > 80) seeing += 1;
   
   return Math.max(1, Math.min(10, seeing));
 };
 
-/**
- * Get transparency (1-10, higher = better)
- */
 export const getTransparency = (data) => {
   const { humidity, aqi, visibility, cloudCover } = data || {};
-  let transparency = 7; // Average
+  let transparency = 7;
   
   if (humidity > 80) transparency -= 2;
   else if (humidity > 60) transparency -= 1;
@@ -722,13 +729,9 @@ export const getTransparency = (data) => {
   return Math.max(1, Math.min(10, transparency));
 };
 
-/**
- * Get Milky Way visibility
- */
 export const getMilkyWayVisibility = (data) => {
   const { cloudCover, moonPhase, season, bortleScale, lat, humidity } = data || {};
   
-  // Check conditions
   if (cloudCover > 30) return 'Too cloudy - Milky Way not visible';
   
   const moonIllum = getMoonIllumination(moonPhase || 0);
@@ -736,17 +739,13 @@ export const getMilkyWayVisibility = (data) => {
   
   if (bortleScale > 5) return `Bortle ${bortleScale} - Too much light pollution for Milky Way`;
   
-  // Season check - Milky Way core best in summer
   if (season === 'winter') return 'Milky Way core below horizon (best in summer months)';
   
-  // Lat check - Southern hemisphere has better view
   const absLat = Math.abs(lat || 45);
   if (absLat > 60) return 'Milky Way visible but low on horizon at high latitudes';
   
-  // Check humidity/transparency
   if (humidity > 80) return 'High humidity may reduce visibility';
   
-  // All conditions good
   if (bortleScale <= 3 && moonIllum < 10 && cloudCover < 10) {
     return 'EXCELLENT - Milky Way casts shadows! Perfect viewing conditions.';
   }
@@ -754,9 +753,6 @@ export const getMilkyWayVisibility = (data) => {
   return 'Visible - Dark skies with good transparency';
 };
 
-/**
- * Get meteor shower calendar
- */
 export const getMeteorShowerCalendar = (date) => {
   const month = date.getMonth();
   const day = date.getDate();
@@ -788,9 +784,6 @@ export const getMeteorShowerCalendar = (date) => {
 // GOLDEN HOUR & TWILIGHT
 // ============================================================================
 
-/**
- * Calculate golden hour times
- */
 export const calcGoldenHour = (sunrise, sunset) => {
   if (!sunrise || !sunset) return { morning: '--:-- - --:--', evening: '--:-- - --:--' };
   const rise = new Date(sunrise);
@@ -804,9 +797,6 @@ export const calcGoldenHour = (sunrise, sunset) => {
   };
 };
 
-/**
- * Calculate blue hour times
- */
 export const calcBlueHour = (sunrise, sunset) => {
   if (!sunrise || !sunset) return null;
   const rise = new Date(sunrise);
@@ -828,9 +818,6 @@ export const calcBlueHour = (sunrise, sunset) => {
 // CONSTRUCTION & DIY CALCULATIONS
 // ============================================================================
 
-/**
- * Paint drying time estimator (hours)
- */
 export const getPaintDryingTime = (temp, humidity) => {
   if (temp == null || humidity == null) return 8;
   if (humidity > 85 || temp < 10) return 24;
@@ -839,9 +826,6 @@ export const getPaintDryingTime = (temp, humidity) => {
   return 8;
 };
 
-/**
- * Concrete curing conditions assessment
- */
 export const getConcreteCuringTemp = (temp) => {
   if (temp == null) return 'No temperature data.';
   if (temp < 4) return 'Too cold. Below 4°C concrete won\'t cure. Use blankets/heaters.';
@@ -850,9 +834,6 @@ export const getConcreteCuringTemp = (temp) => {
   return 'Cold 4-10°C. Slows cure. Allow 14+ days, protect from freeze.';
 };
 
-/**
- * Wood equilibrium moisture content (approximate)
- */
 export const getEquilibriumMoistureContent = (temp, humidity) => {
   if (humidity > 90) return 22;
   if (humidity > 80) return 16;
@@ -868,18 +849,12 @@ export const getEquilibriumMoistureContent = (temp, humidity) => {
 // AGRICULTURE & GARDENING
 // ============================================================================
 
-/**
- * Growing Degree Days
- */
 export const calcGrowingDegreeDays = (tempMin, tempMax, base = 10) => {
   if (tempMin == null || tempMax == null) return 0;
   const avg = (tempMin + tempMax) / 2;
   return Math.max(0, Math.round((avg - base) * 10) / 10);
 };
 
-/**
- * Evapotranspiration (simplified Penman-Monteith)
- */
 export const calcEvapotranspiration = (temp, humidity, wind, solarRadiation) => {
   if (temp == null || humidity == null || wind == null || solarRadiation == null) return 0;
   const Rn = solarRadiation * 0.0864;
@@ -892,9 +867,10 @@ export const calcEvapotranspiration = (temp, humidity, wind, solarRadiation) => 
   return Math.max(0, Math.round(ET0 * 10) / 10);
 };
 
-/**
- * Pollen index estimation based on season and conditions
- */
+// ============================================================================
+// POLLEN INDEX (FIXED — was imported as both getPollenIndex and calculatePollenIndex)
+// ============================================================================
+
 export const getPollenIndex = (season, temp, humidity, wind) => {
   let base = 0;
   if (season === 'spring') base = 7;
@@ -909,6 +885,9 @@ export const getPollenIndex = (season, temp, humidity, wind) => {
   return Math.max(0, Math.min(10, base));
 };
 
+// Alias for backward compatibility
+export const calculatePollenIndex = getPollenIndex;
+
 // ============================================================================
 // DRIVING & TRANSPORTATION
 // ============================================================================
@@ -922,6 +901,9 @@ export const getStoppingDistance = (speed, conditionCode) => {
   const isWet = ['rain', 'drizzle', 'thunderstorm'].includes(condition);
   return Math.round(isWet ? base * 2 : base);
 };
+
+// Alias for backward compatibility
+export const calculateStoppingDistance = getStoppingDistance;
 
 /**
  * Get road condition description
@@ -959,7 +941,6 @@ export const mphToMps = (mph) => Math.round(mph / 2.23694);
 // DEFAULT EXPORT
 // ============================================================================
 
-// Export all functions for modular use
 export default {
   WMO_CODES,
   WMO_CLOUD,
@@ -973,10 +954,12 @@ export default {
   calcDewPoint,
   calculateDewPoint,
   calcWetBulbGlobeTemp,
+  calculateWetBulbGlobeTemp,
   calcApparentTemp,
   calcHumidex,
   getComfortScore,
   getComfortIndex,
+  calculateHumidityCategory,
   getPavementTemp,
   getSurfaceTemp,
   getBurnTime,
@@ -991,6 +974,9 @@ export default {
   getSunPosition,
   getSunAngle,
   getPressureTrend,
+  getAltitudeDensity,
+  calculateAltitudeDensity,
+  calculateJetLag,
   getMoonPhase,
   getMoonPhaseName,
   getMoonIllumination,
@@ -1016,7 +1002,9 @@ export default {
   calcGrowingDegreeDays,
   calcEvapotranspiration,
   getPollenIndex,
+  calculatePollenIndex,
   getStoppingDistance,
+  calculateStoppingDistance,
   getRoadCondition,
   getCompassDirection,
   celsiusToFahrenheit,
