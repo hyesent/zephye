@@ -743,10 +743,61 @@ function getAstrophotographyAdvice(data) {
 export const getStargazingAdvice = async (data, question = '') => {
   if (!data) return "Loading weather data..."
 
+  // --- USE TIME-SHIFTED DATA ---
+  // If _hourIndex is provided, use hourly data directly
+  let cloudPercent = data.cloudCover !== undefined ? data.cloudCover : 0
+  let temp = data.temp || 0
+  let humidity = data.humidity || 0
+  let wind = data.wind || 0
+  let condition = data.condition || 'clear'
+  let conditionCode = data.conditionCode || 0
+  let precipitationProb = data.precipitationProb || 0
+  
+  // If hourly data is available in the data object, use it
+  if (data._hourIndex !== undefined && data.hourly) {
+    const idx = data._hourIndex
+    if (data.hourly.cloud_cover?.[idx] !== undefined) {
+      cloudPercent = data.hourly.cloud_cover[idx]
+    }
+    if (data.hourly.temperature_2m?.[idx] !== undefined) {
+      temp = Math.round(data.hourly.temperature_2m[idx])
+    }
+    if (data.hourly.relative_humidity_2m?.[idx] !== undefined) {
+      humidity = data.hourly.relative_humidity_2m[idx]
+    }
+    if (data.hourly.wind_speed_10m?.[idx] !== undefined) {
+      wind = data.hourly.wind_speed_10m[idx]
+    }
+    if (data.hourly.weather_code?.[idx] !== undefined) {
+      conditionCode = data.hourly.weather_code[idx]
+      condition = mapWeatherCode(conditionCode)
+    }
+    if (data.hourly.precipitation_probability?.[idx] !== undefined) {
+      precipitationProb = data.hourly.precipitation_probability[idx]
+    }
+  }
+  
+  // If daily data is available for day offset
+  if (data._dayOffset !== undefined && data.daily) {
+    const dayIdx = data._dayOffset > 0 ? data._dayOffset : 0
+    if (data.daily.weather_code?.[dayIdx] !== undefined) {
+      conditionCode = data.daily.weather_code[dayIdx]
+      condition = mapWeatherCode(conditionCode)
+    }
+    if (data.daily.cloud_cover?.[dayIdx] !== undefined) {
+      cloudPercent = data.daily.cloud_cover[dayIdx]
+    }
+    if (data.daily.temperature_2m_max?.[dayIdx] !== undefined) {
+      temp = Math.round(data.daily.temperature_2m_max[dayIdx])
+    }
+    if (data.daily.precipitation_probability_max?.[dayIdx] !== undefined) {
+      precipitationProb = data.daily.precipitation_probability_max[dayIdx]
+    }
+  }
+
   const { 
-    conditionCode, cloudCover, condition, humidity, visibility, 
-    sunset, sunrise, city, temp, wind, dewPoint, pressure,
-    tempMin, tempMax, lat, lon, moonPhase: passedMoonPhase
+    sunset, sunrise, city, lat, lon, moonPhase: passedMoonPhase,
+    visibility, dewPoint, pressure, tempMin, tempMax
   } = data
   
   // Use passed moon phase or calculate it
@@ -767,21 +818,20 @@ export const getStargazingAdvice = async (data, question = '') => {
   
   const moonIllumination = getMoonIllumination(moonPhase)
   const moonRiseSet = getMoonRiseSet(data)
-  const cloudPercent = cloudCover !== undefined ? cloudCover : getCloudCover(conditionCode)
-  const seeing = getSeeingConditions(data)
-  const transparency = getTransparency(data)
-  const bortleScale = getDarkSkyRating(data)
+  const seeing = getSeeingConditions({ ...data, temp, humidity, wind })
+  const transparency = getTransparency({ ...data, humidity, wind, cloudPercent })
+  const bortleScale = getDarkSkyRating({ ...data, cloudPercent, moonPhase })
   const bortle = BORTLE_SCALE[bortleScale] || BORTLE_SCALE[5]
   const planetVis = getDetailedPlanetVisibility({ ...data, cloudPercent, moonPhase })
-  const milkyWayVis = getMilkyWayVisibility(data)
+  const milkyWayVis = getMilkyWayVisibility({ ...data, cloudPercent, moonPhase })
   const isssPasses = getISSFlyoverTimes(data)
-  const auroraForecast = getAuroraForecast(data)
+  const auroraForecast = getAuroraForecast({ ...data, cloudPercent })
   const twilightPeriods = getTwilightPeriods(data)
   const meteorShowers = getMeteorShowerCalendar(new Date())
   const deepSkyObjects = getDeepSkyObjectVisibility({...data, cloudPercent, moonPhase, bortleScale})
-  const dewAdvice = getDewAdvice(data)
-  const equipmentRecs = getEquipmentRecommendations({...data, cloudPercent, moonPhase, seeing, transparency, bortleScale})
-  const photoAdvice = getAstrophotographyAdvice({...data, cloudPercent, moonPhase, seeing, transparency})
+  const dewAdvice = getDewAdvice({ ...data, temp, humidity, dewPoint })
+  const equipmentRecs = getEquipmentRecommendations({...data, cloudPercent, moonPhase, seeing, transparency, bortleScale, temp})
+  const photoAdvice = getAstrophotographyAdvice({...data, cloudPercent, moonPhase, seeing, transparency, temp, humidity, wind})
   
   let nightDuration = 'N/A'
   if (sunrise && sunset) {
@@ -806,7 +856,10 @@ export const getStargazingAdvice = async (data, question = '') => {
   let equipment = []
   let comfort = []
 
-  if (condition === 'rain' || condition === 'thunderstorm' || condition === 'snow') {
+  // --- Check for rain/snow based on CONDITION, not just conditionCode ---
+  const isRainy = condition === 'rain' || condition === 'thunderstorm' || condition === 'drizzle' || condition === 'snow'
+  
+  if (isRainy) {
     verdict.push("ASTRONOMY CANCELLED: Active precipitation. No observing possible.")
     warnings.push("Telescopes and electronics + water = expensive disaster.")
     warnings.push("Check forecast for tomorrow night.")
@@ -999,6 +1052,11 @@ export const getStargazingAdvice = async (data, question = '') => {
 
   let response = `${random(intros)} ${city || 'Your location'}\n\n`
   
+  // Show the time context if available
+  if (data._timeLabel) {
+    response += `📅 **Time:** ${data._timeLabel}\n\n`
+  }
+  
   response += `OVERALL: ${verdict.join(' ')}\n\n`
   
   response += `SKY QUALITY:\n`
@@ -1045,7 +1103,6 @@ export const getStargazingAdvice = async (data, question = '') => {
     response += '\n'
   }
   
-  // --- FIXED: Warnings with emoji and bold ---
   if (warnings.length > 0) {
     response += `⚠️ **Warnings:**\n`
     warnings.forEach(w => response += `${w}\n`)
@@ -1056,13 +1113,12 @@ export const getStargazingAdvice = async (data, question = '') => {
   response += `- Temperature: ${temp}C (${tempMin || temp - 2}C to ${tempMax || temp + 2}C)\n`
   response += `- Humidity: ${humidity}%\n`
   response += `- Wind: ${wind}km/h\n`
-  response += `- Visibility: ${visibility}km\n`
+  response += `- Visibility: ${visibility || 10}km\n`
   if (dewPoint) response += `- Dew Point: ${dewPoint}C (Spread: ${(temp - dewPoint).toFixed(1)}C)\n`
   response += '\n'
   
-  // --- FIXED: Bottom Line with emoji and bold ---
   response += `💡 **Bottom Line:**\n`
-  if (cloudPercent > 80) {
+  if (cloudPercent > 80 || isRainy) {
     response += `Keep telescope inside tonight. Use time for astronomy reading/planning.\n`
   } else if (cloudPercent > 40) {
     response += `Risky conditions. Quick setup for bright objects only.\n`
