@@ -89,12 +89,11 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
   const data = { ...baseData }
   const now = new Date()
   let targetDate = new Date(now)
-  let hourOffset = 0
   let dayOffset = 0
   
   const timeLower = timeContext.toLowerCase().trim()
   
-  // Parse time context
+  // Parse day context
   if (timeLower.includes('tomorrow')) {
     dayOffset = 1
     targetDate.setDate(targetDate.getDate() + 1)
@@ -194,10 +193,13 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
       if (baseData.hourly.relative_humidity_2m?.[hourIndex] !== undefined) {
         data.humidity = baseData.hourly.relative_humidity_2m[hourIndex]
       }
+      
+      // FIX: Update conditionCode AND condition together
       if (baseData.hourly.weather_code?.[hourIndex] !== undefined) {
         data.conditionCode = baseData.hourly.weather_code[hourIndex]
         data.condition = mapWeatherCode(baseData.hourly.weather_code[hourIndex])
       }
+      
       if (baseData.hourly.precipitation?.[hourIndex] !== undefined) {
         data.precipitation = baseData.hourly.precipitation[hourIndex]
       }
@@ -213,27 +215,47 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
     }
   }
   
-  // If no hourly data, adjust based on time of day
-  if (data._hourIndex === undefined) {
+  // If no hourly data found, use daily data with day offset
+  if (data._hourIndex === undefined && dayOffset !== 0) {
+    if (baseData.daily) {
+      const dayIndex = dayOffset > 0 ? dayOffset : 0
+      if (baseData.daily.temperature_2m_max?.[dayIndex] !== undefined) {
+        data.temp = Math.round(baseData.daily.temperature_2m_max[dayIndex])
+      }
+      if (baseData.daily.weather_code?.[dayIndex] !== undefined) {
+        data.conditionCode = baseData.daily.weather_code[dayIndex]
+        data.condition = mapWeatherCode(baseData.daily.weather_code[dayIndex])
+      }
+      if (baseData.daily.precipitation_probability_max?.[dayIndex] !== undefined) {
+        data.precipitationProb = baseData.daily.precipitation_probability_max[dayIndex]
+      }
+      if (baseData.daily.cloud_cover?.[dayIndex] !== undefined) {
+        data.cloudCover = baseData.daily.cloud_cover[dayIndex]
+      }
+    }
+  }
+  
+  // If still no data, use rough approximations
+  if (data._hourIndex === undefined && data._dayOffset === undefined) {
     const hour = targetDate.getHours()
-    // Rough approximations for times without hourly data
     if (hour >= 6 && hour < 12) {
-      // Morning - slightly cooler
       data.temp = (data.temp || 0) - 2
       data.cloudCover = data.cloudCover || 20
     } else if (hour >= 12 && hour < 17) {
-      // Afternoon - warmest
       data.temp = (data.temp || 0) + 2
       data.cloudCover = data.cloudCover || 10
     } else if (hour >= 17 && hour < 21) {
-      // Evening - cooling
       data.temp = (data.temp || 0) - 1
       data.cloudCover = data.cloudCover || 30
     } else {
-      // Night - coldest
       data.temp = (data.temp || 0) - 4
       data.cloudCover = data.cloudCover || 40
     }
+  }
+  
+  // Ensure condition and conditionCode are always in sync
+  if (data.conditionCode !== undefined && data.conditionCode !== null) {
+    data.condition = mapWeatherCode(data.conditionCode)
   }
   
   return data
@@ -1139,6 +1161,7 @@ export default function ZephyeFullScreen({
     season: ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getMonth()],
     timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
     hourly: weather?.hourly || {},
+    daily: weather?.daily || {},
     savedLocations: savedLocations,
     homeLat: location?.lat,
     homeLon: location?.lon,
