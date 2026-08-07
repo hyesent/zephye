@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useAudio } from './AudioContext'
 import { getMoonPhase, mapWeatherCode } from './data/calculations.js'
 
@@ -21,7 +21,22 @@ import { getTrafficAdvice } from './data/TrafficAdvice.js'
 import { getRouteAdvice } from './data/RouteAdvice.js'
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── HELPERS ────────────────────────────────────────────────────────────────
+// ─── CONSTANTS & CONFIG ──────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const CONFIG = {
+  MAX_SUGGESTIONS: 8,
+  STREAM_DELAY_MS: 15,
+  MAX_INTENTS: 3,
+  MIN_SCORE_THRESHOLD: 1.5,
+  SECONDARY_THRESHOLD: 0.4,
+  MAX_LINES_PER_SECTION: 6,
+  MAX_WARNINGS: 5,
+  TTS_API: 'https://hyezen.onrender.com/api/tts'
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── HELPERS ──────────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const getSavedLocations = () => {
@@ -56,7 +71,7 @@ const findSavedLocation = (name) => {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── ULTRA-SMART INTENT MAP ───────────────────────────────────────────────
+// ─── INTENT MAP ──────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const INTENT_MAP = [
@@ -72,7 +87,7 @@ const INTENT_MAP = [
   {
     id: 'sports',
     name: 'Sports',
-    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'peloton', 'spin', 'cyclist', 'trail run', 'track', 'sprint', 'workout', 'exercise', 'sports', 'game', 'match', 'tournament', 'practice', 'training', 'workout', 'fitness'],
+    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'peloton', 'spin', 'cyclist', 'trail run', 'track', 'sprint', 'workout', 'exercise', 'sports', 'game', 'match', 'tournament', 'practice', 'training', 'fitness'],
     fn: getSportsAdvice,
     priority: 1,
     section: '🏃 Sports',
@@ -135,11 +150,11 @@ const INTENT_MAP = [
   {
     id: 'stargazing',
     name: 'Stargazing',
-    keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star', 'celestial', 'observatory', 'night vision', 'astrophotography', 'deep space'],
+    keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star', 'celestial', 'observatory', 'night vision', 'astrophotography', 'deep space', 'see stars', 'clear sky', 'dark sky'],
     fn: getStargazingAdvice,
     priority: 3,
     section: '🌙 Stargazing',
-    keywords: ['star', 'moon', 'night sky', 'telescope', 'astronomy']
+    keywords: ['star', 'moon', 'night sky', 'telescope', 'astronomy', 'galaxy', 'milky way', 'planet']
   },
   {
     id: 'farming',
@@ -216,7 +231,7 @@ const INTENT_MAP = [
 ]
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── SCORING ENGINE ──────────────────────────────────────────────────────
+// ─── SCORING ENGINE ──────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const scoreQuestion = (question, intent) => {
@@ -228,18 +243,16 @@ const scoreQuestion = (question, intent) => {
   for (const key of intent.keys) {
     const keyLower = key.toLowerCase()
     if (q.includes(keyLower)) {
-      // Longer keys = more specific = higher score
       const weight = Math.min(keyLower.length / 2, 5)
       score += weight
       matched.push(keyLower)
       if (keyLower.length > 8 && q.split(/\s+/).some(w => w === keyLower)) {
         exactMatches.push(keyLower)
-        score += 3 // Bonus for exact word match
+        score += 3
       }
     }
   }
 
-  // Check for word overlap (partial matches)
   const words = q.split(/\s+/)
   for (const word of words) {
     if (word.length < 3) continue
@@ -250,24 +263,21 @@ const scoreQuestion = (question, intent) => {
     }
   }
 
-  // Priority bonus (higher priority = more likely)
   score += (10 - intent.priority) * 0.5
 
   return { score, matched, exactMatches }
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── MULTI-INTENT DETECTION ──────────────────────────────────────────────
+// ─── INTENT DETECTION ────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const detectIntents = (question) => {
   const results = []
-  const q = question.toLowerCase()
-  
-  // Score all intents
+
   for (const intent of INTENT_MAP) {
-    const { score, matched } = scoreQuestion(q, intent)
-    if (score > 1.5) {
+    const { score, matched } = scoreQuestion(question, intent)
+    if (score > CONFIG.MIN_SCORE_THRESHOLD) {
       results.push({
         intent,
         score,
@@ -277,33 +287,28 @@ const detectIntents = (question) => {
     }
   }
 
-  // Sort by score descending
   results.sort((a, b) => b.score - a.score)
 
-  // Determine primary intent (highest score)
   if (results.length > 0) {
     results[0].isPrimary = true
   }
 
-  // Return top 2-3 intents if they're close in score
   const primaryScore = results[0]?.score || 0
-  const selected = results.filter(r => r.score > primaryScore * 0.4)
+  const selected = results.filter(r => r.score > primaryScore * CONFIG.SECONDARY_THRESHOLD)
   
-  return selected.slice(0, 3) // Max 3 intents
+  return selected.slice(0, CONFIG.MAX_INTENTS)
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── RESPONSE MERGER ──────────────────────────────────────────────────────
+// ─── RESPONSE MERGER ──────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const mergeResponses = (responses, intents, question) => {
   if (responses.length === 0) return null
   if (responses.length === 1) return responses[0]
 
-  // Extract key sections from each response
   const sections = []
-  const allLines = []
-  const warnings = []
+  const allWarnings = []
   const bottomLines = []
 
   for (let i = 0; i < responses.length; i++) {
@@ -311,10 +316,7 @@ const mergeResponses = (responses, intents, question) => {
     const intent = intents[i]?.intent
     const isPrimary = intents[i]?.isPrimary || false
 
-    // Split into lines
     const lines = text.split('\n').filter(l => l.trim())
-    
-    // Extract the section header if present
     const sectionHeader = intent?.section || `📌 ${intent?.name || 'Advice'}`
 
     let sectionLines = []
@@ -324,16 +326,16 @@ const mergeResponses = (responses, intents, question) => {
     for (const line of lines) {
       if (line.includes('⚠️') || line.includes('WARNING') || line.includes('🚨')) {
         warningLines.push(line)
-      } else if (line.includes('BOTTOM LINE') || line.includes('Bottom Line') || line.includes('💡')) {
+      } else if (line.includes('BOTTOM LINE') || line.includes('Bottom Line') || line.includes('💡') || line.includes('🎯')) {
         bottomLine = line
-      } else if (!line.includes('---') && !line.includes('===') && !line.includes('Conditions') && line.trim().length > 3) {
+      } else if (!line.includes('---') && !line.includes('===') && line.trim().length > 3) {
         sectionLines.push(line)
       }
     }
 
     sections.push({
       header: sectionHeader,
-      lines: sectionLines.slice(0, 6), // Limit to 6 lines per section
+      lines: sectionLines.slice(0, CONFIG.MAX_LINES_PER_SECTION),
       warnings: warningLines,
       bottomLine: bottomLine,
       isPrimary,
@@ -341,10 +343,8 @@ const mergeResponses = (responses, intents, question) => {
     })
   }
 
-  // Build merged response
-  let merged = ``
+  let merged = ''
   
-  // Add the primary section first (full)
   const primary = sections.find(s => s.isPrimary) || sections[0]
   if (primary) {
     merged += `${primary.header}\n`
@@ -352,13 +352,11 @@ const mergeResponses = (responses, intents, question) => {
     merged += '\n\n'
   }
 
-  // Add secondary sections (condensed)
   const secondary = sections.filter(s => !s.isPrimary)
   if (secondary.length > 0) {
     merged += `📋 **Also consider:**\n\n`
     for (const sec of secondary) {
       merged += `${sec.header}\n`
-      // Only show the most important lines (first 3)
       const topLines = sec.lines.slice(0, 3)
       merged += topLines.join('\n')
       if (sec.lines.length > 3) {
@@ -368,8 +366,6 @@ const mergeResponses = (responses, intents, question) => {
     }
   }
 
-  // Add warnings section (deduplicated)
-  const allWarnings = []
   for (const sec of sections) {
     for (const w of sec.warnings) {
       if (!allWarnings.some(existing => existing.includes(w.substring(0, 20)))) {
@@ -380,16 +376,15 @@ const mergeResponses = (responses, intents, question) => {
 
   if (allWarnings.length > 0) {
     merged += `⚠️ **Warnings:**\n`
-    for (const w of allWarnings.slice(0, 5)) {
+    for (const w of allWarnings.slice(0, CONFIG.MAX_WARNINGS)) {
       merged += `${w}\n`
     }
-    if (allWarnings.length > 5) {
-      merged += `... and ${allWarnings.length - 5} more warnings\n`
+    if (allWarnings.length > CONFIG.MAX_WARNINGS) {
+      merged += `... and ${allWarnings.length - CONFIG.MAX_WARNINGS} more warnings\n`
     }
     merged += '\n'
   }
 
-  // Add bottom line (use primary, or merge)
   const bottomLinesList = sections.map(s => s.bottomLine).filter(Boolean)
   if (bottomLinesList.length > 0) {
     merged += `💡 **Bottom Line:**\n`
@@ -404,12 +399,11 @@ const mergeResponses = (responses, intents, question) => {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── GHOST SUGGESTIONS ─────────────────────────────────────────────────────
+// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-const getDynamicSuggestions = () => {
-  const savedLocs = getSavedLocations()
-  const suggestions = [
+const getDynamicSuggestions = (savedLocations = []) => {
+  const baseSuggestions = [
     'Ask "stargazing tonight" or "moon phase"',
     'Try "what should I wear" or "safe to run"',
     'Ask "will it rain" or "UV burn time"',
@@ -419,8 +413,10 @@ const getDynamicSuggestions = () => {
     'Ask "can I go biking" or "traffic to work"'
   ]
   
-  if (savedLocs.length > 0) {
-    const locNames = savedLocs.map(l => l.label || 'Untitled').filter(Boolean)
+  const suggestions = [...baseSuggestions]
+  
+  if (savedLocations.length > 0) {
+    const locNames = savedLocations.map(l => l.label || 'Untitled').filter(Boolean)
     if (locNames.length > 0) {
       suggestions.push(`Ask "route to ${locNames[0]}" or "traffic to ${locNames[0]}"`)
     }
@@ -433,7 +429,7 @@ const getDynamicSuggestions = () => {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── MAIN COMPONENT ────────────────────────────────────────────────────────
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export default function ZephyeFullScreen({
@@ -458,31 +454,65 @@ export default function ZephyeFullScreen({
   const [moonPhase, setMoonPhase] = useState(0)
   const [activeTab, setActiveTab] = useState('ask')
   const [savedLocations, setSavedLocations] = useState([])
+  const [typingIndex, setTypingIndex] = useState(0)
 
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
+  const streamTimeoutRef = useRef(null)
+  const ghostIntervalRef = useRef(null)
 
-  const temp = Math.round(weather?.current?.temperature_2m || 0)
-  const humidity = weather?.current?.relative_humidity_2m
-  const wind = weather?.current?.wind_speed_10m
-  const uv = weather?.current?.uv_index || weather?.daily?.uv_index_max?.[0]
-  const conditionCode = weather?.current?.weather_code
+  // ─── Derived Weather Data ──────────────────────────────────────────
+  
+  const weatherData = useMemo(() => ({
+    temp: Math.round(weather?.current?.temperature_2m || 0),
+    feelsLike: Math.round(weather?.current?.apparent_temperature || weather?.current?.temperature_2m || 0),
+    humidity: weather?.current?.relative_humidity_2m || 0,
+    wind: weather?.current?.wind_speed_10m || 0,
+    windDir: weather?.current?.wind_direction_10m || 0,
+    windGust: weather?.current?.wind_gusts_10m || weather?.hourly?.wind_gusts_10m?.[0] || 0,
+    uvIndex: weather?.current?.uv_index || weather?.daily?.uv_index_max?.[0] || 0,
+    aqi: aqi?.us_aqi || 0,
+    visibility: weather?.current?.visibility ? weather.current.visibility / 1000 : 10,
+    conditionCode: weather?.current?.weather_code || 0,
+    condition: mapWeatherCode(weather?.current?.weather_code || 0),
+    pressure: weather?.current?.pressure_msl || 0,
+    precipitation: weather?.current?.precipitation || 0,
+    precipitationProb: weather?.hourly?.precipitation_probability?.[0] || 0,
+    cloudCover: weather?.current?.cloud_cover || weather?.hourly?.cloud_cover?.[0] || 0,
+    dewPoint: weather?.current?.dew_point || weather?.hourly?.dew_point?.[0] || 0,
+    solarRadiation: weather?.current?.shortwave_radiation || 0,
+    tempMax: weather?.daily?.temperature_2m_max?.[0] || 0,
+    tempMin: weather?.daily?.temperature_2m_min?.[0] || 0,
+    sunrise: weather?.daily?.sunrise?.[0] || '',
+    sunset: weather?.daily?.sunset?.[0] || '',
+    city: location?.name || 'Unknown',
+    lat: location?.lat || 0,
+    lon: location?.lon || 0,
+    moonPhase: moonPhase,
+    season: ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getMonth()],
+    timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
+    hourly: weather?.hourly || {},
+    savedLocations: savedLocations,
+    homeLat: location?.lat,
+    homeLon: location?.lon,
+    homeName: location?.name
+  }), [weather, aqi, location, moonPhase, savedLocations])
+
+  const aqiLevel = useMemo(() => {
+    if (aqi == null) return { label: 'Unknown', color: '#6b7280' }
+    if (aqi <= 50) return { label: 'Good', color: '#22c55e' }
+    if (aqi <= 100) return { label: 'Moderate', color: '#eab308' }
+    if (aqi <= 150) return { label: 'Unhealthy', color: '#f97316' }
+    return { label: 'Hazardous', color: '#ef4444' }
+  }, [aqi])
+
+  // ─── Effects ──────────────────────────────────────────────────────
 
   useEffect(() => {
     if (isOpen) {
       setSavedLocations(getSavedLocations())
     }
   }, [isOpen])
-
-  function getAqiLevel(aqi) {
-    if (aqi == null) return { label: 'Unknown', color: '#6b7280' }
-    if (aqi <= 50) return { label: 'Good', color: '#22c55e' }
-    if (aqi <= 100) return { label: 'Moderate', color: '#eab308' }
-    if (aqi <= 150) return { label: 'Unhealthy', color: '#f97316' }
-    return { label: 'Hazardous', color: '#ef4444' }
-  }
-
-  const aqiLevel = getAqiLevel(aqi?.us_aqi)
 
   useEffect(() => {
     if (isOpen && location?.lat && location?.lon) {
@@ -492,15 +522,15 @@ export default function ZephyeFullScreen({
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      const condition = mapWeatherCode(conditionCode)
+      const condition = mapWeatherCode(weatherData.conditionCode)
       setMessages([
         {
           role: 'assistant',
-          content: `${greeting}, ${userName || location?.name?.split(',')[0] || 'there'}\n${location?.name || 'Your location'}\n${temp}°C • ${condition} • AQI ${aqiLevel.label}`
+          content: `${greeting || 'Hello'}, ${userName || location?.name?.split(',')[0] || 'there'}\n${location?.name || 'Your location'}\n${weatherData.temp}°C • ${condition} • AQI ${aqiLevel.label}`
         }
       ])
     }
-  }, [isOpen])
+  }, [isOpen, messages.length, greeting, userName, location, weatherData, aqiLevel])
 
   useEffect(() => {
     if (input) {
@@ -508,69 +538,106 @@ export default function ZephyeFullScreen({
       return
     }
     
-    const suggestions = getDynamicSuggestions()
+    const suggestions = getDynamicSuggestions(savedLocations)
     let i = 0
     setGhostText(suggestions[0])
-    const interval = setInterval(() => {
+    
+    ghostIntervalRef.current = setInterval(() => {
       i = (i + 1) % suggestions.length
       setGhostText(suggestions[i])
     }, 3000)
-    return () => clearInterval(interval)
+    
+    return () => {
+      if (ghostIntervalRef.current) {
+        clearInterval(ghostIntervalRef.current)
+      }
+    }
   }, [input, savedLocations])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── SMART ROUTING ENGINE ────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── Quick Action Chips ──────────────────────────────────────────
 
-  const routeQuestion = async (question) => {
-    const q = question.toLowerCase()
-    const data = {
-      temp,
-      feelsLike: weather?.current?.apparent_temperature || temp,
-      humidity,
-      wind,
-      windDir: weather?.current?.wind_direction_10m,
-      uvIndex: uv,
-      aqi: aqi?.us_aqi,
-      visibility: weather?.current?.visibility ? weather.current.visibility / 1000 : 10,
-      conditionCode,
-      condition: mapWeatherCode(conditionCode),
-      pressure: weather?.current?.pressure_msl,
-      precipitation: weather?.current?.precipitation || 0,
-      city: location?.name,
-      lat: location?.lat,
-      lon: location?.lon,
-      sunrise: weather?.daily?.sunrise?.[0],
-      sunset: weather?.daily?.sunset?.[0],
-      solarRadiation: weather?.current?.shortwave_radiation,
-      tempMax: weather?.daily?.temperature_2m_max?.[0],
-      tempMin: weather?.daily?.temperature_2m_min?.[0],
-      moonPhase,
-      dewPoint: weather?.current?.dew_point,
-      windGust: weather?.current?.wind_gusts_10m || weather?.hourly?.wind_gusts_10m?.[0],
-      precipitationProbability: weather?.hourly?.precipitation_probability?.[0],
-      visibilityCategory: weather?.current?.visibility ? (weather.current.visibility / 1000 < 1 ? 'fog' : weather.current.visibility / 1000 < 5 ? 'poor' : 'good') : 'good',
-      timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
-      season: ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getMonth()],
-      hourly: weather?.hourly || {},
-      homeLat: location?.lat,
-      homeLon: location?.lon,
-      homeName: location?.name,
-      savedLocations: savedLocations
+  const quickActionChips = useMemo(() => {
+    const chips = [
+      'Will it rain tomorrow?',
+      'What should I wear?',
+      'Stargazing tonight?',
+      'Farming advice?',
+      'Safe to drive?',
+      'Traffic incidents near me?',
+      'Can I go biking?'
+    ]
+
+    const locs = savedLocations.slice(0, 2)
+    if (locs.length > 0) {
+      const label = locs[0].label || 'saved location'
+      chips.push(`Route to ${label}?`)
+      chips.push(`Traffic to ${label}?`)
+    }
+    if (locs.length > 1) {
+      chips.push(`Route from ${locs[0].label} to ${locs[1].label}?`)
     }
 
-    // ─── Detect all intents ──────────────────────────────────────────────
+    return chips
+  }, [savedLocations])
+
+  // ─── Speaking ─────────────────────────────────────────────────────
+
+  const speakText = useCallback(async (text) => {
+    if (isSpeaking) {
+      stopGlobal()
+      return
+    }
+    try {
+      const res = await fetch(CONFIG.TTS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: voiceToUse, type: 'fair' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        playGlobal(`https://hyezen.onrender.com${data.url}`, voiceToUse)
+      }
+    } catch {
+      // Silent fail - TTS is non-critical
+    }
+  }, [isSpeaking, stopGlobal, playGlobal, voiceToUse])
+
+  const copyText = useCallback((text) => {
+    navigator.clipboard.writeText(text)
+  }, [])
+
+  // ─── Voice Recognition ────────────────────────────────────────────
+
+  const startListening = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window)) return
+    const recognition = new webkitSpeechRecognition()
+    recognition.lang = lang
+    recognition.onresult = (e) => {
+      const text = e.results[0][0].transcript
+      setInput(text)
+      handleAsk(text)
+    }
+    recognitionRef.current = recognition
+    recognition.start()
+  }, [lang])
+
+  // ─── Routing Engine ──────────────────────────────────────────────
+
+  const routeQuestion = useCallback(async (question) => {
+    const q = question.toLowerCase()
+    const data = weatherData
+
     const detectedIntents = detectIntents(q)
     
-    console.log(`🧠 Detected intents:`, detectedIntents.map(d => `${d.intent.name} (${d.score.toFixed(1)})`).join(', '))
+    console.log(`🧠 Detected intents:`, detectedIntents.map(d => 
+      `${d.intent.name} (${d.score.toFixed(1)})`
+    ).join(', '))
 
-    // ─── If no intents detected ──────────────────────────────────────────
     if (detectedIntents.length === 0) {
-      // Check for route/traffic keywords
       const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
       const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions']
 
@@ -617,16 +684,13 @@ export default function ZephyeFullScreen({
         }
       }
 
-      // Weather fallback
       if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend|temperature/)) {
         return await getWeatherAdvice(data, question)
       }
 
-      // Default response
-      return `I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, or health. Current temp is ${temp}°C.`
+      return `I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, or health. Current temp is ${data.temp}°C.`
     }
 
-    // ─── Get responses for all detected intents ──────────────────────────
     const responses = []
     const intents = []
 
@@ -640,26 +704,21 @@ export default function ZephyeFullScreen({
       }
     }
 
-    // ─── If no responses, fallback ──────────────────────────────────────
     if (responses.length === 0) {
       return await getWeatherAdvice(data, question)
     }
 
-    // ─── If only one response, return it directly ──────────────────────
     if (responses.length === 1) {
       return responses[0]
     }
 
-    // ─── Merge multiple responses ──────────────────────────────────────
     const merged = mergeResponses(responses, intents, question)
     return merged || responses[0]
-  }
+  }, [weatherData, savedLocations])
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── HANDLE ASK ──────────────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── Handle Ask ──────────────────────────────────────────────────
 
-  const handleAsk = async (question) => {
+  const handleAsk = useCallback(async (question) => {
     if (!question.trim()) return
 
     setMessages(prev => [...prev, { role: 'user', content: question }])
@@ -674,7 +733,7 @@ export default function ZephyeFullScreen({
       for (const word of answer.split(' ')) {
         text += word + ' '
         setStreamingText(text)
-        await new Promise(r => setTimeout(r, 20))
+        await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
       }
 
       setMessages(prev => [...prev, { role: 'assistant', content: answer }])
@@ -683,47 +742,14 @@ export default function ZephyeFullScreen({
       if (voiceToUse) speakText(answer)
 
     } catch (e) {
-      const fallback = `Error getting advice. Current temp is ${temp}°C with ${mapWeatherCode(conditionCode)}.`
+      const fallback = `Error getting advice. Current temp is ${weatherData.temp}°C with ${weatherData.condition}.`
       setMessages(prev => [...prev, { role: 'assistant', content: fallback }])
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [routeQuestion, weatherData, voiceToUse, speakText])
 
-  const speakText = async (text) => {
-    if (isSpeaking) {
-      stopGlobal()
-      return
-    }
-    try {
-      const res = await fetch('https://hyezen.onrender.com/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: voiceToUse, type: 'fair' })
-      })
-      const data = await res.json()
-      if (data.success) {
-        playGlobal(`https://hyezen.onrender.com${data.url}`, voiceToUse)
-      }
-    } catch {}
-  }
-
-  const copyText = (text) => {
-    navigator.clipboard.writeText(text)
-  }
-
-  const startListening = () => {
-    if (!('webkitSpeechRecognition' in window)) return
-    const recognition = new webkitSpeechRecognition()
-    recognition.lang = lang
-    recognition.onresult = (e) => {
-      const text = e.results[0][0].transcript
-      setInput(text)
-      handleAsk(text)
-    }
-    recognitionRef.current = recognition
-    recognition.start()
-  }
+  // ─── Render ──────────────────────────────────────────────────────
 
   if (!isOpen) return null
 
@@ -735,34 +761,6 @@ export default function ZephyeFullScreen({
         </div>
       </div>
     )
-  }
-
-  // ─── Quick Action Chips ──────────────────────────────────────────────────
-
-  const getQuickActionChips = () => {
-    const chips = [
-      'Will it rain tomorrow?',
-      'What should I wear?',
-      'Stargazing tonight?',
-      'Farming advice?',
-      'Safe to drive?',
-      'Traffic incidents near me?',
-      'Can I go biking?'
-    ]
-
-    const savedLocs = savedLocations.slice(0, 2)
-    if (savedLocs.length > 0) {
-      const label = savedLocs[0].label || 'saved location'
-      chips.push(`Route to ${label}?`)
-      chips.push(`Traffic to ${label}?`)
-    }
-    if (savedLocs.length > 1) {
-      const label1 = savedLocs[0].label || 'location 1'
-      const label2 = savedLocs[1].label || 'location 2'
-      chips.push(`Route from ${label1} to ${label2}?`)
-    }
-
-    return chips
   }
 
   return (
@@ -794,7 +792,7 @@ export default function ZephyeFullScreen({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div className="weather-badge">
             <span>{location?.name?.split(',')[0] || 'City'}</span>
-            <span>{temp}°C</span>
+            <span>{weatherData.temp}°C</span>
             <span className="aqi-badge">{aqiLevel.label}</span>
           </div>
         </div>
@@ -810,7 +808,7 @@ export default function ZephyeFullScreen({
           flexWrap: 'wrap',
           borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          {getQuickActionChips().map((q, i) => (
+          {quickActionChips.slice(0, 8).map((q, i) => (
             <button
               key={i}
               onClick={() => handleAsk(q)}
@@ -822,7 +820,16 @@ export default function ZephyeFullScreen({
                 background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 color: 'var(--text-muted)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.12)'
+                e.target.style.borderColor = 'rgba(255,255,255,0.2)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.06)'
+                e.target.style.borderColor = 'rgba(255,255,255,0.1)'
               }}
             >
               {q}
@@ -831,7 +838,7 @@ export default function ZephyeFullScreen({
         </div>
       )}
 
-      {/* BODY (messages) */}
+      {/* BODY */}
       <div className="ai-body">
         <div style={{ maxWidth: '768px', margin: '0 auto' }}>
           {messages.map((msg, i) => (
