@@ -360,7 +360,7 @@ function getDetailedPlanetVisibility(data) {
     special: 'Ring tilt varies. Edge-on every 15 years. Currently good tilt for viewing.'
   })
   
-  if (cloudPercent < 40 && moonPhase !== 'Full Moon') {
+  if (cloudPercent < 40) {
     planets.push({
       name: 'Uranus',
       visible: true,
@@ -373,7 +373,7 @@ function getDetailedPlanetVisibility(data) {
     })
   }
   
-  if (cloudPercent < 20 && moonPhase === 'New Moon') {
+  if (cloudPercent < 20) {
     planets.push({
       name: 'Neptune',
       visible: true,
@@ -554,7 +554,6 @@ function getTwilightPeriods(data) {
   const trueNightStart = astroEnd
   const trueNightEnd = astroStart
   
-  // Fix: Check if true night exists (astroEnd < astroStart)
   if (trueNightStart < trueNightEnd) {
     periods.push({
       phase: 'True Night',
@@ -564,7 +563,6 @@ function getTwilightPeriods(data) {
       photography: 'Best for narrowband and faint object imaging'
     })
   } else {
-    // In summer, astronomical twilight may not end
     periods.push({
       phase: 'Astronomical Twilight',
       time: `${format(astroEnd)} - ${format(astroStart)}`,
@@ -748,14 +746,17 @@ export const getStargazingAdvice = async (data, question = '') => {
   const { 
     conditionCode, cloudCover, condition, humidity, visibility, 
     sunset, sunrise, city, temp, wind, dewPoint, pressure,
-    tempMin, tempMax, lat, lon
+    tempMin, tempMax, lat, lon, moonPhase: passedMoonPhase
   } = data
   
-  // Get moon phase asynchronously
-  let moonPhase = 0
+  // Use passed moon phase or calculate it
+  let moonPhase = passedMoonPhase !== undefined ? passedMoonPhase : 0
   let moonPhaseName = 'Unknown'
+  
   try {
-    moonPhase = await getMoonPhaseAsync(lat, lon)
+    if (passedMoonPhase === undefined && lat && lon) {
+      moonPhase = await getMoonPhaseAsync(lat, lon)
+    }
     moonPhaseName = ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 
                      'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent']
                      [Math.round(moonPhase * 7) % 8] || 'New Moon'
@@ -766,33 +767,30 @@ export const getStargazingAdvice = async (data, question = '') => {
   
   const moonIllumination = getMoonIllumination(moonPhase)
   const moonRiseSet = getMoonRiseSet(data)
-  const cloudPercent = getCloudCover(conditionCode)
+  const cloudPercent = cloudCover !== undefined ? cloudCover : getCloudCover(conditionCode)
   const seeing = getSeeingConditions(data)
   const transparency = getTransparency(data)
   const bortleScale = getDarkSkyRating(data)
   const bortle = BORTLE_SCALE[bortleScale] || BORTLE_SCALE[5]
-  const planetVis = getDetailedPlanetVisibility(data)
+  const planetVis = getDetailedPlanetVisibility({ ...data, cloudPercent, moonPhase })
   const milkyWayVis = getMilkyWayVisibility(data)
   const isssPasses = getISSFlyoverTimes(data)
   const auroraForecast = getAuroraForecast(data)
   const twilightPeriods = getTwilightPeriods(data)
   const meteorShowers = getMeteorShowerCalendar(new Date())
-  const deepSkyObjects = getDeepSkyObjectVisibility({...data, moonPhase, bortleScale})
+  const deepSkyObjects = getDeepSkyObjectVisibility({...data, cloudPercent, moonPhase, bortleScale})
   const dewAdvice = getDewAdvice(data)
-  const equipmentRecs = getEquipmentRecommendations(data)
-  const photoAdvice = getAstrophotographyAdvice(data)
+  const equipmentRecs = getEquipmentRecommendations({...data, cloudPercent, moonPhase, seeing, transparency, bortleScale})
+  const photoAdvice = getAstrophotographyAdvice({...data, cloudPercent, moonPhase, seeing, transparency})
   
-  // Calculate night duration correctly
   let nightDuration = 'N/A'
   if (sunrise && sunset) {
     const rise = new Date(sunrise)
     const set = new Date(sunset)
-    // If sunset is after sunrise (normal case)
     if (set > rise) {
       const duration = (set - rise) / 3600000
       nightDuration = duration.toFixed(1) + ' hours'
     } else {
-      // Sunrise is next day (night crossing midnight)
       const duration = (new Date(rise.getTime() + 86400000) - set) / 3600000
       nightDuration = duration.toFixed(1) + ' hours'
     }
@@ -846,7 +844,7 @@ export const getStargazingAdvice = async (data, question = '') => {
   }
 
   if (moonIllumination > 90) {
-    warnings.push(`${moonPhaseName}: ${moonIllumination}% illuminated. Sky brightly lit.`)
+    warnings.push(`${moonPhaseName}: ${Math.round(moonIllumination)}% illuminated. Sky brightly lit.`)
     warnings.push("Deep sky observing severely compromised. Only brightest DSOs visible.")
     viewing.push("EXCELLENT for: Lunar observation (craters along terminator are spectacular).")
     viewing.push("EXCELLENT for: Planetary observation.")
@@ -855,7 +853,7 @@ export const getStargazingAdvice = async (data, question = '') => {
       timing.push("Moon visible all night. No dark sky window.")
     }
   } else if (moonIllumination > 60) {
-    warnings.push(`${moonPhaseName}: ${moonIllumination}% illuminated. Significant sky brightness.`)
+    warnings.push(`${moonPhaseName}: ${Math.round(moonIllumination)}% illuminated. Significant sky brightness.`)
     viewing.push("Good for: Moon, planets, bright star clusters, double stars.")
     if (moonRiseSet && moonRiseSet.set) {
       timing.push(`Moon sets at ${moonRiseSet.set}. Dark window after moonset.`)
@@ -1011,7 +1009,7 @@ export const getStargazingAdvice = async (data, question = '') => {
   response += `- Limiting Magnitude: ~${bortle.limiting}\n\n`
   
   response += `MOON:\n`
-  response += `- Phase: ${moonPhaseName} (${moonIllumination}% illuminated)\n`
+  response += `- Phase: ${moonPhaseName} (${Math.round(moonIllumination)}% illuminated)\n`
   if (moonRiseSet) {
     if (moonRiseSet.rise) response += `- Rises: ${moonRiseSet.rise}\n`
     if (moonRiseSet.set) response += `- Sets: ${moonRiseSet.set}\n`
@@ -1047,8 +1045,9 @@ export const getStargazingAdvice = async (data, question = '') => {
     response += '\n'
   }
   
+  // --- FIXED: Warnings with emoji and bold ---
   if (warnings.length > 0) {
-    response += `WARNINGS:\n`
+    response += `⚠️ **Warnings:**\n`
     warnings.forEach(w => response += `${w}\n`)
     response += '\n'
   }
@@ -1061,7 +1060,8 @@ export const getStargazingAdvice = async (data, question = '') => {
   if (dewPoint) response += `- Dew Point: ${dewPoint}C (Spread: ${(temp - dewPoint).toFixed(1)}C)\n`
   response += '\n'
   
-  response += `BOTTOM LINE:\n`
+  // --- FIXED: Bottom Line with emoji and bold ---
+  response += `💡 **Bottom Line:**\n`
   if (cloudPercent > 80) {
     response += `Keep telescope inside tonight. Use time for astronomy reading/planning.\n`
   } else if (cloudPercent > 40) {
