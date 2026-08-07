@@ -66,6 +66,179 @@ const findSavedLocation = (name) => {
   return match || null
 }
 
+// ─── TIME SHIFTING ENGINE ──────────────────────────────────────────────
+
+const findClosestHourIndex = (times, targetDate) => {
+  if (!times || times.length === 0) return -1
+  let closest = 0
+  let closestDiff = Infinity
+  const targetTime = targetDate.getTime()
+  
+  for (let i = 0; i < times.length; i++) {
+    const time = new Date(times[i])
+    const diff = Math.abs(time.getTime() - targetTime)
+    if (diff < closestDiff) {
+      closestDiff = diff
+      closest = i
+    }
+  }
+  return closest
+}
+
+const getTimeShiftedData = (baseData, timeContext, question = '') => {
+  const data = { ...baseData }
+  const now = new Date()
+  let targetDate = new Date(now)
+  let hourOffset = 0
+  let dayOffset = 0
+  
+  const timeLower = timeContext.toLowerCase().trim()
+  
+  // Parse time context
+  if (timeLower.includes('tomorrow')) {
+    dayOffset = 1
+    targetDate.setDate(targetDate.getDate() + 1)
+  } else if (timeLower.includes('yesterday')) {
+    dayOffset = -1
+    targetDate.setDate(targetDate.getDate() - 1)
+  } else if (timeLower.includes('weekend')) {
+    const day = targetDate.getDay()
+    const daysUntilSat = (6 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilSat)
+  } else if (timeLower.includes('weekday')) {
+    const day = targetDate.getDay()
+    if (day === 0 || day === 6) {
+      targetDate.setDate(targetDate.getDate() + (day === 0 ? 1 : 2))
+    }
+  } else if (timeLower.includes('monday')) {
+    const day = targetDate.getDay()
+    const daysUntilMon = (1 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilMon)
+  } else if (timeLower.includes('tuesday')) {
+    const day = targetDate.getDay()
+    const daysUntilTue = (2 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilTue)
+  } else if (timeLower.includes('wednesday')) {
+    const day = targetDate.getDay()
+    const daysUntilWed = (3 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilWed)
+  } else if (timeLower.includes('thursday')) {
+    const day = targetDate.getDay()
+    const daysUntilThu = (4 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilThu)
+  } else if (timeLower.includes('friday')) {
+    const day = targetDate.getDay()
+    const daysUntilFri = (5 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilFri)
+  } else if (timeLower.includes('saturday')) {
+    const day = targetDate.getDay()
+    const daysUntilSat = (6 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilSat)
+  } else if (timeLower.includes('sunday')) {
+    const day = targetDate.getDay()
+    const daysUntilSun = (0 - day + 7) % 7
+    targetDate.setDate(targetDate.getDate() + daysUntilSun)
+  }
+  
+  // Parse time of day
+  if (timeLower.includes('morning')) {
+    targetDate.setHours(9, 0, 0, 0)
+  } else if (timeLower.includes('afternoon')) {
+    targetDate.setHours(14, 0, 0, 0)
+  } else if (timeLower.includes('evening') || timeLower.includes('tonight')) {
+    targetDate.setHours(19, 0, 0, 0)
+  } else if (timeLower.includes('night')) {
+    targetDate.setHours(23, 0, 0, 0)
+  } else if (timeLower.includes('noon') || timeLower.includes('midday')) {
+    targetDate.setHours(12, 0, 0, 0)
+  } else if (timeLower.includes('midnight')) {
+    targetDate.setHours(0, 0, 0, 0)
+  } else if (timeLower.includes('sunrise')) {
+    if (baseData.sunrise) {
+      const sunrise = new Date(baseData.sunrise)
+      targetDate.setHours(sunrise.getHours(), sunrise.getMinutes(), 0, 0)
+    }
+  } else if (timeLower.includes('sunset')) {
+    if (baseData.sunset) {
+      const sunset = new Date(baseData.sunset)
+      targetDate.setHours(sunset.getHours(), sunset.getMinutes(), 0, 0)
+    }
+  } else if (timeLower.includes('rush hour') || timeLower.includes('commute')) {
+    targetDate.setHours(8, 0, 0, 0)
+  } else if (timeLower.includes('lunch')) {
+    targetDate.setHours(12, 30, 0, 0)
+  }
+  
+  // Try to find matching data in hourly forecast
+  if (baseData.hourly && baseData.hourly.time) {
+    const hourIndex = findClosestHourIndex(baseData.hourly.time, targetDate)
+    if (hourIndex !== -1) {
+      data._hourIndex = hourIndex
+      data._targetDate = targetDate
+      data._timeLabel = timeContext
+      data._dayOffset = dayOffset
+      
+      // Override with hourly data if available
+      if (baseData.hourly.temperature_2m?.[hourIndex] !== undefined) {
+        data.temp = Math.round(baseData.hourly.temperature_2m[hourIndex])
+      }
+      if (baseData.hourly.precipitation_probability?.[hourIndex] !== undefined) {
+        data.precipitationProb = baseData.hourly.precipitation_probability[hourIndex]
+      }
+      if (baseData.hourly.cloud_cover?.[hourIndex] !== undefined) {
+        data.cloudCover = baseData.hourly.cloud_cover[hourIndex]
+      }
+      if (baseData.hourly.wind_speed_10m?.[hourIndex] !== undefined) {
+        data.wind = baseData.hourly.wind_speed_10m[hourIndex]
+      }
+      if (baseData.hourly.relative_humidity_2m?.[hourIndex] !== undefined) {
+        data.humidity = baseData.hourly.relative_humidity_2m[hourIndex]
+      }
+      if (baseData.hourly.weather_code?.[hourIndex] !== undefined) {
+        data.conditionCode = baseData.hourly.weather_code[hourIndex]
+        data.condition = mapWeatherCode(baseData.hourly.weather_code[hourIndex])
+      }
+      if (baseData.hourly.precipitation?.[hourIndex] !== undefined) {
+        data.precipitation = baseData.hourly.precipitation[hourIndex]
+      }
+      if (baseData.hourly.wind_gusts_10m?.[hourIndex] !== undefined) {
+        data.windGust = baseData.hourly.wind_gusts_10m[hourIndex]
+      }
+      if (baseData.hourly.uv_index?.[hourIndex] !== undefined) {
+        data.uvIndex = baseData.hourly.uv_index[hourIndex]
+      }
+      if (baseData.hourly.visibility?.[hourIndex] !== undefined) {
+        data.visibility = baseData.hourly.visibility[hourIndex] / 1000
+      }
+    }
+  }
+  
+  // If no hourly data, adjust based on time of day
+  if (data._hourIndex === undefined) {
+    const hour = targetDate.getHours()
+    // Rough approximations for times without hourly data
+    if (hour >= 6 && hour < 12) {
+      // Morning - slightly cooler
+      data.temp = (data.temp || 0) - 2
+      data.cloudCover = data.cloudCover || 20
+    } else if (hour >= 12 && hour < 17) {
+      // Afternoon - warmest
+      data.temp = (data.temp || 0) + 2
+      data.cloudCover = data.cloudCover || 10
+    } else if (hour >= 17 && hour < 21) {
+      // Evening - cooling
+      data.temp = (data.temp || 0) - 1
+      data.cloudCover = data.cloudCover || 30
+    } else {
+      // Night - coldest
+      data.temp = (data.temp || 0) - 4
+      data.cloudCover = data.cloudCover || 40
+    }
+  }
+  
+  return data
+}
+
 // ─── INTENT MAP ───────────────────────────────────────────────────────────
 
 const INTENT_MAP = [
@@ -708,10 +881,10 @@ const detectComparison = (question) => {
   
   const timeWords = [
     'today', 'tomorrow', 'now', 'later', 
-    'evening', 'morning', 'afternoon', 'night',
+    'evening', 'morning', 'afternoon', 'night', 'tonight',
     'weekend', 'weekday', 'monday', 'tuesday', 
     'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-    'tonight', 'this morning', 'this afternoon', 'this evening',
+    'this morning', 'this afternoon', 'this evening',
     '6 PM', '7 PM', '8 PM', '9 PM', '10 PM',
     '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
     'noon', 'midnight', 'sunrise', 'sunset',
@@ -808,6 +981,7 @@ const generateComparisonVerdict = (results, comparison, intent) => {
       const times = comparison.type === 'multi_time' ? comparison.times : [comparison.time1, comparison.time2]
       const tempValues = results.map(r => r.temp)
       const rainValues = results.map(r => r.rain)
+      const cloudValues = results.map(r => r.cloudCover)
       
       if (tempValues.some(v => v !== null && v !== undefined)) {
         const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
@@ -815,9 +989,12 @@ const generateComparisonVerdict = (results, comparison, intent) => {
           const max = Math.max(...temps)
           const min = Math.min(...temps)
           const diff = max - min
-          if (diff > 5) {
+          if (diff > 3) {
             const hottest = times[tempValues.indexOf(max)]
-            verdict += `Temperature: ${hottest} is hottest at ${max}°C. `
+            const coldest = times[tempValues.indexOf(min)]
+            verdict += `🌡️ ${hottest} is hottest at ${max}°C, ${coldest} is coolest at ${min}°C. `
+          } else {
+            verdict += `🌡️ Temperatures are similar across all times (${Math.round(temps.reduce((a,b) => a + b, 0) / temps.length)}°C avg). `
           }
         }
       }
@@ -827,37 +1004,71 @@ const generateComparisonVerdict = (results, comparison, intent) => {
         if (rains.length > 1) {
           const max = Math.max(...rains)
           const min = Math.min(...rains)
-          if (max > 50 && min < 30) {
+          if (max > 40) {
             const rainiest = times[rainValues.indexOf(max)]
             const driest = times[rainValues.indexOf(min)]
-            verdict += `Rain: ${rainiest} is rainier (${max}%) than ${driest} (${min}%). `
+            verdict += `☔ ${rainiest} is rainier (${max}%) than ${driest} (${min}%). `
+          } else {
+            verdict += `☀️ Low rain chance across all times (${Math.round(rains.reduce((a,b) => a + b, 0) / rains.length)}% avg). `
+          }
+        }
+      }
+      
+      if (cloudValues.some(v => v !== null && v !== undefined)) {
+        const clouds = cloudValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (clouds.length > 1) {
+          const max = Math.max(...clouds)
+          const min = Math.min(...clouds)
+          if (max - min > 30) {
+            const cloudiest = times[cloudValues.indexOf(max)]
+            const clearest = times[cloudValues.indexOf(min)]
+            verdict += `☁️ ${cloudiest} is cloudiest (${max}%), ${clearest} is clearest (${min}%). `
           }
         }
       }
       
       if (!verdict) {
         const timeList = times.join(', ')
-        verdict = `The conditions across ${timeList} are similar. Check the details above for specifics.`
+        verdict = `The conditions across ${timeList} are fairly similar. Check the details above.`
       }
       break
     }
     
     case 'location': {
       const locs = comparison.locations
-      verdict = `Comparing ${locs.join(' and ')}. Weather can vary significantly between locations.`
+      const tempValues = results.map(r => r.temp)
+      
+      if (tempValues.some(v => v !== null && v !== undefined)) {
+        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (temps.length > 1) {
+          const max = Math.max(...temps)
+          const min = Math.min(...temps)
+          const diff = max - min
+          if (diff > 5) {
+            const hottest = locs[tempValues.indexOf(max)]
+            const coldest = locs[tempValues.indexOf(min)]
+            verdict += `🌡️ ${hottest} is warmer (${max}°C) than ${coldest} (${min}°C). `
+          }
+        }
+      }
+      
+      verdict += `📍 Weather can vary by location. Check details above.`
       break
     }
     
     case 'activity': {
       const activities = comparison.activities
-      verdict = `Comparing ${activities.join(' vs ')}. Consider weather impact on each activity.`
+      verdict = `🏃 Comparing ${activities.join(' vs ')}. `
+      verdict += `Consider weather impact on each activity. `
+      verdict += `Check the details above for specific recommendations.`
       break
     }
     
     case 'scenario': {
       const scenarios = comparison.scenarios
       const dest = comparison.destination
-      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. Consider time, weather, and traffic for each option.`
+      verdict = `🚗 Comparing ${scenarios.join(' vs ')} to ${dest}. `
+      verdict += `Consider time, weather, and traffic for each option.`
       break
     }
     
@@ -1085,15 +1296,17 @@ export default function ZephyeFullScreen({
         const results = []
         
         for (const time of times) {
-          const timeData = { ...data, _timeContext: time }
+          const timeData = getTimeShiftedData(data, time, question)
           const response = await primaryIntent.fn(timeData, question)
           const tempMatch = response.match(/(\d+)°C/)
           const rainMatch = response.match(/(\d+)% rain/i)
+          const cloudMatch = response.match(/Cloud Cover:\s*(\d+)%/)
           results.push({
             time,
             response: extractKeyPoints(response, 4),
             temp: tempMatch ? parseInt(tempMatch[1]) : null,
-            rain: rainMatch ? parseInt(rainMatch[1]) : null
+            rain: rainMatch ? parseInt(rainMatch[1]) : null,
+            cloudCover: cloudMatch ? parseInt(cloudMatch[1]) : null
           })
         }
         
@@ -1264,8 +1477,8 @@ export default function ZephyeFullScreen({
       const primaryIntent = detectedIntents[0].intent
       const results = []
       
-      const time1Data = { ...data, _timeContext: comparison.time1 }
-      const time2Data = { ...data, _timeContext: comparison.time2 }
+      const time1Data = getTimeShiftedData(data, comparison.time1, question)
+      const time2Data = getTimeShiftedData(data, comparison.time2, question)
       
       const [response1, response2] = await Promise.all([
         primaryIntent.fn(time1Data, question),
@@ -1276,19 +1489,23 @@ export default function ZephyeFullScreen({
       const temp2 = response2.match(/(\d+)°C/)
       const rain1 = response1.match(/(\d+)% rain/i)
       const rain2 = response2.match(/(\d+)% rain/i)
+      const cloud1 = response1.match(/Cloud Cover:\s*(\d+)%/)
+      const cloud2 = response2.match(/Cloud Cover:\s*(\d+)%/)
       
       results.push({
         time: comparison.time1,
         response: extractKeyPoints(response1, 4),
         temp: temp1 ? parseInt(temp1[1]) : null,
-        rain: rain1 ? parseInt(rain1[1]) : null
+        rain: rain1 ? parseInt(rain1[1]) : null,
+        cloudCover: cloud1 ? parseInt(cloud1[1]) : null
       })
       
       results.push({
         time: comparison.time2,
         response: extractKeyPoints(response2, 4),
         temp: temp2 ? parseInt(temp2[1]) : null,
-        rain: rain2 ? parseInt(rain2[1]) : null
+        rain: rain2 ? parseInt(rain2[1]) : null,
+        cloudCover: cloud2 ? parseInt(cloud2[1]) : null
       })
       
       let comparisonResponse = `📊 **Comparison: ${comparison.time1} vs ${comparison.time2}**\n\n`
