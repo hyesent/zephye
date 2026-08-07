@@ -124,173 +124,129 @@ const findClosestHourIndex = (times, targetDate) => {
 }
 
 const getTimeShiftedData = (baseData, timeContext, question = '') => {
-  const data = { ...baseData }
+  // 🔥 FIX: Deep clone the base data so each call is independent
+  const data = JSON.parse(JSON.stringify(baseData))
   const now = new Date()
   let targetDate = new Date(now)
   let dayOffset = 0
   
   const timeLower = timeContext.toLowerCase().trim()
   
-  // Parse day context
+  // ─── DAY OFFSET ──────────────────────────────────────────────────────
+  
   if (timeLower.includes('tomorrow')) {
     dayOffset = 1
-    targetDate.setDate(targetDate.getDate() + 1)
   } else if (timeLower.includes('yesterday')) {
     dayOffset = -1
-    targetDate.setDate(targetDate.getDate() - 1)
   } else if (timeLower.includes('weekend')) {
     const day = targetDate.getDay()
     const daysUntilSat = (6 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilSat)
+    dayOffset = daysUntilSat
   } else if (timeLower.includes('weekday')) {
     const day = targetDate.getDay()
     if (day === 0 || day === 6) {
-      targetDate.setDate(targetDate.getDate() + (day === 0 ? 1 : 2))
+      dayOffset = day === 0 ? 1 : 2
     }
-  } else if (timeLower.includes('monday')) {
-    const day = targetDate.getDay()
-    const daysUntilMon = (1 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilMon)
-  } else if (timeLower.includes('tuesday')) {
-    const day = targetDate.getDay()
-    const daysUntilTue = (2 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilTue)
-  } else if (timeLower.includes('wednesday')) {
-    const day = targetDate.getDay()
-    const daysUntilWed = (3 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilWed)
-  } else if (timeLower.includes('thursday')) {
-    const day = targetDate.getDay()
-    const daysUntilThu = (4 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilThu)
-  } else if (timeLower.includes('friday')) {
-    const day = targetDate.getDay()
-    const daysUntilFri = (5 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilFri)
-  } else if (timeLower.includes('saturday')) {
-    const day = targetDate.getDay()
-    const daysUntilSat = (6 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilSat)
-  } else if (timeLower.includes('sunday')) {
-    const day = targetDate.getDay()
-    const daysUntilSun = (0 - day + 7) % 7
-    targetDate.setDate(targetDate.getDate() + daysUntilSun)
   }
   
-  // Parse time of day
-  if (timeLower.includes('morning')) {
-    targetDate.setHours(9, 0, 0, 0)
-  } else if (timeLower.includes('afternoon')) {
-    targetDate.setHours(14, 0, 0, 0)
-  } else if (timeLower.includes('evening') || timeLower.includes('tonight')) {
-    targetDate.setHours(19, 0, 0, 0)
-  } else if (timeLower.includes('night')) {
-    targetDate.setHours(23, 0, 0, 0)
-  } else if (timeLower.includes('noon') || timeLower.includes('midday')) {
-    targetDate.setHours(12, 0, 0, 0)
-  } else if (timeLower.includes('midnight')) {
-    targetDate.setHours(0, 0, 0, 0)
-  } else if (timeLower.includes('sunrise')) {
-    if (baseData.sunrise) {
-      const sunrise = new Date(baseData.sunrise)
-      targetDate.setHours(sunrise.getHours(), sunrise.getMinutes(), 0, 0)
-    }
-  } else if (timeLower.includes('sunset')) {
-    if (baseData.sunset) {
-      const sunset = new Date(baseData.sunset)
-      targetDate.setHours(sunset.getHours(), sunset.getMinutes(), 0, 0)
-    }
-  } else if (timeLower.includes('rush hour') || timeLower.includes('commute')) {
-    targetDate.setHours(8, 0, 0, 0)
-  } else if (timeLower.includes('lunch')) {
-    targetDate.setHours(12, 30, 0, 0)
+  // Apply day offset first
+  if (dayOffset !== 0) {
+    targetDate.setDate(targetDate.getDate() + dayOffset)
   }
   
-  // Try hourly data
+  // ─── DAY OF WEEK ─────────────────────────────────────────────────────
+  
+  const dayMap = {
+    'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
+    'friday': 5, 'saturday': 6, 'sunday': 0
+  }
+  
+  for (const [dayName, dayNum] of Object.entries(dayMap)) {
+    if (timeLower.includes(dayName)) {
+      const currentDay = targetDate.getDay()
+      const daysUntil = (dayNum - currentDay + 7) % 7
+      if (daysUntil > 0) {
+        targetDate.setDate(targetDate.getDate() + daysUntil)
+      }
+      break // Only match one day
+    }
+  }
+  
+  // ─── TIME OF DAY (mutually exclusive - only apply ONE) ───────────────
+  
+  const timeMap = [
+    { keys: ['sunrise'], hour: null, useData: 'sunrise' },
+    { keys: ['sunset'], hour: null, useData: 'sunset' },
+    { keys: ['morning'], hour: 9, minute: 0 },
+    { keys: ['noon', 'midday'], hour: 12, minute: 0 },
+    { keys: ['afternoon'], hour: 14, minute: 0 },
+    { keys: ['evening'], hour: 19, minute: 0 },
+    { keys: ['tonight'], hour: 19, minute: 0 },
+    { keys: ['night'], hour: 23, minute: 0 },
+    { keys: ['midnight'], hour: 0, minute: 0 },
+    { keys: ['rush hour', 'commute'], hour: 8, minute: 0 },
+    { keys: ['lunch'], hour: 12, minute: 30 }
+  ]
+  
+  for (const entry of timeMap) {
+    if (entry.keys.some(k => timeLower.includes(k))) {
+      if (entry.useData === 'sunrise' && baseData.sunrise) {
+        const sr = new Date(baseData.sunrise)
+        targetDate.setHours(sr.getHours(), sr.getMinutes(), 0, 0)
+      } else if (entry.useData === 'sunset' && baseData.sunset) {
+        const ss = new Date(baseData.sunset)
+        targetDate.setHours(ss.getHours(), ss.getMinutes(), 0, 0)
+      } else if (entry.hour !== null) {
+        targetDate.setHours(entry.hour, entry.minute || 0, 0, 0)
+      }
+      break // Only apply ONE time of day
+    }
+  }
+  
+  // ─── OVERRIDE WITH HOURLY DATA ───────────────────────────────────────
+  
   if (baseData.hourly && baseData.hourly.time) {
     const hourIndex = findClosestHourIndex(baseData.hourly.time, targetDate)
     if (hourIndex !== -1) {
       data._hourIndex = hourIndex
-      data._targetDate = targetDate
+      data._targetDate = targetDate.toISOString()
       data._timeLabel = timeContext
       data._dayOffset = dayOffset
       
-      if (baseData.hourly.temperature_2m?.[hourIndex] !== undefined) {
+      // Only override if hourly data exists
+      if (baseData.hourly.temperature_2m?.[hourIndex] !== undefined)
         data.temp = Math.round(baseData.hourly.temperature_2m[hourIndex])
-      }
-      if (baseData.hourly.precipitation_probability?.[hourIndex] !== undefined) {
+      if (baseData.hourly.precipitation_probability?.[hourIndex] !== undefined)
         data.precipitationProb = baseData.hourly.precipitation_probability[hourIndex]
-      }
-      if (baseData.hourly.cloud_cover?.[hourIndex] !== undefined) {
+      if (baseData.hourly.cloud_cover?.[hourIndex] !== undefined)
         data.cloudCover = baseData.hourly.cloud_cover[hourIndex]
-      }
-      if (baseData.hourly.wind_speed_10m?.[hourIndex] !== undefined) {
+      if (baseData.hourly.wind_speed_10m?.[hourIndex] !== undefined)
         data.wind = baseData.hourly.wind_speed_10m[hourIndex]
-      }
-      if (baseData.hourly.relative_humidity_2m?.[hourIndex] !== undefined) {
+      if (baseData.hourly.relative_humidity_2m?.[hourIndex] !== undefined)
         data.humidity = baseData.hourly.relative_humidity_2m[hourIndex]
-      }
       if (baseData.hourly.weather_code?.[hourIndex] !== undefined) {
         data.conditionCode = baseData.hourly.weather_code[hourIndex]
         data.condition = mapWeatherCode(baseData.hourly.weather_code[hourIndex])
       }
-      if (baseData.hourly.precipitation?.[hourIndex] !== undefined) {
+      if (baseData.hourly.precipitation?.[hourIndex] !== undefined)
         data.precipitation = baseData.hourly.precipitation[hourIndex]
-      }
-      if (baseData.hourly.wind_gusts_10m?.[hourIndex] !== undefined) {
+      if (baseData.hourly.wind_gusts_10m?.[hourIndex] !== undefined)
         data.windGust = baseData.hourly.wind_gusts_10m[hourIndex]
-      }
-      if (baseData.hourly.uv_index?.[hourIndex] !== undefined) {
+      if (baseData.hourly.uv_index?.[hourIndex] !== undefined)
         data.uvIndex = baseData.hourly.uv_index[hourIndex]
-      }
-      if (baseData.hourly.visibility?.[hourIndex] !== undefined) {
+      if (baseData.hourly.visibility?.[hourIndex] !== undefined)
         data.visibility = baseData.hourly.visibility[hourIndex] / 1000
-      }
     }
   }
   
-  // If no hourly data, use daily data with day offset
-  if (data._hourIndex === undefined && dayOffset !== 0) {
-    if (baseData.daily) {
-      const dayIndex = dayOffset > 0 ? dayOffset : 0
-      if (baseData.daily.temperature_2m_max?.[dayIndex] !== undefined) {
-        data.temp = Math.round(baseData.daily.temperature_2m_max[dayIndex])
-      }
-      if (baseData.daily.weather_code?.[dayIndex] !== undefined) {
-        data.conditionCode = baseData.daily.weather_code[dayIndex]
-        data.condition = mapWeatherCode(baseData.daily.weather_code[dayIndex])
-      }
-      if (baseData.daily.precipitation_probability_max?.[dayIndex] !== undefined) {
-        data.precipitationProb = baseData.daily.precipitation_probability_max[dayIndex]
-      }
-      if (baseData.daily.cloud_cover?.[dayIndex] !== undefined) {
-        data.cloudCover = baseData.daily.cloud_cover[dayIndex]
-      }
-    }
-  }
+  // ─── ENSURE CONDITION SYNC ───────────────────────────────────────────
   
-  // Rough fallback approximations
-  if (data._hourIndex === undefined && data._dayOffset === undefined) {
-    const hour = targetDate.getHours()
-    if (hour >= 6 && hour < 12) {
-      data.temp = (data.temp || 0) - 2
-    } else if (hour >= 12 && hour < 17) {
-      data.temp = (data.temp || 0) + 2
-    } else if (hour >= 17 && hour < 21) {
-      data.temp = (data.temp || 0) - 1
-    } else {
-      data.temp = (data.temp || 0) - 4
-    }
-  }
-  
-  // Ensure condition and conditionCode are always in sync
   if (data.conditionCode !== undefined && data.conditionCode !== null) {
     data.condition = mapWeatherCode(data.conditionCode)
   }
   
   return data
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. INTENT MAP
 // ═══════════════════════════════════════════════════════════════════════════════
