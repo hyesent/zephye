@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useAudio } from './AudioContext'
-import { getMoonPhase, mapWeatherCode } from './data/calculations.js'
+import { getMoonPhase, mapWeatherCode, getMoonIllumination } from './data/calculations.js'
 
 import { getClothingAdvice } from './data/ClothingAdvice.js'
 import { getLifestyleAdvice } from './data/Lifestyle.js'
@@ -304,7 +304,6 @@ const mergeResponses = (responses, intents, question) => {
   if (responses.length === 0) return null
   if (responses.length === 1) return responses[0]
 
-  // Parse each response into structured sections
   const parsedSections = []
 
   for (let i = 0; i < responses.length; i++) {
@@ -331,7 +330,6 @@ const mergeResponses = (responses, intents, question) => {
     for (const line of lines) {
       const trimmed = line.trim()
       
-      // Detect section headers
       if (trimmed.includes('⚠️') && (trimmed.includes('WARNING') || trimmed.includes('Warning'))) {
         currentSection = 'warnings'
         warningBuffer = []
@@ -344,10 +342,8 @@ const mergeResponses = (responses, intents, question) => {
         continue
       }
 
-      // Skip divider lines
       if (trimmed.includes('---') || trimmed.includes('===')) continue
 
-      // Route content to appropriate bucket
       if (currentSection === 'warnings') {
         if (trimmed && !trimmed.includes('⚠️') && !trimmed.includes('💡')) {
           warningBuffer.push(trimmed)
@@ -357,7 +353,6 @@ const mergeResponses = (responses, intents, question) => {
           bottomBuffer.push(trimmed)
         }
       } else {
-        // Content section - skip if it's a header line
         if (!trimmed.includes('⚠️') && !trimmed.includes('💡') && 
             !trimmed.includes('BOTTOM') && !trimmed.includes('Bottom') &&
             trimmed.length > 2) {
@@ -366,7 +361,6 @@ const mergeResponses = (responses, intents, question) => {
       }
     }
 
-    // If we didn't find warnings via header, search for warning patterns
     if (warningBuffer.length === 0) {
       for (const line of lines) {
         const trimmed = line.trim()
@@ -377,7 +371,6 @@ const mergeResponses = (responses, intents, question) => {
       }
     }
 
-    // If we didn't find bottom line via header, search for patterns
     if (bottomBuffer.length === 0) {
       for (const line of lines) {
         const trimmed = line.trim()
@@ -393,41 +386,34 @@ const mergeResponses = (responses, intents, question) => {
     parsedSections.push(section)
   }
 
-  // Sort by priority (primary first, then by score)
   parsedSections.sort((a, b) => {
     if (a.isPrimary && !b.isPrimary) return -1
     if (!a.isPrimary && b.isPrimary) return 1
     return b.score - a.score
   })
 
-  // Build merged response
   let merged = ''
   const primary = parsedSections.find(s => s.isPrimary) || parsedSections[0]
   const secondary = parsedSections.filter(s => !s.isPrimary)
 
-  // --- PRIMARY SECTION: FULL CONTENT ---
   merged += `${primary.icon} ${primary.header}\n`
   merged += primary.contentLines.join('\n')
   
-  // Add primary warnings if any
   if (primary.warnings.length > 0) {
     merged += '\n\n⚠️ Warnings:\n'
     merged += primary.warnings.join('\n')
   }
   
-  // Add primary bottom line if any
   if (primary.bottomLine) {
     merged += '\n\n💡 Bottom Line:\n'
     merged += primary.bottomLine
   }
   merged += '\n\n'
 
-  // --- SECONDARY SECTIONS: CONDENSED ---
   if (secondary.length > 0) {
     merged += `📋 Also consider:\n\n`
     for (const sec of secondary) {
       merged += `${sec.icon} ${sec.header}\n`
-      // Show top 4 lines from secondary
       const topLines = sec.contentLines.slice(0, CONFIG.MAX_SECONDARY_LINES)
       merged += topLines.join('\n')
       if (sec.contentLines.length > CONFIG.MAX_SECONDARY_LINES) {
@@ -437,7 +423,6 @@ const mergeResponses = (responses, intents, question) => {
     }
   }
 
-  // --- GLOBAL WARNINGS (deduplicated, from all sources) ---
   const allWarnings = []
   for (const sec of parsedSections) {
     for (const w of sec.warnings) {
@@ -448,7 +433,6 @@ const mergeResponses = (responses, intents, question) => {
     }
   }
 
-  // Only add global warnings if primary didn't already have them
   if (allWarnings.length > 0 && primary.warnings.length === 0) {
     merged += `⚠️ Warnings:\n`
     for (const w of allWarnings.slice(0, CONFIG.MAX_WARNINGS)) {
@@ -460,14 +444,12 @@ const mergeResponses = (responses, intents, question) => {
     merged += '\n'
   }
 
-  // --- GLOBAL BOTTOM LINE (choose best one) ---
   const allBottomLines = parsedSections
     .map(s => s.bottomLine)
     .filter(Boolean)
-    .filter((line, index, self) => self.indexOf(line) === index) // deduplicate
+    .filter((line, index, self) => self.indexOf(line) === index)
 
   if (allBottomLines.length > 0) {
-    // Prefer primary's bottom line, otherwise use first one
     const primaryBottom = parsedSections.find(s => s.isPrimary)?.bottomLine
     const bestBottom = primaryBottom || allBottomLines[0]
     merged += `💡 Bottom Line:\n${bestBottom}\n`
@@ -483,7 +465,10 @@ const getDynamicSuggestions = (savedLocations = []) => {
     'Ask "stargazing tonight" or "moon phase"',
     'Try "what should I wear" or "safe to run"',
     'Ask "will it rain" or "UV burn time"',
-    'Type "paint drying time" or "best photo hour"'
+    'Type "paint drying time" or "best photo hour"',
+    'Compare "today vs tomorrow" for anything',
+    'Ask "biking vs running today?"',
+    'Try "drive or bike to work?"'
   ]
   
   const suggestions = [...base]
@@ -495,11 +480,392 @@ const getDynamicSuggestions = (savedLocations = []) => {
       suggestions.push(`Traffic to ${locNames[0]}?`)
     }
     if (locNames.length > 1) {
+      suggestions.push(`Compare ${locNames[0]} and ${locNames[1]} weather?`)
       suggestions.push(`Route from ${locNames[0]} to ${locNames[1]}?`)
     }
   }
   
   return suggestions
+}
+
+// ─── SMART VERDICT GENERATOR ──────────────────────────────────────────
+
+const generateVerdict = (question, data, intent) => {
+  const q = question.toLowerCase()
+  let verdict = ''
+  let confidence = 85
+  
+  const isYesNo = q.match(/^(will|is|are|can|do|does|should|would|could|did|have|has|was|were|am|may|might|shall|must|need to|got to|able to|going to)/i)
+  
+  if (!isYesNo) {
+    return null
+  }
+  
+  const intentId = intent?.id || 'weather'
+  
+  switch (intentId) {
+    case 'stargazing': {
+      const cloudCover = data.cloudCover || 0
+      const moonIllumination = data.moonPhase ? Math.round(getMoonIllumination(data.moonPhase) * 100) : 0
+      const seeing = data.seeing || 5
+      
+      if (cloudCover > 70) {
+        verdict = 'NO'
+        confidence = 90
+      } else if (cloudCover > 40) {
+        verdict = 'MIGHT'
+        confidence = 60
+      } else if (moonIllumination > 80) {
+        verdict = 'MIGHT'
+        confidence = 65
+      } else if (seeing <= 3 && cloudCover < 20 && moonIllumination < 30) {
+        verdict = 'YES'
+        confidence = 95
+      } else if (cloudCover < 30 && moonIllumination < 50) {
+        verdict = 'YES'
+        confidence = 80
+      } else {
+        verdict = 'MIGHT'
+        confidence = 55
+      }
+      break
+    }
+    
+    case 'weather': {
+      const rainChance = data.precipitationProb || 0
+      const temp = data.temp || 0
+      
+      if (q.includes('rain') || q.includes('storm')) {
+        if (rainChance > 70) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (rainChance > 40) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('hot') || q.includes('warm')) {
+        if (temp > 28) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (temp > 22) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('cold')) {
+        if (temp < 10) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (temp < 18) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('clear') || q.includes('sunny')) {
+        if (data.cloudCover < 30) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (data.cloudCover < 60) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      }
+      break
+    }
+    
+    case 'sports': {
+      const rainChance = data.precipitationProb || 0
+      const temp = data.temp || 0
+      const wind = data.wind || 0
+      
+      if (q.includes('run') || q.includes('jog') || q.includes('bike') || q.includes('cycle')) {
+        if (temp > 35 || temp < -5) {
+          verdict = 'NO'
+          confidence = 90
+        } else if (rainChance > 60 || wind > 40) {
+          verdict = 'NO'
+          confidence = 85
+        } else if (rainChance > 30 || wind > 25 || temp > 30 || temp < 5) {
+          verdict = 'MIGHT'
+          confidence = 55
+        } else {
+          verdict = 'YES'
+          confidence = 90
+        }
+      }
+      break
+    }
+    
+    case 'driving': {
+      const rainChance = data.precipitationProb || 0
+      const visibility = data.visibility || 10
+      const wind = data.wind || 0
+      const condition = data.condition || ''
+      
+      if (condition === 'thunderstorm' || condition === 'snow') {
+        verdict = 'NO'
+        confidence = 95
+      } else if (rainChance > 70 || visibility < 2 || wind > 50) {
+        verdict = 'NO'
+        confidence = 85
+      } else if (rainChance > 40 || visibility < 5 || wind > 30) {
+        verdict = 'MIGHT'
+        confidence = 60
+      } else {
+        verdict = 'YES'
+        confidence = 90
+      }
+      break
+    }
+    
+    case 'traffic': {
+      const hour = new Date().getHours()
+      const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 18)
+      const isWeekend = [0, 6].includes(new Date().getDay())
+      
+      if (isRushHour && !isWeekend) {
+        verdict = 'YES'
+        confidence = 80
+      } else if ((isRushHour && isWeekend) || (hour >= 12 && hour <= 13)) {
+        verdict = 'MIGHT'
+        confidence = 55
+      } else {
+        verdict = 'NO'
+        confidence = 75
+      }
+      break
+    }
+    
+    case 'clothing': {
+      const temp = data.temp || 0
+      const rainChance = data.precipitationProb || 0
+      
+      if (q.includes('jacket') || q.includes('coat')) {
+        if (temp < 10) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (temp < 18) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('umbrella') || q.includes('raincoat')) {
+        if (rainChance > 60) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (rainChance > 30) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      }
+      break
+    }
+    
+    default: {
+      const rainChance = data.precipitationProb || 0
+      if (rainChance > 60) {
+        verdict = 'MIGHT'
+        confidence = 55
+      } else {
+        verdict = 'YES'
+        confidence = 70
+      }
+    }
+  }
+  
+  if (!verdict) {
+    verdict = 'MIGHT'
+    confidence = 50
+  }
+  
+  let confidenceLabel = ''
+  if (confidence >= 90) confidenceLabel = ' (high confidence)'
+  else if (confidence >= 70) confidenceLabel = ' (moderate confidence)'
+  else if (confidence >= 50) confidenceLabel = ' (low confidence)'
+  
+  return `${verdict}${confidenceLabel}`
+}
+
+// ─── COMPARISON DETECTION ──────────────────────────────────────────────
+
+const detectComparison = (question) => {
+  const q = question.toLowerCase()
+  
+  const timeWords = [
+    'today', 'tomorrow', 'now', 'later', 
+    'evening', 'morning', 'afternoon', 'night',
+    'weekend', 'weekday', 'monday', 'tuesday', 
+    'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    'tonight', 'this morning', 'this afternoon', 'this evening',
+    '6 PM', '7 PM', '8 PM', '9 PM', '10 PM',
+    '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
+    'noon', 'midnight', 'sunrise', 'sunset',
+    'rush hour', 'commute time', 'lunch time'
+  ]
+  
+  const savedLocs = getSavedLocations()
+  const locationWords = savedLocs.map(l => l.label?.toLowerCase()).filter(Boolean)
+  
+  const activityWords = ['run', 'bike', 'drive', 'walk', 'cycle', 'jog', 'hike', 'swim', 'sport', 'gym']
+  const compareWords = ['vs', 'versus', 'compare', 'difference', 'or', 'vs.', 'and', 'better', 'best', 'rather']
+  
+  const hasCompare = compareWords.some(w => q.includes(w))
+  
+  // Multi-time comparison (3+ times)
+  const foundTimes = timeWords.filter(w => q.includes(w))
+  if (hasCompare && foundTimes.length >= 3) {
+    return {
+      type: 'multi_time',
+      times: foundTimes,
+      count: foundTimes.length
+    }
+  }
+  
+  // Location comparison
+  const foundLocations = locationWords.filter(w => q.includes(w))
+  if (hasCompare && foundLocations.length >= 2) {
+    return {
+      type: 'location',
+      locations: foundLocations,
+      count: foundLocations.length
+    }
+  }
+  
+  // Activity comparison
+  const foundActivities = activityWords.filter(w => q.includes(w))
+  if (hasCompare && foundActivities.length >= 2) {
+    if (q.includes('vs') || q.includes('or') || q.includes('versus') || q.includes('rather')) {
+      return {
+        type: 'activity',
+        activities: foundActivities,
+        count: foundActivities.length
+      }
+    }
+  }
+  
+  // Scenario comparison (drive vs bike to work)
+  const scenarioKeywords = ['drive', 'bike', 'walk', 'cycle', 'run', 'commute', 'travel']
+  const foundScenarios = scenarioKeywords.filter(w => q.includes(w))
+  if (hasCompare && foundScenarios.length >= 2) {
+    if (q.includes('to work') || q.includes('to school') || q.includes('to the') || q.includes('commute')) {
+      return {
+        type: 'scenario',
+        scenarios: foundScenarios,
+        destination: q.match(/to\s+([\w\s]+?)(?:\?|$)/)?.[1]?.trim() || 'destination'
+      }
+    }
+  }
+  
+  // Standard two-time comparison
+  if (hasCompare && foundTimes.length >= 2) {
+    return {
+      type: 'time',
+      time1: foundTimes[0],
+      time2: foundTimes[1]
+    }
+  }
+  
+  // Implicit time comparison
+  if (q.includes('today') && q.includes('tomorrow')) {
+    return { type: 'time', time1: 'today', time2: 'tomorrow' }
+  }
+  
+  if (q.includes('now') && q.includes('later')) {
+    return { type: 'time', time1: 'now', time2: 'later' }
+  }
+  
+  return null
+}
+
+// ─── COMPARISON HELPERS ──────────────────────────────────────────────────
+
+const extractKeyPoints = (response, maxLines = 5) => {
+  const lines = response.split('\n').filter(l => l.trim() && !l.includes('---') && !l.includes('==='))
+  return lines.slice(0, maxLines).join('\n')
+}
+
+const generateComparisonVerdict = (results, comparison, intent) => {
+  let verdict = ''
+  
+  switch (comparison.type) {
+    case 'time':
+    case 'multi_time': {
+      const times = comparison.type === 'multi_time' ? comparison.times : [comparison.time1, comparison.time2]
+      const tempValues = results.map(r => r.temp)
+      const rainValues = results.map(r => r.rain)
+      
+      if (tempValues.some(v => v !== null && v !== undefined)) {
+        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (temps.length > 1) {
+          const max = Math.max(...temps)
+          const min = Math.min(...temps)
+          const diff = max - min
+          if (diff > 5) {
+            const hottest = times[tempValues.indexOf(max)]
+            verdict += `Temperature: ${hottest} is hottest at ${max}°C. `
+          }
+        }
+      }
+      
+      if (rainValues.some(v => v !== null && v !== undefined)) {
+        const rains = rainValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (rains.length > 1) {
+          const max = Math.max(...rains)
+          const min = Math.min(...rains)
+          if (max > 50 && min < 30) {
+            const rainiest = times[rainValues.indexOf(max)]
+            const driest = times[rainValues.indexOf(min)]
+            verdict += `Rain: ${rainiest} is rainier (${max}%) than ${driest} (${min}%). `
+          }
+        }
+      }
+      
+      if (!verdict) {
+        const timeList = times.join(', ')
+        verdict = `The conditions across ${timeList} are similar. Check the details above for specifics.`
+      }
+      break
+    }
+    
+    case 'location': {
+      const locs = comparison.locations
+      verdict = `Comparing ${locs.join(' and ')}. Weather can vary significantly between locations.`
+      break
+    }
+    
+    case 'activity': {
+      const activities = comparison.activities
+      verdict = `Comparing ${activities.join(' vs ')}. Consider weather impact on each activity.`
+      break
+    }
+    
+    case 'scenario': {
+      const scenarios = comparison.scenarios
+      const dest = comparison.destination
+      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. Consider time, weather, and traffic for each option.`
+      break
+    }
+    
+    default:
+      verdict = 'Comparison complete. See details above.'
+  }
+  
+  return verdict
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────
@@ -635,14 +1001,18 @@ export default function ZephyeFullScreen({
       'Stargazing tonight?',
       'Safe to drive?',
       'Traffic incidents near me?',
-      'Can I go biking?'
+      'Can I go biking?',
+      'Compare today vs tomorrow',
+      'Biking vs running today?'
     ]
 
     const locs = savedLocations.slice(0, 2)
     if (locs.length > 0) {
       chips.push(`Route to ${locs[0].label || 'saved location'}?`)
+      chips.push(`Traffic to ${locs[0].label || 'saved location'}?`)
     }
     if (locs.length > 1) {
+      chips.push(`Compare ${locs[0].label} and ${locs[1].label} weather?`)
       chips.push(`Route from ${locs[0].label} to ${locs[1].label}?`)
     }
 
@@ -690,12 +1060,250 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
-  // ─── Routing Engine ──────────────────────────────────────────────────
+  // ─── ENHANCED ROUTE QUESTION ──────────────────────────────────────────
 
   const routeQuestion = useCallback(async (question) => {
     const q = question.toLowerCase()
     const data = weatherData
 
+    // ─── Check for comparison mode ──────────────────────────────────────
+    const comparison = detectComparison(question)
+    
+    if (comparison) {
+      console.log(`🔀 Comparison detected:`, comparison)
+      
+      // ─── Multi-time comparison ──────────────────────────────────────
+      if (comparison.type === 'multi_time') {
+        const times = comparison.times
+        const detectedIntents = detectIntents(q)
+        
+        if (detectedIntents.length === 0) {
+          return "I can compare multiple times. Try asking 'Compare today, tomorrow, and this weekend for stargazing?'"
+        }
+        
+        const primaryIntent = detectedIntents[0].intent
+        const results = []
+        
+        for (const time of times) {
+          const timeData = { ...data, _timeContext: time }
+          const response = await primaryIntent.fn(timeData, question)
+          const tempMatch = response.match(/(\d+)°C/)
+          const rainMatch = response.match(/(\d+)% rain/i)
+          results.push({
+            time,
+            response: extractKeyPoints(response, 4),
+            temp: tempMatch ? parseInt(tempMatch[1]) : null,
+            rain: rainMatch ? parseInt(rainMatch[1]) : null
+          })
+        }
+        
+        let comparisonResponse = `📊 **Multi-Time Comparison:**\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `**${result.time.toUpperCase()}:**\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+        comparisonResponse += `**Verdict:** ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Location comparison ──────────────────────────────────────────
+      if (comparison.type === 'location') {
+        const locations = comparison.locations
+        const detectedIntents = detectIntents(q)
+        
+        if (detectedIntents.length === 0) {
+          return "I can compare locations. Try asking 'Compare Lagos and Abuja weather?'"
+        }
+        
+        const primaryIntent = detectedIntents[0].intent
+        const results = []
+        
+        for (const locName of locations) {
+          const savedLoc = findSavedLocation(locName)
+          if (!savedLoc) {
+            return `I couldn't find "${locName}" in your saved locations. Please save it first.`
+          }
+          
+          const locData = { 
+            ...data, 
+            _locationContext: locName,
+            city: savedLoc.label,
+            lat: savedLoc.lat,
+            lon: savedLoc.lon
+          }
+          
+          const response = await primaryIntent.fn(locData, question)
+          const tempMatch = response.match(/(\d+)°C/)
+          results.push({
+            location: locName,
+            response: extractKeyPoints(response, 4),
+            temp: tempMatch ? parseInt(tempMatch[1]) : null
+          })
+        }
+        
+        let comparisonResponse = `📊 **Location Comparison:**\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `**${result.location.toUpperCase()}:**\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+        comparisonResponse += `**Verdict:** ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Activity comparison ──────────────────────────────────────────
+      if (comparison.type === 'activity') {
+        const activities = comparison.activities
+        
+        const activityToIntent = {
+          'run': 'sports',
+          'bike': 'sports',
+          'cycle': 'sports',
+          'drive': 'driving',
+          'walk': 'lifestyle',
+          'jog': 'sports',
+          'hike': 'sports',
+          'swim': 'sports'
+        }
+        
+        const results = []
+        
+        for (const activity of activities) {
+          const intentId = activityToIntent[activity] || 'sports'
+          const intent = INTENT_MAP.find(i => i.id === intentId)
+          
+          if (!intent) continue
+          
+          const activityQuestion = `Is it good for ${activity}?`
+          const response = await intent.fn(data, activityQuestion)
+          
+          results.push({
+            activity,
+            response: extractKeyPoints(response, 4),
+            icon: intent.icon
+          })
+        }
+        
+        if (results.length === 0) {
+          return "I couldn't compare those activities. Try 'Biking vs running today?'"
+        }
+        
+        let comparisonResponse = `📊 **Activity Comparison:**\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.icon} **${result.activity.toUpperCase()}:**\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, { id: 'sports' })
+        comparisonResponse += `**Verdict:** ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Scenario comparison ──────────────────────────────────────────
+      if (comparison.type === 'scenario') {
+        const scenarios = comparison.scenarios
+        const dest = comparison.destination
+        
+        const scenarioToIntent = {
+          'drive': 'driving',
+          'bike': 'sports',
+          'cycle': 'sports',
+          'walk': 'lifestyle',
+          'run': 'sports',
+          'commute': 'route',
+          'travel': 'route'
+        }
+        
+        const results = []
+        
+        for (const scenario of scenarios) {
+          const intentId = scenarioToIntent[scenario] || 'route'
+          const intent = INTENT_MAP.find(i => i.id === intentId)
+          
+          if (!intent) continue
+          
+          const scenarioQuestion = `${scenario} to ${dest}?`
+          const response = await intent.fn(data, scenarioQuestion)
+          
+          results.push({
+            scenario,
+            response: extractKeyPoints(response, 4),
+            icon: intent.icon
+          })
+        }
+        
+        if (results.length === 0) {
+          return "I couldn't compare those scenarios. Try 'Drive or bike to work?'"
+        }
+        
+        let comparisonResponse = `📊 **Scenario Comparison: ${dest.toUpperCase()}**\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.icon} **${result.scenario.toUpperCase()}:**\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, { id: 'route' })
+        comparisonResponse += `**Verdict:** ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Standard two-time comparison ────────────────────────────────
+      const detectedIntents = detectIntents(q)
+      
+      if (detectedIntents.length === 0) {
+        return "I can compare times. Try asking 'Stargazing tonight vs tomorrow?'"
+      }
+      
+      const primaryIntent = detectedIntents[0].intent
+      const results = []
+      
+      const time1Data = { ...data, _timeContext: comparison.time1 }
+      const time2Data = { ...data, _timeContext: comparison.time2 }
+      
+      const [response1, response2] = await Promise.all([
+        primaryIntent.fn(time1Data, question),
+        primaryIntent.fn(time2Data, question)
+      ])
+      
+      const temp1 = response1.match(/(\d+)°C/)
+      const temp2 = response2.match(/(\d+)°C/)
+      const rain1 = response1.match(/(\d+)% rain/i)
+      const rain2 = response2.match(/(\d+)% rain/i)
+      
+      results.push({
+        time: comparison.time1,
+        response: extractKeyPoints(response1, 4),
+        temp: temp1 ? parseInt(temp1[1]) : null,
+        rain: rain1 ? parseInt(rain1[1]) : null
+      })
+      
+      results.push({
+        time: comparison.time2,
+        response: extractKeyPoints(response2, 4),
+        temp: temp2 ? parseInt(temp2[1]) : null,
+        rain: rain2 ? parseInt(rain2[1]) : null
+      })
+      
+      let comparisonResponse = `📊 **Comparison: ${comparison.time1} vs ${comparison.time2}**\n\n`
+      
+      for (const result of results) {
+        comparisonResponse += `**${result.time.toUpperCase()}:**\n${result.response}\n\n`
+      }
+      
+      const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+      comparisonResponse += `**Verdict:** ${verdict}`
+      
+      return comparisonResponse
+    }
+
+    // ─── NORMAL FLOW ──────────────────────────────────────────────────────
     const detectedIntents = detectIntents(q)
     
     console.log(`🧠 Intents:`, detectedIntents.map(d => 
@@ -731,44 +1339,72 @@ export default function ZephyeFullScreen({
         if (toLocation && !fromLocation) fromLocation = 'home'
 
         if (hasTraffic && !toLocation) {
-          return await getTrafficAdvice(data, question, {})
+          const response = await getTrafficAdvice(data, question, {})
+          const verdict = generateVerdict(question, data, { id: 'traffic' })
+          return verdict ? `${verdict}\n\n${response}` : response
         }
 
         if (hasRoute && toLocation) {
-          return await getRouteAdvice(data, question, { from: fromLocation, to: toLocation, savedLocations })
+          const response = await getRouteAdvice(data, question, { from: fromLocation, to: toLocation, savedLocations })
+          const verdict = generateVerdict(question, data, { id: 'route' })
+          return verdict ? `${verdict}\n\n${response}` : response
         }
       }
 
       if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend|temperature/)) {
-        return await getWeatherAdvice(data, question)
+        const response = await getWeatherAdvice(data, question)
+        const verdict = generateVerdict(question, data, { id: 'weather' })
+        return verdict ? `${verdict}\n\n${response}` : response
       }
 
       return `I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, or health. Current temp is ${data.temp}°C.`
     }
 
+    // ─── PARALLEL FETCHING ──────────────────────────────────────────────
+    const results = await Promise.all(
+      detectedIntents.map(async (detected) => {
+        try {
+          const response = await detected.intent.fn(data, question)
+          return { response, detected }
+        } catch (e) {
+          console.error(`Error in ${detected.intent.name}:`, e)
+          return null
+        }
+      })
+    )
+
     const responses = []
     const intents = []
 
-    for (const detected of detectedIntents) {
-      try {
-        const response = await detected.intent.fn(data, question)
-        responses.push(response)
-        intents.push(detected)
-      } catch (e) {
-        console.error(`Error in ${detected.intent.name}:`, e)
+    for (const result of results) {
+      if (result) {
+        responses.push(result.response)
+        intents.push(result.detected)
       }
     }
 
     if (responses.length === 0) {
-      return await getWeatherAdvice(data, question)
+      const response = await getWeatherAdvice(data, question)
+      const verdict = generateVerdict(question, data, { id: 'weather' })
+      return verdict ? `${verdict}\n\n${response}` : response
     }
 
-    if (responses.length === 1) {
-      return responses[0]
+    const primaryIntent = intents[0]?.intent
+    let verdict = null
+    
+    if (primaryIntent) {
+      verdict = generateVerdict(question, data, primaryIntent)
     }
 
-    const merged = mergeResponses(responses, intents, question)
-    return merged || responses[0]
+    let mergedResponse = responses.length === 1 
+      ? responses[0] 
+      : mergeResponses(responses, intents, question)
+
+    if (verdict) {
+      mergedResponse = `${verdict}\n\n${mergedResponse}`
+    }
+
+    return mergedResponse || responses[0]
   }, [weatherData, savedLocations])
 
   // ─── Handle Ask ──────────────────────────────────────────────────────
@@ -859,7 +1495,7 @@ export default function ZephyeFullScreen({
           flexWrap: 'wrap',
           borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          {quickActionChips.slice(0, 8).map((q, i) => (
+          {quickActionChips.slice(0, 10).map((q, i) => (
             <button
               key={i}
               onClick={() => handleAsk(q)}
