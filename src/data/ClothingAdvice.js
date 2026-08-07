@@ -1,5 +1,4 @@
-import { calcHeatIndex, calcWindChill, calcDewPoint, getUVLevel, getAQICategory, random, getSeason, getTimeOfDay, getSunPosition, getDayLength } from './calculations';
-
+import { calcHeatIndex, calcWindChill, calcDewPoint, getUVLevel, getAQICategory, random, getSeason, getTimeOfDay, getSunPosition, getDayLength, mapWeatherCode } from './calculations';
 // ============================================================================
 // COMPREHENSIVE CLOTHING ADVICE SYSTEM
 // ============================================================================
@@ -1370,11 +1369,33 @@ function getPregnancyAdvice(data) {
 export const getClothingAdvice = (data, question = '') => {
   if (!data) return "Loading weather data...";
 
-  const { 
+  let { 
     temp, feelsLike, condition, humidity, wind, windGust, 
     uvIndex, precipitation, visibility, pressure,
     tempMin, tempMax, snow, dewPoint, aqi
   } = data;
+
+  // ═══ TIME-SHIFT AWARENESS ═══
+  if (data._hourIndex !== undefined && data.hourly) {
+    const idx = data._hourIndex
+    if (data.hourly.temperature_2m?.[idx] !== undefined) temp = Math.round(data.hourly.temperature_2m[idx])
+    if (data.hourly.apparent_temperature?.[idx] !== undefined) feelsLike = Math.round(data.hourly.apparent_temperature[idx])
+    if (data.hourly.relative_humidity_2m?.[idx] !== undefined) humidity = data.hourly.relative_humidity_2m[idx]
+    if (data.hourly.wind_speed_10m?.[idx] !== undefined) wind = data.hourly.wind_speed_10m[idx]
+    if (data.hourly.wind_gusts_10m?.[idx] !== undefined) windGust = data.hourly.wind_gusts_10m[idx]
+    if (data.hourly.weather_code?.[idx] !== undefined) condition = mapWeatherCode(data.hourly.weather_code[idx])
+    if (data.hourly.precipitation?.[idx] !== undefined) precipitation = data.hourly.precipitation[idx]
+    if (data.hourly.uv_index?.[idx] !== undefined) uvIndex = data.hourly.uv_index[idx]
+    if (data.hourly.visibility?.[idx] !== undefined) visibility = data.hourly.visibility[idx] / 1000
+  }
+  if (data._dayOffset !== undefined && data.daily) {
+    const d = data._dayOffset > 0 ? data._dayOffset : 0
+    if (data.daily.temperature_2m_max?.[d] !== undefined) tempMax = Math.round(data.daily.temperature_2m_max[d])
+    if (data.daily.temperature_2m_min?.[d] !== undefined) tempMin = Math.round(data.daily.temperature_2m_min[d])
+    if (data.daily.weather_code?.[d] !== undefined) condition = mapWeatherCode(data.daily.weather_code[d])
+    if (data.daily.precipitation_sum?.[d] !== undefined) precipitation = data.daily.precipitation_sum[d]
+  }
+  // ═══ END TIME-SHIFT ═══
   
   const realFeel = feelsLike || temp;
   const isRaining = ['rain', 'drizzle', 'thunderstorm'].includes(condition);
@@ -1999,7 +2020,13 @@ export const getClothingAdvice = (data, question = '') => {
     "🫶 Today's clothing guide:"
   ];
 
-  let response = `${random(intros)}\n\n`;
+    let response = `${random(intros)}\n\n`;
+  
+  if (data._timeLabel) {
+    response += `📅 **Time:** ${data._timeLabel}\n\n`;
+  }
+  
+  // Core layers section
   
   // Core layers section
   if (layers.length > 0) {
