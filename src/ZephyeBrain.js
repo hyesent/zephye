@@ -1,6 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────────────
 // ─── ZEPHYE BRAIN v3.0 - Unified Intelligence Engine ──────────────────────
-// ─── Merges: Intent routing + Scoring engine + Comparison + Time-shift ────
 // ──────────────────────────────────────────────────────────────────────────────
 
 import {
@@ -129,7 +128,7 @@ const geocodeLocation = async (locationName) => {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LOCATION WEATHER FETCHER
+// LOCATION WEATHER FETCHER (CANONICAL DATA SOURCE)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const locationCache = new Map()
@@ -173,8 +172,8 @@ const fetchWeatherForLocation = async (lat, lon) => {
       city: '', lat, lon, moonPhase: 0,
       season: ['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()],
       timeOfDay: new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening',
-      hourly: om.hourly || {},
-      daily: om.daily || {}
+      hourly: om.hourly || { time: [], temperature_2m: [], weather_code: [], precipitation_probability: [], precipitation: [], apparent_temperature: [], wind_gusts_10m: [], pressure_msl: [], relative_humidity_2m: [], cloud_cover: [], visibility: [], uv_index: [], wind_speed_10m: [] },
+      daily: om.daily || { time: [], temperature_2m_max: [], temperature_2m_min: [], weather_code: [], uv_index_max: [], sunrise: [], sunset: [], precipitation_sum: [], precipitation_probability_max: [], cloud_cover: [] }
     }
     locationCache.set(key, { data: wd, time: Date.now() })
     return wd
@@ -182,12 +181,6 @@ const fetchWeatherForLocation = async (lat, lon) => {
     return null
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ASYNC INTENT CHECK
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const ASYNC_INTENTS = ['farming', 'stargazing']
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. TIME SHIFTING ENGINE
@@ -557,7 +550,7 @@ const detectIntents = (question) => {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 4. COMPARISON DETECTION — FULLY UPDATED
+// 4. COMPARISON DETECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const detectComparison = (question) => {
@@ -1332,72 +1325,102 @@ class ZephyeBrain {
     this.initialized = true
   }
 
+  // ─── NEW ASK METHOD ────────────────────────────────────────────────────────
   async ask(question, weatherData) {
     const q = question.toLowerCase().trim()
-    const data = { ...weatherData }
-
-    // ─── STEP 1: Check for comparison mode ──────────────────────────────────
-    const comparison = detectComparison(question)
-    
-    if (comparison) {
-      return this.handleComparison(question, data, comparison)
-    }
-
-    // ─── STEP 2: Detect intents ──────────────────────────────────────────────
-    const detectedIntents = detectIntents(q)
-    
-    console.log(`🧠 Intents:`, detectedIntents.map(d => 
-      `${d.intent.name} (${d.score.toFixed(1)})`
-    ).join(', '))
-
-    // ─── STEP 3: Check for saved location mention ───────────────────────────
-    let locationData = data
     const savedLocs = getSavedLocations()
-    
-    let matchedSavedLocation = null
+
+    // ─── 1. Resolve location ──────────────────────────────────────────────
+    let lat = weatherData?.lat ?? 0
+    let lon = weatherData?.lon ?? 0
+    let city = weatherData?.city || 'Your Location'
+
+    // Check if question mentions a saved location
+    let matchedSaved = null
     for (const loc of savedLocs) {
       const label = loc.label?.toLowerCase() || ''
       const name = loc.name?.toLowerCase() || ''
       if (label && q.includes(label)) {
-        matchedSavedLocation = loc
+        matchedSaved = loc
         break
       }
       if (name && q.includes(name)) {
-        matchedSavedLocation = loc
+        matchedSaved = loc
         break
       }
     }
-    
-    if (matchedSavedLocation) {
-      const fetched = await fetchWeatherForLocation(matchedSavedLocation.lat, matchedSavedLocation.lon)
-      if (fetched) {
-        fetched.city = matchedSavedLocation.label || matchedSavedLocation.name
-        fetched.homeName = matchedSavedLocation.label || matchedSavedLocation.name
-        fetched.savedLocations = savedLocs
-        fetched._fromSavedLocation = true
-        fetched._savedLabel = matchedSavedLocation.label || matchedSavedLocation.name
-        locationData = fetched
-        console.log(`📍 Using weather for saved location: ${matchedSavedLocation.label || matchedSavedLocation.name}`)
-      }
+
+    if (matchedSaved) {
+      lat = matchedSaved.lat
+      lon = matchedSaved.lon
+      city = matchedSaved.label || matchedSaved.name
     }
 
-    // ─── STEP 4: Route & Traffic special handling ────────────────────────────
+    // ─── 2. Fetch canonical weather data ──────────────────────────────────
+    const locationData = await fetchWeatherForLocation(lat, lon)
+    if (!locationData) {
+      // If fetch fails, use a minimal fallback from the passed data
+      const fallback = {
+        temp: weatherData?.temp ?? 0,
+        feelsLike: weatherData?.feelsLike ?? weatherData?.temp ?? 0,
+        humidity: weatherData?.humidity ?? 50,
+        wind: weatherData?.wind ?? 0,
+        windGust: weatherData?.windGust ?? 0,
+        uvIndex: weatherData?.uvIndex ?? 0,
+        aqi: weatherData?.aqi ?? 0,
+        visibility: weatherData?.visibility ?? 10,
+        conditionCode: weatherData?.conditionCode ?? 0,
+        condition: weatherData?.condition || 'clear',
+        cloudCover: weatherData?.cloudCover ?? 0,
+        precipitation: weatherData?.precipitation ?? 0,
+        precipitationProb: weatherData?.precipitationProb ?? 0,
+        pressure: weatherData?.pressure ?? 1013,
+        dewPoint: weatherData?.dewPoint ?? 0,
+        sunrise: weatherData?.sunrise ?? '',
+        sunset: weatherData?.sunset ?? '',
+        city: city,
+        lat: lat,
+        lon: lon,
+        savedLocations: savedLocs,
+        hourly: weatherData?.hourly || { time: [] },
+        daily: weatherData?.daily || { time: [] }
+      }
+      console.warn('⚠️ Weather fetch failed, using fallback data')
+      return this.handleFallback(question, fallback, q)
+    }
+
+    // ─── 3. Attach metadata ────────────────────────────────────────────────
+    locationData.city = city
+    locationData.lat = lat
+    locationData.lon = lon
+    locationData.savedLocations = savedLocs
+    locationData._fromSavedLocation = !!matchedSaved
+    locationData._savedLabel = matchedSaved?.label || null
+
+    // ─── 4. Now run the normal pipeline ────────────────────────────────────
+    const comparison = detectComparison(question)
+
+    if (comparison) {
+      return this.handleComparison(question, locationData, comparison)
+    }
+
+    const detectedIntents = detectIntents(q)
+
     if (detectedIntents.length === 0) {
       return this.handleFallback(question, locationData, q)
     }
 
-    // ─── STEP 5: Parallel fetching of all intent responses ───────────────────
+    // ─── 5. Parallel fetch responses ──────────────────────────────────────
     const results = await Promise.all(
       detectedIntents.map(async (detected) => {
         try {
           if (detected.intent.id === 'route' || detected.intent.id === 'traffic') {
             return await this.handleRouteTraffic(question, locationData, detected)
           }
-          
-          const fn = detected.intent.fn
           const isAsync = ['farming', 'stargazing'].includes(detected.intent.id)
-          const response = isAsync ? await fn(locationData, question) : fn(locationData, question)
-          
+          const response = isAsync
+            ? await detected.intent.fn(locationData, question)
+            : detected.intent.fn(locationData, question)
           return { response, detected }
         } catch (e) {
           console.error(`Error in ${detected.intent.name}:`, e)
@@ -1416,7 +1439,6 @@ class ZephyeBrain {
       }
     }
 
-    // ─── STEP 6: Fallback if no responses ────────────────────────────────────
     if (responses.length === 0) {
       const response = await getWeatherAdvice(locationData, question)
       const verdict = generateVerdict(question, locationData, { id: 'weather' })
@@ -1428,22 +1450,19 @@ class ZephyeBrain {
       }
     }
 
-    // ─── STEP 7: Generate verdict ────────────────────────────────────────────
+    // ─── 6. Generate verdict and merge ────────────────────────────────────
     const primaryIntent = intents[0]?.intent
     let verdict = null
-    
     if (primaryIntent) {
       verdict = generateVerdict(question, locationData, primaryIntent)
     }
 
-    // ─── STEP 8: Merge or return single response ─────────────────────────────
-    let mergedResponse = responses.length === 1 
-      ? responses[0] 
+    let mergedResponse = responses.length === 1
+      ? responses[0]
       : mergeResponses(responses, intents, question)
 
-    // ─── STEP 9: Enhance with scoring ────────────────────────────────────────
     const scores = ScoringEngine.score(locationData, question, intents)
-    
+
     if (!mergedResponse.includes('Score:')) {
       const scoreSummary = `\n\n📊 Score: ${Math.round(scores.overallScore)}/100 (${scores.recommendation})`
       mergedResponse += scoreSummary
@@ -1522,7 +1541,7 @@ class ZephyeBrain {
       }
     }
     
-    // ─── Location comparison - FULLY FIXED ──────────────────────────────────
+    // ─── Location comparison ──────────────────────────────────────────────
     if (comparison.type === 'location' || comparison.type === 'location_unsaved') {
       const isUnsaved = comparison.type === 'location_unsaved'
       const locations = comparison.locations || comparison.locationNames || []
@@ -1540,13 +1559,46 @@ class ZephyeBrain {
       const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
       const results = []
       
-      // ─── For saved locations ──────────────────────────────────────────────
+      // ─── Helper to fetch and build complete data for a location ──────
+      const fetchLocationData = async (locObj, label) => {
+        const locData = await fetchWeatherForLocation(locObj.lat, locObj.lon)
+        if (!locData) return null
+        
+        const completeData = {
+          ...locData,
+          temp: locData.temp ?? 0,
+          feelsLike: locData.feelsLike ?? locData.temp ?? 0,
+          humidity: locData.humidity ?? 50,
+          wind: locData.wind ?? 0,
+          windGust: locData.windGust ?? 0,
+          uvIndex: locData.uvIndex ?? 0,
+          aqi: locData.aqi ?? 0,
+          visibility: locData.visibility ?? 10,
+          condition: locData.condition ?? 'clear',
+          conditionCode: locData.conditionCode ?? 0,
+          cloudCover: locData.cloudCover ?? 0,
+          precipitation: locData.precipitation ?? 0,
+          precipitationProb: locData.precipitationProb ?? 0,
+          pressure: locData.pressure ?? 1013,
+          dewPoint: locData.dewPoint ?? 0,
+          sunrise: locData.sunrise ?? '',
+          sunset: locData.sunset ?? '',
+          city: label || locData.city || 'Unknown',
+          hourly: locData.hourly || { time: [] },
+          daily: locData.daily || { time: [] },
+          savedLocations: savedLocations
+        }
+        return completeData
+      }
+      
+      // ─── Process saved locations ──────────────────────────────────────
       if (!isUnsaved && locationObjects.length >= 2) {
         for (const savedLoc of locationObjects) {
-          const locData = await fetchWeatherForLocation(savedLoc.lat, savedLoc.lon)
-          if (!locData) {
+          const label = savedLoc.label || savedLoc.name || 'Location'
+          const completeData = await fetchLocationData(savedLoc, label)
+          if (!completeData) {
             results.push({
-              location: savedLoc.label || savedLoc.name,
+              location: label,
               response: "❌ Could not fetch weather for this location.",
               temp: null,
               rain: null,
@@ -1557,35 +1609,11 @@ class ZephyeBrain {
             continue
           }
           
-          const completeData = {
-            ...locData,
-            temp: locData.temp || 0,
-            feelsLike: locData.feelsLike || locData.temp || 0,
-            humidity: locData.humidity || 50,
-            wind: locData.wind || 0,
-            windGust: locData.windGust || 0,
-            uvIndex: locData.uvIndex || 0,
-            aqi: locData.aqi || 0,
-            visibility: locData.visibility || 10,
-            condition: locData.condition || 'clear',
-            conditionCode: locData.conditionCode || 0,
-            cloudCover: locData.cloudCover || 0,
-            precipitation: locData.precipitation || 0,
-            precipitationProb: locData.precipitationProb || 0,
-            pressure: locData.pressure || 1013,
-            dewPoint: locData.dewPoint || 0,
-            sunrise: locData.sunrise || '',
-            sunset: locData.sunset || '',
-            city: savedLoc.label || savedLoc.name,
-            hourly: locData.hourly || {},
-            daily: locData.daily || {}
-          }
-          
           try {
             const response = isAsync ? await fn(completeData, question) : fn(completeData, question)
             const tempMatch = response.match(/(\d+)°C/)
             results.push({
-              location: savedLoc.label || savedLoc.name,
+              location: label,
               response: extractKeyPoints(response, 4),
               temp: tempMatch ? parseInt(tempMatch[1]) : completeData.temp,
               rain: completeData.precipitationProb,
@@ -1595,31 +1623,33 @@ class ZephyeBrain {
               fullResponse: response
             })
           } catch (e) {
-            console.error(`Error getting advice for ${savedLoc.label}:`, e)
+            const fallback = `${label}: ${completeData.temp}°C, ${completeData.condition}, wind ${completeData.wind} km/h`
             results.push({
-              location: savedLoc.label || savedLoc.name,
-              response: "❌ Error getting weather advice for this location.",
-              temp: null,
-              rain: null,
-              cloudCover: null,
+              location: label,
+              response: fallback,
+              temp: completeData.temp,
+              rain: completeData.precipitationProb,
+              cloudCover: completeData.cloudCover,
               isSaved: true,
-              error: true
+              error: false,
+              fullResponse: fallback
             })
           }
         }
       }
       
-      // ─── For unsaved/random locations ──────────────────────────────────────
+      // ─── Process unsaved/random locations ──────────────────────────────
       if (isUnsaved || results.length === 0) {
         const locNames = isUnsaved ? comparison.locationNames : locations
         for (const locName of locNames) {
-          // First try to find as saved location
+          // Try saved first
           const savedLoc = findSavedLocation(locName)
           if (savedLoc) {
-            const locData = await fetchWeatherForLocation(savedLoc.lat, savedLoc.lon)
-            if (!locData) {
+            const label = savedLoc.label || savedLoc.name || locName
+            const completeData = await fetchLocationData(savedLoc, label)
+            if (!completeData) {
               results.push({
-                location: savedLoc.label || savedLoc.name,
+                location: label,
                 response: "❌ Could not fetch weather for this location.",
                 temp: null,
                 rain: null,
@@ -1629,36 +1659,11 @@ class ZephyeBrain {
               })
               continue
             }
-            
-            const completeData = {
-              ...locData,
-              temp: locData.temp || 0,
-              feelsLike: locData.feelsLike || locData.temp || 0,
-              humidity: locData.humidity || 50,
-              wind: locData.wind || 0,
-              windGust: locData.windGust || 0,
-              uvIndex: locData.uvIndex || 0,
-              aqi: locData.aqi || 0,
-              visibility: locData.visibility || 10,
-              condition: locData.condition || 'clear',
-              conditionCode: locData.conditionCode || 0,
-              cloudCover: locData.cloudCover || 0,
-              precipitation: locData.precipitation || 0,
-              precipitationProb: locData.precipitationProb || 0,
-              pressure: locData.pressure || 1013,
-              dewPoint: locData.dewPoint || 0,
-              sunrise: locData.sunrise || '',
-              sunset: locData.sunset || '',
-              city: savedLoc.label || savedLoc.name,
-              hourly: locData.hourly || {},
-              daily: locData.daily || {}
-            }
-            
             try {
               const response = isAsync ? await fn(completeData, question) : fn(completeData, question)
               const tempMatch = response.match(/(\d+)°C/)
               results.push({
-                location: savedLoc.label || savedLoc.name,
+                location: label,
                 response: extractKeyPoints(response, 4),
                 temp: tempMatch ? parseInt(tempMatch[1]) : completeData.temp,
                 rain: completeData.precipitationProb,
@@ -1668,18 +1673,20 @@ class ZephyeBrain {
                 fullResponse: response
               })
             } catch (e) {
+              const fallback = `${label}: ${completeData.temp}°C, ${completeData.condition}, wind ${completeData.wind} km/h`
               results.push({
-                location: savedLoc.label || savedLoc.name,
-                response: "❌ Error getting advice for this location.",
-                temp: null,
-                rain: null,
-                cloudCover: null,
+                location: label,
+                response: fallback,
+                temp: completeData.temp,
+                rain: completeData.precipitationProb,
+                cloudCover: completeData.cloudCover,
                 isSaved: true,
-                error: true
+                error: false,
+                fullResponse: fallback
               })
             }
           } else {
-            // ─── Geocode the random location ──────────────────────────────────
+            // Geocode random location
             const geoResult = await geocodeLocation(locName)
             if (!geoResult) {
               results.push({
@@ -1693,11 +1700,12 @@ class ZephyeBrain {
               })
               continue
             }
-            
-            const locData = await fetchWeatherForLocation(geoResult.lat, geoResult.lon)
-            if (!locData) {
+            const locObj = { lat: geoResult.lat, lon: geoResult.lon }
+            const label = geoResult.name
+            const completeData = await fetchLocationData(locObj, label)
+            if (!completeData) {
               results.push({
-                location: geoResult.name,
+                location: label,
                 response: "❌ Could not fetch weather for this location.",
                 temp: null,
                 rain: null,
@@ -1707,36 +1715,11 @@ class ZephyeBrain {
               })
               continue
             }
-            
-            const completeData = {
-              ...locData,
-              temp: locData.temp || 0,
-              feelsLike: locData.feelsLike || locData.temp || 0,
-              humidity: locData.humidity || 50,
-              wind: locData.wind || 0,
-              windGust: locData.windGust || 0,
-              uvIndex: locData.uvIndex || 0,
-              aqi: locData.aqi || 0,
-              visibility: locData.visibility || 10,
-              condition: locData.condition || 'clear',
-              conditionCode: locData.conditionCode || 0,
-              cloudCover: locData.cloudCover || 0,
-              precipitation: locData.precipitation || 0,
-              precipitationProb: locData.precipitationProb || 0,
-              pressure: locData.pressure || 1013,
-              dewPoint: locData.dewPoint || 0,
-              sunrise: locData.sunrise || '',
-              sunset: locData.sunset || '',
-              city: geoResult.name,
-              hourly: locData.hourly || {},
-              daily: locData.daily || {}
-            }
-            
             try {
               const response = isAsync ? await fn(completeData, question) : fn(completeData, question)
               const tempMatch = response.match(/(\d+)°C/)
               results.push({
-                location: geoResult.name,
+                location: label,
                 response: extractKeyPoints(response, 4),
                 temp: tempMatch ? parseInt(tempMatch[1]) : completeData.temp,
                 rain: completeData.precipitationProb,
@@ -1746,21 +1729,23 @@ class ZephyeBrain {
                 fullResponse: response
               })
             } catch (e) {
+              const fallback = `${label}: ${completeData.temp}°C, ${completeData.condition}, wind ${completeData.wind} km/h`
               results.push({
-                location: geoResult.name,
-                response: "❌ Error getting advice for this location.",
-                temp: null,
-                rain: null,
-                cloudCover: null,
+                location: label,
+                response: fallback,
+                temp: completeData.temp,
+                rain: completeData.precipitationProb,
+                cloudCover: completeData.cloudCover,
                 isSaved: false,
-                error: true
+                error: false,
+                fullResponse: fallback
               })
             }
           }
         }
       }
       
-      // ─── Filter out errors ──────────────────────────────────────────────────
+      // ─── Filter out errors ──────────────────────────────────────────────
       const validResults = results.filter(r => !r.error)
       
       if (!validResults.length) {
@@ -1769,7 +1754,7 @@ class ZephyeBrain {
         }
       }
       
-      // ─── Build response ──────────────────────────────────────────────────────
+      // ─── Build response ──────────────────────────────────────────────────
       let comparisonResponse = `📍 Location Comparison:\n\n`
       for (const result of validResults) {
         const savedBadge = result.isSaved ? ' ⭐' : ''
