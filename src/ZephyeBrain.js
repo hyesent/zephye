@@ -550,7 +550,7 @@ const detectIntents = (question) => {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 4. COMPARISON DETECTION
+// 4. COMPARISON DETECTION — ENHANCED
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const detectComparison = (question) => {
@@ -588,59 +588,61 @@ const detectComparison = (question) => {
     }
   }
   
-  // ─── Location comparison ────────────────────────────────────────────────
+  // ─── ENHANCED LOCATION DETECTION ──────────────────────────────────────
+  // First try to find any two location words in the whole question
   const foundLocationWords = allLocationWords.filter(w => q.includes(w))
   
-  // Check for "vs" with location names
-  let unsavedLocations = []
-  const locationMatch = q.match(/(?:compare|vs|versus)\s+([\w\s]+?)\s+(?:and|vs|versus|or)\s+([\w\s]+?)(?:\?|$)/i)
+  // Also try to extract location names that might be adjacent to "compare" or "vs"
+  // e.g., "compare sister and camp" → ["sister", "camp"]
+  // e.g., "compare the weather for sister and camp" → ["sister", "camp"]
+  let explicitLocations = []
+  const compareMatch = q.match(/(?:compare|vs|versus)\s+(?:the weather for\s+)?([\w\s]+?)\s+(?:and|vs|versus|or)\s+([\w\s]+?)(?:\?|$)/i)
+  if (compareMatch) {
+    explicitLocations = [compareMatch[1].trim(), compareMatch[2].trim()]
+  }
   
-  if (locationMatch) {
-    const loc1 = locationMatch[1].trim()
-    const loc2 = locationMatch[2].trim()
-    const saved1 = findSavedLocation(loc1)
-    const saved2 = findSavedLocation(loc2)
-    if (saved1 && saved2) {
-      return {
-        type: 'location',
-        locations: [saved1.label || saved1.name, saved2.label || saved2.name],
-        locationObjects: [saved1, saved2],
-        count: 2
-      }
-    } else {
-      unsavedLocations = [loc1, loc2]
+  // Combine both sources
+  let locationCandidates = [...foundLocationWords, ...explicitLocations]
+  // Remove duplicates
+  locationCandidates = [...new Set(locationCandidates)]
+  
+  // Map candidates to saved location objects
+  const matchedLocs = locationCandidates.map(name => {
+    const lowerName = name.toLowerCase()
+    return savedLocs.find(loc => 
+      loc.label?.toLowerCase() === lowerName || 
+      loc.name?.toLowerCase() === lowerName
+    )
+  }).filter(Boolean)
+  
+  // Remove duplicates by id
+  const uniqueMatchedLocs = []
+  const seenIds = new Set()
+  for (const loc of matchedLocs) {
+    if (!seenIds.has(loc.id)) {
+      seenIds.add(loc.id)
+      uniqueMatchedLocs.push(loc)
     }
   }
   
-  if (hasCompare && foundLocationWords.length >= 2) {
-    const matchedLocs = foundLocationWords.map(name => {
-      const lowerName = name.toLowerCase()
-      return savedLocs.find(loc => 
-        loc.label?.toLowerCase() === lowerName || 
-        loc.name?.toLowerCase() === lowerName
-      )
-    }).filter(Boolean)
-    
-    const uniqueMatchedLocs = []
-    const seenIds = new Set()
-    for (const loc of matchedLocs) {
-      if (!seenIds.has(loc.id)) {
-        seenIds.add(loc.id)
-        uniqueMatchedLocs.push(loc)
-      }
-    }
-    
-    if (uniqueMatchedLocs.length >= 2) {
-      return {
-        type: 'location',
-        locations: uniqueMatchedLocs.map(l => l.label || l.name),
-        locationObjects: uniqueMatchedLocs,
-        count: uniqueMatchedLocs.length
-      }
+  if (uniqueMatchedLocs.length >= 2) {
+    return {
+      type: 'location',
+      locations: uniqueMatchedLocs.map(l => l.label || l.name),
+      locationObjects: uniqueMatchedLocs,
+      count: uniqueMatchedLocs.length
     }
   }
   
-  // ─── If we found unsaved locations, trigger geocoding ────────────────────
+  // If we have at least two location names but some weren't found, try unsaved
+  const unsavedLocations = locationCandidates.filter(name => {
+    const lower = name.toLowerCase()
+    return !savedLocs.some(loc => 
+      loc.label?.toLowerCase() === lower || 
+      loc.name?.toLowerCase() === lower
+    )
+  })
+  
   if (unsavedLocations.length >= 2) {
     return {
       type: 'location_unsaved',
@@ -649,7 +651,7 @@ const detectComparison = (question) => {
     }
   }
   
-  // Activity comparison
+  // ─── Activity comparison ──────────────────────────────────────────────
   const foundActivities = activityWords.filter(w => q.includes(w))
   if (hasCompare && foundActivities.length >= 2) {
     if (q.includes('vs') || q.includes('or') || q.includes('versus') || q.includes('rather')) {
@@ -661,7 +663,7 @@ const detectComparison = (question) => {
     }
   }
   
-  // Scenario comparison
+  // ─── Scenario comparison ──────────────────────────────────────────────
   const scenarioKeywords = ['drive', 'bike', 'walk', 'cycle', 'run', 'commute', 'travel']
   const foundScenarios = scenarioKeywords.filter(w => q.includes(w))
   if (hasCompare && foundScenarios.length >= 2) {
@@ -674,7 +676,7 @@ const detectComparison = (question) => {
     }
   }
   
-  // Standard two-time comparison
+  // ─── Standard two-time comparison ──────────────────────────────────────
   if (hasCompare && foundTimes.length >= 2) {
     return {
       type: 'time',
@@ -1325,7 +1327,7 @@ class ZephyeBrain {
     this.initialized = true
   }
 
-  // ─── NEW ASK METHOD ────────────────────────────────────────────────────────
+  // ─── ASK METHOD ──────────────────────────────────────────────────────────
   async ask(question, weatherData) {
     const q = question.toLowerCase().trim()
     const savedLocs = getSavedLocations()
