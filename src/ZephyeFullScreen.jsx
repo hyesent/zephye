@@ -364,7 +364,6 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
   
   const timeLower = timeContext.toLowerCase().trim()
   
-  // Parse day context
   if (timeLower.includes('tomorrow')) {
     dayOffset = 1
     targetDate.setDate(targetDate.getDate() + 1)
@@ -410,7 +409,6 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
     targetDate.setDate(targetDate.getDate() + daysUntilSun)
   }
   
-  // Parse time of day - support "by 7pm", "by 8pm", "at 12pm", etc.
   const byTimeMatch = timeLower.match(/by\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
   const atTimeMatch = timeLower.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
   const timeMatch = byTimeMatch || atTimeMatch
@@ -459,7 +457,6 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
     targetDate.setHours(12, 30, 0, 0)
   }
   
-  // Try to find matching data in hourly forecast
   if (baseData.hourly && baseData.hourly.time) {
     const hourIndex = findClosestHourIndex(baseData.hourly.time, targetDate)
     if (hourIndex !== -1) {
@@ -864,6 +861,460 @@ const mergeResponses = (responses, intents, question) => {
   return merged
 }
 
+// ─── SMART VERDICT GENERATOR ──────────────────────────────────────────
+
+const generateVerdict = (question, data, intent) => {
+  const q = question.toLowerCase()
+  let verdict = ''
+  let confidence = 85
+  
+  const isYesNo = q.match(/^(will|is|are|can|do|does|should|would|could|did|have|has|was|were|am|may|might|shall|must|need to|got to|able to|going to)/i)
+  
+  if (!isYesNo) {
+    return null
+  }
+  
+  const intentId = intent?.id || 'weather'
+  
+  switch (intentId) {
+    case 'stargazing': {
+      const cloudCover = data.cloudCover || 0
+      const moonIllumination = data.moonPhase ? Math.round(getMoonIllumination(data.moonPhase) * 100) : 0
+      
+      if (cloudCover > 70) {
+        verdict = 'NO'
+        confidence = 90
+      } else if (cloudCover > 40) {
+        verdict = 'MIGHT'
+        confidence = 60
+      } else if (moonIllumination > 80) {
+        verdict = 'MIGHT'
+        confidence = 65
+      } else if (cloudCover < 30 && moonIllumination < 50) {
+        verdict = 'YES'
+        confidence = 80
+      } else {
+        verdict = 'MIGHT'
+        confidence = 55
+      }
+      break
+    }
+    
+    case 'weather': {
+      const rainChance = data.precipitationProb || 0
+      const temp = data.temp || 0
+      
+      if (q.includes('rain') || q.includes('storm')) {
+        if (rainChance > 70) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (rainChance > 40) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('hot') || q.includes('warm')) {
+        if (temp > 28) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (temp > 22) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('cold')) {
+        if (temp < 10) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (temp < 18) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('clear') || q.includes('sunny')) {
+        if (data.cloudCover < 30) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (data.cloudCover < 60) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      }
+      break
+    }
+    
+    case 'sports': {
+      const rainChance = data.precipitationProb || 0
+      const temp = data.temp || 0
+      const wind = data.wind || 0
+      
+      if (q.includes('run') || q.includes('jog') || q.includes('bike') || q.includes('cycle')) {
+        if (temp > 35 || temp < -5) {
+          verdict = 'NO'
+          confidence = 90
+        } else if (rainChance > 60 || wind > 40) {
+          verdict = 'NO'
+          confidence = 85
+        } else if (rainChance > 30 || wind > 25 || temp > 30 || temp < 5) {
+          verdict = 'MIGHT'
+          confidence = 55
+        } else {
+          verdict = 'YES'
+          confidence = 90
+        }
+      }
+      break
+    }
+    
+    case 'driving': {
+      const rainChance = data.precipitationProb || 0
+      const visibility = data.visibility || 10
+      const wind = data.wind || 0
+      
+      if (data.condition === 'thunderstorm' || data.condition === 'snow') {
+        verdict = 'NO'
+        confidence = 95
+      } else if (rainChance > 70 || visibility < 2 || wind > 50) {
+        verdict = 'NO'
+        confidence = 85
+      } else if (rainChance > 40 || visibility < 5 || wind > 30) {
+        verdict = 'MIGHT'
+        confidence = 60
+      } else {
+        verdict = 'YES'
+        confidence = 90
+      }
+      break
+    }
+    
+    case 'traffic': {
+      const hour = new Date().getHours()
+      const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 18)
+      const isWeekend = [0, 6].includes(new Date().getDay())
+      
+      if (isRushHour && !isWeekend) {
+        verdict = 'YES'
+        confidence = 80
+      } else if ((isRushHour && isWeekend) || (hour >= 12 && hour <= 13)) {
+        verdict = 'MIGHT'
+        confidence = 55
+      } else {
+        verdict = 'NO'
+        confidence = 75
+      }
+      break
+    }
+    
+    case 'clothing': {
+      const temp = data.temp || 0
+      const rainChance = data.precipitationProb || 0
+      
+      if (q.includes('jacket') || q.includes('coat')) {
+        if (temp < 10) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (temp < 18) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      } else if (q.includes('umbrella') || q.includes('raincoat')) {
+        if (rainChance > 60) {
+          verdict = 'YES'
+          confidence = 90
+        } else if (rainChance > 30) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'NO'
+          confidence = 85
+        }
+      }
+      break
+    }
+    
+    case 'pets': {
+      const temp = data.temp || 0
+      const pavementTemp = data.temp ? data.temp + 25 : 45
+      
+      if (q.includes('walk') || q.includes('dog')) {
+        if (pavementTemp > 52) {
+          verdict = 'NO'
+          confidence = 95
+        } else if (temp > 35 || temp < -5) {
+          verdict = 'NO'
+          confidence = 90
+        } else if (temp > 30 || temp < 0) {
+          verdict = 'MIGHT'
+          confidence = 60
+        } else {
+          verdict = 'YES'
+          confidence = 90
+        }
+      }
+      break
+    }
+    
+    default: {
+      const rainChance = data.precipitationProb || 0
+      if (rainChance > 60) {
+        verdict = 'MIGHT'
+        confidence = 55
+      } else {
+        verdict = 'YES'
+        confidence = 70
+      }
+    }
+  }
+  
+  if (!verdict) {
+    verdict = 'MIGHT'
+    confidence = 50
+  }
+  
+  let confidenceLabel = ''
+  if (confidence >= 90) confidenceLabel = ' (high confidence)'
+  else if (confidence >= 70) confidenceLabel = ' (moderate confidence)'
+  else if (confidence >= 50) confidenceLabel = ' (low confidence)'
+  
+  return `${verdict}${confidenceLabel}`
+}
+
+// ─── COMPARISON DETECTION ──────────────────────────────────────────────
+
+const detectComparison = (question) => {
+  const q = question.toLowerCase()
+  
+  const timeWords = [
+    'today', 'tomorrow', 'now', 'later', 
+    'evening', 'morning', 'afternoon', 'night', 'tonight',
+    'weekend', 'weekday', 'monday', 'tuesday', 
+    'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    'this morning', 'this afternoon', 'this evening',
+    '6 PM', '7 PM', '8 PM', '9 PM', '10 PM',
+    '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
+    'noon', 'midnight', 'sunrise', 'sunset',
+    'rush hour', 'commute time', 'lunch time'
+  ]
+  
+  const savedLocs = getSavedLocations()
+  const locationWords = savedLocs.map(l => l.label?.toLowerCase()).filter(Boolean)
+  
+  const activityWords = ['run', 'bike', 'drive', 'walk', 'cycle', 'jog', 'hike', 'swim', 'sport', 'gym']
+  const compareWords = ['vs', 'versus', 'compare', 'difference', 'or', 'vs.', 'and', 'better', 'best', 'rather']
+  
+  const hasCompare = compareWords.some(w => q.includes(w))
+  
+  const detectedLocations = detectLocationNames(question)
+  if (detectedLocations.length >= 2) {
+    return {
+      type: 'multi_location',
+      locations: detectedLocations.map(l => l.name),
+      coords: detectedLocations.map(l => ({ lat: l.lat, lon: l.lon })),
+      displayNames: detectedLocations.map(l => l.displayName),
+      locationData: detectedLocations
+    }
+  }
+  
+  const foundTimes = timeWords.filter(w => q.includes(w))
+  if (hasCompare && foundTimes.length >= 3) {
+    return {
+      type: 'multi_time',
+      times: foundTimes,
+      count: foundTimes.length
+    }
+  }
+  
+  const foundLocations = locationWords.filter(w => q.includes(w))
+  if (hasCompare && foundLocations.length >= 2) {
+    return {
+      type: 'location',
+      locations: foundLocations,
+      count: foundLocations.length
+    }
+  }
+  
+  const foundActivities = activityWords.filter(w => q.includes(w))
+  if (hasCompare && foundActivities.length >= 2) {
+    if (q.includes('vs') || q.includes('or') || q.includes('versus') || q.includes('rather')) {
+      return {
+        type: 'activity',
+        activities: foundActivities,
+        count: foundActivities.length
+      }
+    }
+  }
+  
+  const scenarioKeywords = ['drive', 'bike', 'walk', 'cycle', 'run', 'commute', 'travel']
+  const foundScenarios = scenarioKeywords.filter(w => q.includes(w))
+  if (hasCompare && foundScenarios.length >= 2) {
+    if (q.includes('to work') || q.includes('to school') || q.includes('to the') || q.includes('commute')) {
+      return {
+        type: 'scenario',
+        scenarios: foundScenarios,
+        destination: q.match(/to\s+([\w\s]+?)(?:\?|$)/)?.[1]?.trim() || 'destination'
+      }
+    }
+  }
+  
+  if (hasCompare && foundTimes.length >= 2) {
+    return {
+      type: 'time',
+      time1: foundTimes[0],
+      time2: foundTimes[1]
+    }
+  }
+  
+  if (q.includes('today') && q.includes('tomorrow')) {
+    return { type: 'time', time1: 'today', time2: 'tomorrow' }
+  }
+  
+  if (q.includes('now') && q.includes('later')) {
+    return { type: 'time', time1: 'now', time2: 'later' }
+  }
+  
+  return null
+}
+
+// ─── COMPARISON HELPERS ──────────────────────────────────────────────────
+
+const extractKeyPoints = (response, maxLines = 5) => {
+  const lines = response.split('\n').filter(l => l.trim() && !l.includes('---') && !l.includes('==='))
+  return lines.slice(0, maxLines).join('\n')
+}
+
+const generateComparisonVerdict = (results, comparison, intent) => {
+  let verdict = ''
+  
+  switch (comparison.type) {
+    case 'time':
+    case 'multi_time': {
+      const times = comparison.type === 'multi_time' ? comparison.times : [comparison.time1, comparison.time2]
+      const tempValues = results.map(r => r.temp)
+      const rainValues = results.map(r => r.rain)
+      const cloudValues = results.map(r => r.cloudCover)
+      
+      if (tempValues.some(v => v !== null && v !== undefined)) {
+        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (temps.length > 1) {
+          const max = Math.max(...temps)
+          const min = Math.min(...temps)
+          const diff = max - min
+          if (diff > 3) {
+            const hottest = times[tempValues.indexOf(max)]
+            const coldest = times[tempValues.indexOf(min)]
+            verdict += `${hottest} is hottest at ${max}C, ${coldest} is coolest at ${min}C. `
+          } else {
+            verdict += `Temperatures are similar across all times (${Math.round(temps.reduce((a,b) => a + b, 0) / temps.length)}C avg). `
+          }
+        }
+      }
+      
+      if (rainValues.some(v => v !== null && v !== undefined)) {
+        const rains = rainValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (rains.length > 1) {
+          const max = Math.max(...rains)
+          const min = Math.min(...rains)
+          if (max > 40) {
+            const rainiest = times[rainValues.indexOf(max)]
+            const driest = times[rainValues.indexOf(min)]
+            verdict += `${rainiest} is rainier (${max}%) than ${driest} (${min}%). `
+          } else {
+            verdict += `Low rain chance across all times (${Math.round(rains.reduce((a,b) => a + b, 0) / rains.length)}% avg). `
+          }
+        }
+      }
+      
+      if (cloudValues.some(v => v !== null && v !== undefined)) {
+        const clouds = cloudValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (clouds.length > 1) {
+          const max = Math.max(...clouds)
+          const min = Math.min(...clouds)
+          if (max - min > 30) {
+            const cloudiest = times[cloudValues.indexOf(max)]
+            const clearest = times[cloudValues.indexOf(min)]
+            verdict += `${cloudiest} is cloudiest (${max}%), ${clearest} is clearest (${min}%). `
+          }
+        }
+      }
+      
+      if (!verdict) {
+        const timeList = times.join(', ')
+        verdict = `The conditions across ${timeList} are fairly similar. Check the details above.`
+      }
+      break
+    }
+    
+    case 'location':
+    case 'multi_location': {
+      const locs = comparison.type === 'multi_location' ? comparison.displayNames : comparison.locations
+      const tempValues = results.map(r => r.temp)
+      
+      if (tempValues.some(v => v !== null && v !== undefined)) {
+        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (temps.length > 1) {
+          const max = Math.max(...temps)
+          const min = Math.min(...temps)
+          const diff = max - min
+          if (diff > 5) {
+            const hottest = locs[tempValues.indexOf(max)]
+            const coldest = locs[tempValues.indexOf(min)]
+            verdict += `${hottest} is warmer (${max}C) than ${coldest} (${min}C). `
+          }
+        }
+      }
+      
+      const rainValues = results.map(r => r.rain)
+      if (rainValues.some(v => v !== null && v !== undefined)) {
+        const rains = rainValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (rains.length > 1) {
+          const max = Math.max(...rains)
+          const min = Math.min(...rains)
+          if (max - min > 30) {
+            const rainiest = locs[rainValues.indexOf(max)]
+            const driest = locs[rainValues.indexOf(min)]
+            verdict += `${rainiest} gets more rain (${max}%) than ${driest} (${min}%). `
+          }
+        }
+      }
+      
+      if (!verdict) {
+        verdict = 'Weather varies by location. Check details above for the best spot.'
+      }
+      break
+    }
+    
+    case 'activity': {
+      const activities = comparison.activities
+      verdict = `Comparing ${activities.join(' vs ')}. Consider weather impact on each activity. Check the details above for specific recommendations.`
+      break
+    }
+    
+    case 'scenario': {
+      const scenarios = comparison.scenarios
+      const dest = comparison.destination
+      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. Consider time, weather, and traffic for each option.`
+      break
+    }
+    
+    default:
+      verdict = 'Comparison complete. See details above.'
+  }
+  
+  return verdict
+}
+
 // ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────────
 
 const getDynamicSuggestions = (savedLocations = [], userMemory = null) => {
@@ -1242,7 +1693,6 @@ export default function ZephyeFullScreen({
     // ─── EXTRACT TIME CONTEXT ─────────────────────────────────────────────
     let timeContext = ''
     
-    // Check for "by" time patterns
     const byMatch = q.match(/by\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
     if (byMatch) {
       let hour = parseInt(byMatch[1])
@@ -1253,7 +1703,6 @@ export default function ZephyeFullScreen({
       timeContext = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
     }
     
-    // Check for "at" time patterns
     const atMatch = q.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
     if (atMatch && !timeContext) {
       let hour = parseInt(atMatch[1])
@@ -1277,9 +1726,335 @@ export default function ZephyeFullScreen({
     if (q.includes('tomorrow')) timeContext = 'tomorrow'
     if (q.includes('weekend')) timeContext = 'weekend'
     
-    // Apply time shift if we have a time context
     if (timeContext) {
       locationData = getTimeShiftedData(locationData, timeContext, question)
+    }
+    
+    // ─── CHECK FOR COMPARISON ────────────────────────────────────────────
+    const comparison = detectComparison(question)
+    
+    if (comparison) {
+      // ─── Multi-location comparison ──────────────────────────────────────
+      if (comparison.type === 'multi_location') {
+        const locations = comparison.locationData
+        const detectedIntents = detectIntents(q)
+        let primaryIntent = detectedIntents.length > 0 ? detectedIntents[0].intent : INTENT_MAP.find(i => i.id === 'weather')
+        
+        if (!primaryIntent) {
+          return 'I can compare locations. Try asking "Compare weather in London and Paris tomorrow?"'
+        }
+        
+        const results = []
+        
+        for (const loc of locations) {
+          const fetched = await fetchWeatherWithCache(loc.lat, loc.lon)
+          if (fetched) {
+            const locData = { ...weatherData, ...fetched, city: loc.displayName, lat: loc.lat, lon: loc.lon, isExternalLocation: true }
+            try {
+              const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
+              const response = isAsync ? await primaryIntent.fn(locData, question) : primaryIntent.fn(locData, question)
+              const tempMatch = response.match(/(\d+)°C/)
+              const rainMatch = response.match(/(\d+)% rain/i)
+              results.push({
+                location: loc.displayName,
+                response: extractKeyPoints(response, 4),
+                temp: tempMatch ? parseInt(tempMatch[1]) : locData.temp,
+                rain: rainMatch ? parseInt(rainMatch[1]) : locData.precipitationProb
+              })
+            } catch (e) {
+              results.push({
+                location: loc.displayName,
+                response: `${locData.temp}C, ${locData.condition}`,
+                temp: locData.temp,
+                rain: locData.precipitationProb
+              })
+            }
+          }
+        }
+        
+        if (results.length === 0) {
+          return 'Could not fetch weather for the requested locations. Please try again.'
+        }
+        
+        let comparisonResponse = `Multi-Location Comparison:\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.location}:\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+        comparisonResponse += `Verdict: ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Multi-time comparison ──────────────────────────────────────
+      if (comparison.type === 'multi_time') {
+        const times = comparison.times
+        const detectedIntents = detectIntents(q)
+        let primaryIntent = detectedIntents.length > 0 ? detectedIntents[0].intent : INTENT_MAP.find(i => i.id === 'weather')
+        
+        if (!primaryIntent) {
+          return 'I can compare multiple times. Try asking "Compare today, tomorrow, and this weekend for stargazing?"'
+        }
+        
+        const results = []
+        
+        for (const time of times) {
+          const timeData = getTimeShiftedData(locationData, time, question)
+          try {
+            const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
+            const response = isAsync ? await primaryIntent.fn(timeData, question) : primaryIntent.fn(timeData, question)
+            const tempMatch = response.match(/(\d+)°C/)
+            const rainMatch = response.match(/(\d+)% rain/i)
+            const cloudMatch = response.match(/Cloud Cover:\s*(\d+)%/)
+            results.push({
+              time,
+              response: extractKeyPoints(response, 4),
+              temp: tempMatch ? parseInt(tempMatch[1]) : timeData.temp,
+              rain: rainMatch ? parseInt(rainMatch[1]) : timeData.precipitationProb,
+              cloudCover: cloudMatch ? parseInt(cloudMatch[1]) : timeData.cloudCover
+            })
+          } catch (e) {
+            results.push({
+              time,
+              response: `${timeData.temp}C, ${timeData.condition}`,
+              temp: timeData.temp,
+              rain: timeData.precipitationProb,
+              cloudCover: timeData.cloudCover
+            })
+          }
+        }
+        
+        let comparisonResponse = `Multi-Time Comparison:\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.time.toUpperCase()}:\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+        comparisonResponse += `Verdict: ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Location comparison (saved locations) ──────────────────────
+      if (comparison.type === 'location') {
+        const locations = comparison.locations
+        const detectedIntents = detectIntents(q)
+        let primaryIntent = detectedIntents.length > 0 ? detectedIntents[0].intent : INTENT_MAP.find(i => i.id === 'weather')
+        
+        if (!primaryIntent) {
+          return 'I can compare locations. Try asking "Compare Lagos and Abuja weather?"'
+        }
+        
+        const results = []
+        
+        for (const locName of locations) {
+          const savedLoc = findSavedLocation(locName)
+          if (!savedLoc) {
+            return `Could not find "${locName}" in your saved locations. Please save it first.`
+          }
+          
+          const fetched = await fetchWeatherWithCache(savedLoc.lat, savedLoc.lon)
+          const locData = fetched ? { ...weatherData, ...fetched, city: savedLoc.label } : { ...weatherData, city: savedLoc.label, lat: savedLoc.lat, lon: savedLoc.lon }
+          
+          try {
+            const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
+            const response = isAsync ? await primaryIntent.fn(locData, question) : primaryIntent.fn(locData, question)
+            const tempMatch = response.match(/(\d+)°C/)
+            results.push({
+              location: locName,
+              response: extractKeyPoints(response, 4),
+              temp: tempMatch ? parseInt(tempMatch[1]) : locData.temp
+            })
+          } catch (e) {
+            results.push({
+              location: locName,
+              response: `${locData.temp}C, ${locData.condition}`,
+              temp: locData.temp
+            })
+          }
+        }
+        
+        let comparisonResponse = `Location Comparison:\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.location.toUpperCase()}:\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+        comparisonResponse += `Verdict: ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Activity comparison ──────────────────────────────────────────
+      if (comparison.type === 'activity') {
+        const activities = comparison.activities
+        
+        const activityToIntent = {
+          'run': 'sports',
+          'bike': 'sports',
+          'cycle': 'sports',
+          'drive': 'driving',
+          'walk': 'lifestyle',
+          'jog': 'sports',
+          'hike': 'sports',
+          'swim': 'sports'
+        }
+        
+        const results = []
+        
+        for (const activity of activities) {
+          const intentId = activityToIntent[activity] || 'sports'
+          const intent = INTENT_MAP.find(i => i.id === intentId)
+          
+          if (!intent) continue
+          
+          const activityQuestion = `Is it good for ${activity}?`
+          try {
+            const isAsync = ['farming', 'stargazing'].includes(intent.id)
+            const response = isAsync ? await intent.fn(locationData, activityQuestion) : intent.fn(locationData, activityQuestion)
+            results.push({
+              activity,
+              response: extractKeyPoints(response, 4)
+            })
+          } catch (e) {
+            results.push({
+              activity,
+              response: `Check weather conditions for ${activity}`
+            })
+          }
+        }
+        
+        if (results.length === 0) {
+          return 'I could not compare those activities. Try "Biking vs running today?"'
+        }
+        
+        let comparisonResponse = `Activity Comparison:\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.activity.toUpperCase()}:\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, { id: 'sports' })
+        comparisonResponse += `Verdict: ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Scenario comparison ──────────────────────────────────────────
+      if (comparison.type === 'scenario') {
+        const scenarios = comparison.scenarios
+        const dest = comparison.destination
+        
+        const scenarioToIntent = {
+          'drive': 'driving',
+          'bike': 'sports',
+          'cycle': 'sports',
+          'walk': 'lifestyle',
+          'run': 'sports',
+          'commute': 'route',
+          'travel': 'route'
+        }
+        
+        const results = []
+        
+        for (const scenario of scenarios) {
+          const intentId = scenarioToIntent[scenario] || 'route'
+          const intent = INTENT_MAP.find(i => i.id === intentId)
+          
+          if (!intent) continue
+          
+          const scenarioQuestion = `${scenario} to ${dest}?`
+          try {
+            const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
+            const response = isAsync ? await intent.fn(locationData, scenarioQuestion) : intent.fn(locationData, scenarioQuestion)
+            results.push({
+              scenario,
+              response: extractKeyPoints(response, 4)
+            })
+          } catch (e) {
+            results.push({
+              scenario,
+              response: `Consider ${scenario} to ${dest}`
+            })
+          }
+        }
+        
+        if (results.length === 0) {
+          return 'I could not compare those scenarios. Try "Drive or bike to work?"'
+        }
+        
+        let comparisonResponse = `Scenario Comparison: ${dest.toUpperCase()}\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.scenario.toUpperCase()}:\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, { id: 'route' })
+        comparisonResponse += `Verdict: ${verdict}`
+        
+        return comparisonResponse
+      }
+      
+      // ─── Standard two-time comparison ────────────────────────────────
+      const detectedIntents = detectIntents(q)
+      let primaryIntent = detectedIntents.length > 0 ? detectedIntents[0].intent : INTENT_MAP.find(i => i.id === 'weather')
+      
+      if (!primaryIntent) {
+        return 'I can compare times. Try asking "Stargazing tonight vs tomorrow?"'
+      }
+      
+      const results = []
+      
+      const time1Data = getTimeShiftedData(locationData, comparison.time1, question)
+      const time2Data = getTimeShiftedData(locationData, comparison.time2, question)
+      
+      try {
+        const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
+        const [response1, response2] = await Promise.all([
+          isAsync ? await primaryIntent.fn(time1Data, question) : primaryIntent.fn(time1Data, question),
+          isAsync ? await primaryIntent.fn(time2Data, question) : primaryIntent.fn(time2Data, question)
+        ])
+        
+        const temp1 = response1.match(/(\d+)°C/)
+        const temp2 = response2.match(/(\d+)°C/)
+        const rain1 = response1.match(/(\d+)% rain/i)
+        const rain2 = response2.match(/(\d+)% rain/i)
+        const cloud1 = response1.match(/Cloud Cover:\s*(\d+)%/)
+        const cloud2 = response2.match(/Cloud Cover:\s*(\d+)%/)
+        
+        results.push({
+          time: comparison.time1,
+          response: extractKeyPoints(response1, 4),
+          temp: temp1 ? parseInt(temp1[1]) : time1Data.temp,
+          rain: rain1 ? parseInt(rain1[1]) : time1Data.precipitationProb,
+          cloudCover: cloud1 ? parseInt(cloud1[1]) : time1Data.cloudCover
+        })
+        
+        results.push({
+          time: comparison.time2,
+          response: extractKeyPoints(response2, 4),
+          temp: temp2 ? parseInt(temp2[1]) : time2Data.temp,
+          rain: rain2 ? parseInt(rain2[1]) : time2Data.precipitationProb,
+          cloudCover: cloud2 ? parseInt(cloud2[1]) : time2Data.cloudCover
+        })
+        
+        let comparisonResponse = `Comparison: ${comparison.time1} vs ${comparison.time2}\n\n`
+        
+        for (const result of results) {
+          comparisonResponse += `${result.time.toUpperCase()}:\n${result.response}\n\n`
+        }
+        
+        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
+        comparisonResponse += `Verdict: ${verdict}`
+        
+        return comparisonResponse
+      } catch (e) {
+        return 'I had trouble comparing those times. Please try again.'
+      }
     }
     
     // ─── DETECT INTENTS ──────────────────────────────────────────────────
@@ -1309,9 +2084,17 @@ export default function ZephyeFullScreen({
         return response
       }
       
-      const merged = mergeResponses(responses, intents, question)
+      let merged = mergeResponses(responses, intents, question)
       
-      // Add location context if external
+      // Add verdict for yes/no questions
+      const primaryIntent = intents[0]?.intent
+      if (primaryIntent) {
+        const verdict = generateVerdict(question, locationData, primaryIntent)
+        if (verdict) {
+          merged = `${verdict}\n\n${merged}`
+        }
+      }
+      
       if (isExternalLocation && locationDisplayName) {
         return `Location: ${locationDisplayName}\n\n${merged}`
       }
@@ -1325,11 +2108,16 @@ export default function ZephyeFullScreen({
       
       try {
         const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(primaryIntent.id)
-        const response = isAsync 
+        let response = isAsync 
           ? await primaryIntent.fn(locationData, question)
           : primaryIntent.fn(locationData, question)
         
-        // Add location context if external
+        // Add verdict for yes/no questions
+        const verdict = generateVerdict(question, locationData, primaryIntent)
+        if (verdict) {
+          response = `${verdict}\n\n${response}`
+        }
+        
         if (isExternalLocation && locationDisplayName) {
           return `Location: ${locationDisplayName}\n\n${response}`
         }
@@ -1343,7 +2131,6 @@ export default function ZephyeFullScreen({
     }
     
     // ─── NO INTENT DETECTED ──────────────────────────────────────────────
-    // Try route/traffic detection
     const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
     const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill']
 
@@ -1376,7 +2163,7 @@ export default function ZephyeFullScreen({
     
     // ─── FINAL FALLBACK ──────────────────────────────────────────────────
     const locationPrefix = isExternalLocation ? `Location: ${locationDisplayName}\n\n` : ''
-    return `${locationPrefix}I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, health, pets, DIY, photography, events, energy, lifestyle, skin/hair, or travel. Current temp is ${locationData.temp}°C with ${locationData.condition}.`
+    return `${locationPrefix}I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, health, pets, DIY, photography, events, energy, lifestyle, skin/hair, or travel. Current temp is ${locationData.temp}C with ${locationData.condition}.`
     
   }, [weatherData, savedLocations])
 
@@ -1406,7 +2193,7 @@ export default function ZephyeFullScreen({
       if (voiceToUse) speakText(answer)
 
     } catch (e) {
-      const fallback = `Error getting advice. Current temp is ${weatherData.temp}°C with ${weatherData.condition}.`
+      const fallback = `Error getting advice. Current temp is ${weatherData.temp}C with ${weatherData.condition}.`
       setMessages(prev => [...prev, { role: 'assistant', content: fallback }])
     } finally {
       setIsLoading(false)
