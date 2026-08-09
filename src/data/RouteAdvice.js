@@ -63,7 +63,6 @@ const setCachedTraffic = (lat, lon, incidents) => {
       timestamp: Date.now()
     }))
   } catch {
-    // Storage full — clear old caches
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith('zephye_traffic_')) {
         try {
@@ -118,13 +117,11 @@ const findSavedLocation = (name, savedLocations) => {
   
   const lowerName = name.toLowerCase().trim()
   
-  // Exact match on label
   let match = savedLocations.find(loc => 
     loc.label && loc.label.toLowerCase() === lowerName
   )
   if (match) return match
   
-  // Contains match on label or name
   match = savedLocations.find(loc => {
     const label = loc.label?.toLowerCase() || ''
     const locName = loc.name?.toLowerCase() || ''
@@ -138,15 +135,13 @@ const findSavedLocation = (name, savedLocations) => {
  * Get traffic incidents for an area
  */
 const fetchTrafficIncidents = async (lat, lon) => {
-  // Check cache first
   const cached = getCachedTraffic(lat, lon)
   if (cached) {
-    console.log('📦 Using cached traffic data for', lat, lon)
+    console.log('Using cached traffic data for', lat, lon)
     return cached
   }
 
   try {
-    // Use Mapbox Directions API with incident annotations
     const destLat = lat + 0.1
     const destLon = lon + 0.1
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon},${lat};${destLon},${destLat}?` +
@@ -162,7 +157,6 @@ const fetchTrafficIncidents = async (lat, lon) => {
       incidents = data.routes[0].incidents || []
     }
 
-    // If no incidents, try a wider search
     if (incidents.length === 0) {
       const widerUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon - 0.2},${lat - 0.2};${lon + 0.2},${lat + 0.2}?` +
         `annotations=incidents&` +
@@ -176,7 +170,6 @@ const fetchTrafficIncidents = async (lat, lon) => {
       }
     }
 
-    // Cache the incidents
     setCachedTraffic(lat, lon, incidents)
     return incidents
 
@@ -252,25 +245,21 @@ export const getRouteAdvice = async (data, question, options = {}) => {
   let startLabel = null
   let startIsSaved = false
 
-  // Check if "from" is a saved location object
   if (typeof fromLocation === 'object' && fromLocation.isSaved) {
     startCoords = { lat: fromLocation.lat, lon: fromLocation.lon, name: fromLocation.label || fromLocation.name }
     startLabel = fromLocation.label || fromLocation.name
     startIsSaved = true
   } else if (typeof fromLocation === 'string') {
-    // Check if it's "home", "my location", "here"
     if (fromLocation === 'home' || fromLocation === 'my location' || fromLocation === 'here' || fromLocation === 'my place') {
       startCoords = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
       startLabel = 'Home'
     } else {
-      // Check if it's a saved location
       const saved = findSavedLocation(fromLocation, savedLocations)
       if (saved) {
         startCoords = { lat: saved.lat, lon: saved.lon, name: saved.label || saved.name }
         startLabel = saved.label || saved.name
         startIsSaved = true
       } else {
-        // Try geocoding
         startCoords = await geocodeLocation(fromLocation)
         if (startCoords) {
           startLabel = startCoords.name
@@ -290,14 +279,12 @@ export const getRouteAdvice = async (data, question, options = {}) => {
     endLabel = toLocation.label || toLocation.name
     endIsSaved = true
   } else if (typeof toLocation === 'string') {
-    // Check if it's a saved location
     const saved = findSavedLocation(toLocation, savedLocations)
     if (saved) {
       endCoords = { lat: saved.lat, lon: saved.lon, name: saved.label || saved.name }
       endLabel = saved.label || saved.name
       endIsSaved = true
     } else {
-      // Try geocoding
       endCoords = await geocodeLocation(toLocation)
       if (endCoords) {
         endLabel = endCoords.name
@@ -308,7 +295,6 @@ export const getRouteAdvice = async (data, question, options = {}) => {
   // ─── If user mentioned a saved location but didn't specify from/to ──────
 
   if (mentionedSavedLocation && !toLocation && !fromLocation) {
-    // Default: route from home to the mentioned saved location
     startCoords = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
     startLabel = 'Home'
     endCoords = { lat: mentionedSavedLocation.lat, lon: mentionedSavedLocation.lon, name: mentionedSavedLocation.label || mentionedSavedLocation.name }
@@ -321,7 +307,6 @@ export const getRouteAdvice = async (data, question, options = {}) => {
   const isTrafficOnly = q.includes('traffic') && !q.includes('route') && !q.includes('drive') && !q.includes('go to')
   
   if (isTrafficOnly && endCoords && !startCoords) {
-    // Show traffic near the destination
     startCoords = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
     startLabel = 'Your Location'
   }
@@ -329,16 +314,16 @@ export const getRouteAdvice = async (data, question, options = {}) => {
   // ─── If we couldn't resolve locations ────────────────────────────────────
 
   if (!endCoords && !toLocation) {
-    return `❓ I couldn't find a destination. Please specify where you want to go, e.g., "Route to Lagos" or "How long to get to work?"`
+    return `I couldn't find a destination. Please specify where you want to go, e.g., "Route to Lagos" or "How long to get to work?"`
   }
 
   if (!endCoords) {
     const savedNames = savedLocations.map(l => `"${l.label || l.name}"`).join(', ')
-    return `❓ I couldn't find the destination "${toLocation}". ${savedLocations.length > 0 ? `Your saved locations: ${savedNames}` : 'Try saving locations in the app first.'}`
+    return `I couldn't find the destination "${toLocation}". ${savedLocations.length > 0 ? `Your saved locations: ${savedNames}` : 'Try saving locations in the app first.'}`
   }
 
   if (!startCoords) {
-    return `❓ I couldn't find the starting location "${fromLocation}". Try "from home" or specify a city.`
+    return `I couldn't find the starting location "${fromLocation}". Try "from home" or specify a city.`
   }
 
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -355,7 +340,7 @@ export const getRouteAdvice = async (data, question, options = {}) => {
     const routeData = await response.json()
 
     if (!routeData.features || routeData.features.length === 0) {
-      return `❌ Could not find a route from ${startLabel || startCoords.name} to ${endLabel || endCoords.name}. Please try different locations.`
+      return `Could not find a route from ${startLabel || startCoords.name} to ${endLabel || endCoords.name}. Please try different locations.`
     }
 
     const feature = routeData.features[0]
@@ -363,7 +348,7 @@ export const getRouteAdvice = async (data, question, options = {}) => {
     const segments = properties.segments || []
 
     if (segments.length === 0) {
-      return `❌ No route found between these locations.`
+      return `No route found between these locations.`
     }
 
     const segment = segments[0]
@@ -376,23 +361,22 @@ export const getRouteAdvice = async (data, question, options = {}) => {
 
     // ─── Build response ────────────────────────────────────────────────────
 
-    let responseText = `🗺️ **Route from ${startLabel || startCoords.name} to ${endLabel || endCoords.name}**\n\n`
+    let responseText = `Route from ${startLabel || startCoords.name} to ${endLabel || endCoords.name}\n\n`
 
-    // Show saved location badges
     if (startIsSaved) {
-      responseText += `📍 **Start:** ${startLabel} (saved location)\n`
+      responseText += `Start: ${startLabel} (saved location)\n`
     } else {
-      responseText += `📍 **Start:** ${startLabel || startCoords.name}\n`
+      responseText += `Start: ${startLabel || startCoords.name}\n`
     }
     
     if (endIsSaved) {
-      responseText += `📍 **Destination:** ${endLabel} (saved location)\n`
+      responseText += `Destination: ${endLabel} (saved location)\n`
     } else {
-      responseText += `📍 **Destination:** ${endLabel || endCoords.name}\n`
+      responseText += `Destination: ${endLabel || endCoords.name}\n`
     }
 
-    responseText += `\n📏 **Distance:** ${formatDistance(distanceKm)}\n`
-    responseText += `⏱️ **Estimated driving time:** ${formatDuration(durationMin)}\n`
+    responseText += `\nDistance: ${formatDistance(distanceKm)}\n`
+    responseText += `Estimated driving time: ${formatDuration(durationMin)}\n`
 
     // ─── Fetch traffic incidents for the route ────────────────────────────
 
@@ -400,7 +384,6 @@ export const getRouteAdvice = async (data, question, options = {}) => {
     let trafficDelay = 0
 
     try {
-      // Try Mapbox for traffic incidents
       const mapboxUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?` +
         `annotations=congestion,incidents&` +
         `access_token=${MAPBOX_KEY}`
@@ -412,7 +395,6 @@ export const getRouteAdvice = async (data, question, options = {}) => {
         const route = mapboxData.routes[0]
         incidents = route.incidents || []
         
-        // Calculate traffic delay (if available)
         if (route.duration && duration) {
           const mapboxDuration = route.duration / 60
           if (mapboxDuration > durationMin * 1.05) {
@@ -421,7 +403,6 @@ export const getRouteAdvice = async (data, question, options = {}) => {
         }
       }
 
-      // If no incidents, try cached data for the area
       if (incidents.length === 0) {
         const cached = getCachedTraffic((startCoords.lat + endCoords.lat) / 2, (startCoords.lon + endCoords.lon) / 2)
         if (cached) {
@@ -437,42 +418,30 @@ export const getRouteAdvice = async (data, question, options = {}) => {
 
     if (incidents && incidents.length > 0) {
       const incidentCount = incidents.length
-      responseText += `\n📋 **${incidentCount} traffic incident${incidentCount > 1 ? 's' : ''} on route:**\n`
+      responseText += `\n${incidentCount} traffic incident${incidentCount > 1 ? 's' : ''} on route:\n`
       
       incidents.slice(0, 5).forEach((inc, i) => {
         const type = inc.type || inc.iconCategory || 'unknown'
-        const emoji = {
-          accident: '🚗',
-          construction: '🚧',
-          roadClosure: '🚫',
-          hazard: '⚠️',
-          weather: '🌧️',
-          event: '🎪',
-          congestion: '🚦',
-          laneClosed: '🚧',
-          brokenDownVehicle: '🛻'
-        } [type] || '📌'
-        
         const desc = inc.description || inc.properties?.description || 'Traffic incident reported'
         const severity = inc.severity || inc.properties?.severity || ''
         const severityText = severity ? ` (${severity})` : ''
 
-        responseText += `  ${i + 1}. ${emoji} **${type.charAt(0).toUpperCase() + type.slice(1)}**${severityText}\n`
+        responseText += `  ${i + 1}. ${type.charAt(0).toUpperCase() + type.slice(1)}${severityText}\n`
         responseText += `     ${desc}\n`
 
         if (inc.startTime) {
           const start = new Date(inc.startTime)
-          responseText += `     🕐 Started: ${start.toLocaleString()}\n`
+          responseText += `     Started: ${start.toLocaleString()}\n`
         }
         if (inc.endTime) {
           const end = new Date(inc.endTime)
-          responseText += `     ⏳ Ends: ${end.toLocaleString()}\n`
+          responseText += `     Ends: ${end.toLocaleString()}\n`
         }
         if (inc.length) {
-          responseText += `     📏 Affects: ${Math.round(inc.length)}m\n`
+          responseText += `     Affects: ${Math.round(inc.length)}m\n`
         }
         if (inc.lanesBlocked) {
-          responseText += `     🚧 Lanes blocked: ${inc.lanesBlocked}\n`
+          responseText += `     Lanes blocked: ${inc.lanesBlocked}\n`
         }
       })
 
@@ -480,37 +449,33 @@ export const getRouteAdvice = async (data, question, options = {}) => {
         responseText += `  ... and ${incidents.length - 5} more incidents on the route.\n`
       }
 
-      // Traffic delay warning
       if (trafficDelay > 5) {
-        responseText += `\n⚠️ **Traffic delay:** ~${trafficDelay} minutes extra\n`
+        responseText += `\nTraffic delay: ~${trafficDelay} minutes extra\n`
         responseText += `   Consider leaving earlier or finding an alternate route.\n`
       }
     } else {
-      responseText += `\n✅ No major traffic incidents reported on this route.\n`
+      responseText += `\nNo major traffic incidents reported on this route.\n`
     }
 
-    // ─── Step-by-step directions ──────────────────────────────────────────
+    // ─── Step-by-step directions (ALL STEPS - NO TRUNCATION) ──────────────
 
     if (steps && steps.length > 0) {
-      responseText += `\n📌 **Directions:**\n`
+      responseText += `\nDirections:\n`
       
-      steps.slice(0, 6).forEach((step, i) => {
+      // ─── FIX: Show ALL steps, no truncation ──────────────────────────────
+      steps.forEach((step, i) => {
         const instruction = step.instruction || step.maneuver?.instruction || ''
         const stepDist = step.distance ? ` (${formatDistance(step.distance / 1000)})` : ''
         if (instruction) {
           responseText += `  ${i + 1}. ${instruction}${stepDist}\n`
         }
       })
-      
-      if (steps.length > 6) {
-        responseText += `  ... and ${steps.length - 6} more steps.\n`
-      }
     }
 
     // ─── Alternative routes (if available) ────────────────────────────────
 
     if (routeData.features.length > 1) {
-      responseText += `\n🔄 **${routeData.features.length - 1} alternative route${routeData.features.length - 1 > 1 ? 's' : ''} available.**\n`
+      responseText += `\n${routeData.features.length - 1} alternative route${routeData.features.length - 1 > 1 ? 's' : ''} available.\n`
       responseText += `   Ask "show alternative route" for more options.\n`
     }
 
@@ -519,19 +484,19 @@ export const getRouteAdvice = async (data, question, options = {}) => {
     if (data.condition) {
       const condition = data.condition.toLowerCase()
       if (condition.includes('rain') || condition.includes('storm') || condition.includes('thunder')) {
-        responseText += `\n🌧️ **Weather warning:** ${data.condition} conditions — drive with extra caution.\n`
+        responseText += `\nWeather warning: ${data.condition} conditions — drive with extra caution.\n`
       }
       if (data.temp && data.temp < 5) {
-        responseText += `❄️ **Cold weather:** ${Math.round(data.temp)}°C — roads may be icy in shaded areas.\n`
+        responseText += `Cold weather: ${Math.round(data.temp)}°C — roads may be icy in shaded areas.\n`
       }
       if (data.temp && data.temp > 35) {
-        responseText += `🔥 **Hot weather:** ${Math.round(data.temp)}°C — ensure your vehicle is cooled and carry water.\n`
+        responseText += `Hot weather: ${Math.round(data.temp)}°C — ensure your vehicle is cooled and carry water.\n`
       }
     }
 
     // ─── Travel tips ──────────────────────────────────────────────────────
 
-    responseText += `\n💡 **Travel tips:**\n`
+    responseText += `\nTravel tips:\n`
     
     if (distanceKm > 100) {
       responseText += `  • Long journey — plan for breaks every 2-3 hours.\n`
@@ -543,10 +508,10 @@ export const getRouteAdvice = async (data, question, options = {}) => {
     }
     
     if (trafficDelay > 10) {
-      responseText += `  • 🚦 Significant delays expected — consider leaving earlier.\n`
+      responseText += `  • Significant delays expected — consider leaving earlier.\n`
     }
 
-    // Find the nearest saved location (if any)
+    // Find the nearest saved location
     if (savedLocations.length > 0 && !endIsSaved) {
       const nearest = savedLocations.reduce((nearest, loc) => {
         const dist = Math.sqrt(
@@ -560,17 +525,17 @@ export const getRouteAdvice = async (data, question, options = {}) => {
       }, null)
       
       if (nearest && nearest.dist < 0.5) {
-        responseText += `\n📍 **Note:** You're near "${nearest.label || nearest.name}" — a saved location!\n`
+        responseText += `\nYou're near "${nearest.label || nearest.name}" — a saved location!\n`
       }
     }
 
-    responseText += `\n🚗 **Drive safely!**`
+    responseText += `\nDrive safely!`
 
     return responseText
 
   } catch (error) {
     console.error('Route calculation failed:', error)
-    return `❌ Error calculating route. Please try again later.`
+    return `Error calculating route. Please try again later.`
   }
 }
 
