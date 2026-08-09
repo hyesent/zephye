@@ -95,7 +95,10 @@ const fetchFullWeather = async (lat, lon) => {
       tempMax: om.daily?.temperature_2m_max?.[0] ?? 0,
       tempMin: om.daily?.temperature_2m_min?.[0] ?? 0,
       sunrise: om.daily?.sunrise?.[0] ?? '',
-      sunset: om.daily?.sunset?.[0] ?? ''
+      sunset: om.daily?.sunset?.[0] ?? '',
+      dewPoint: om.hourly?.dew_point?.[0] ?? 0,
+      lat,
+      lon
     }
   } catch {
     return null
@@ -296,47 +299,53 @@ const INTENT_MAP = [
     keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear', 'will it rain', 'temperature today', 'weather forecast', 'degrees', 'celsius', 'fahrenheit', 'precipitation', 'humidity', 'wind speed'],
     fn: getWeatherAdvice,
     priority: 1,
-    section: 'Weather'
+    section: 'Weather',
+    keywords: ['weather', 'forecast', 'temperature', 'rain', 'storm']
   },
   {
     id: 'sports',
     name: 'Sports',
-    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'cyclist', 'trail run', 'track', 'sprint', 'sports', 'match', 'tournament', 'practice', 'fitness'],
+    keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'peloton', 'spin', 'cyclist', 'trail run', 'track', 'sprint', 'workout', 'exercise', 'sports', 'game', 'match', 'tournament', 'practice', 'training', 'fitness'],
     fn: getSportsAdvice,
     priority: 1,
-    section: 'Sports'
+    section: 'Sports',
+    keywords: ['bike', 'biking', 'ride', 'run', 'gym', 'exercise', 'sport', 'workout', 'training', 'game', 'football', 'tennis', 'swim', 'hike']
   },
   {
     id: 'clothing',
     name: 'Clothing',
-    keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear', 'dress code', 'fashion', 'style', 'formal', 'casual'],
+    keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear', 'dress code', 'fashion', 'style', 'formal', 'casual', 'sweatshirt', 't-shirt', 'sweatpants', 'leggings', 'athletic wear', 'running shoes', 'cycling kit'],
     fn: getClothingAdvice,
     priority: 2,
-    section: 'Clothing'
+    section: 'Clothing',
+    keywords: ['wear', 'clothes', 'outfit', 'dress', 'jacket', 'fashion', 'style']
   },
   {
     id: 'route',
     name: 'Route',
-    keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate', 'direction', 'map', 'navigation', 'road trip', 'distance between', 'travel duration', 'way', 'bike route', 'cycling route', 'path', 'trail', 'route planner'],
+    keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate', 'direction', 'map', 'navigation', 'road trip', 'distance between', 'travel duration', 'way', 'bike route', 'cycling route', 'path', 'trail', 'route planner', 'shortest route', 'fastest route', 'scenic route'],
     fn: getRouteAdvice,
     priority: 2,
-    section: 'Route'
+    section: 'Route',
+    keywords: ['route', 'distance', 'how long', 'get to', 'from', 'to', 'directions', 'map', 'navigate']
   },
   {
     id: 'traffic',
     name: 'Traffic',
-    keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report', 'bumper to bumper', 'delay', 'construction traffic', 'road closure', 'car crash', 'traffic jam', 'stuck in traffic', 'rush hour', 'commute traffic'],
+    keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report', 'bumper to bumper', 'delay', 'construction traffic', 'road closure', 'car crash', 'bike lane blocked', 'cycle lane', 'traffic jam', 'stuck in traffic', 'rush hour', 'commute traffic'],
     fn: getTrafficAdvice,
     priority: 2,
-    section: 'Traffic'
+    section: 'Traffic',
+    keywords: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow']
   },
   {
     id: 'driving',
     name: 'Driving',
-    keys: ['drive', 'driving', 'road', 'car', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'vehicle', 'transport', 'freeway', 'intersection', 'driving conditions', 'road conditions'],
+    keys: ['drive', 'driving', 'road', 'car', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'vehicle', 'transport', 'freeway', 'intersection', 'road bike', 'bike on road', 'cycle lane', 'driving conditions', 'road conditions', 'pavement', 'roads'],
     fn: getDrivingAdvice,
     priority: 3,
-    section: 'Driving'
+    section: 'Driving',
+    keywords: ['drive', 'driving', 'road', 'car', 'vehicle', 'highway']
   },
   {
     id: 'health',
@@ -344,15 +353,17 @@ const INTENT_MAP = [
     keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical', 'migraine', 'arthritis', 'heart', 'diabetes', 'copd', 'breathing', 'safe to go outside', 'doctor', 'hospital', 'symptoms', 'medicine', 'condition', 'chronic', 'pain', 'injury', 'wellness', 'air quality', 'pollution', 'allergies', 'pollen', 'dust', 'smoke', 'fever', 'cough', 'sneeze'],
     fn: getHealthAdvice,
     priority: 3,
-    section: 'Health'
+    section: 'Health',
+    keywords: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'breathing', 'air quality', 'pain']
   },
   {
     id: 'lifestyle',
     name: 'Lifestyle',
-    keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga', 'outdoor activity', 'leisure', 'recreation', 'fun', 'relax', 'walking', 'bike ride', 'hammock', 'read outside', 'garden', 'bird watching'],
+    keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga', 'outdoor activity', 'leisure', 'recreation', 'fun', 'relax', 'exercise light', 'walking', 'bike ride', 'casual ride', 'leisure bike', 'hammock', 'read outside', 'garden', 'bird watching'],
     fn: getLifestyleAdvice,
     priority: 3,
-    section: 'Lifestyle'
+    section: 'Lifestyle',
+    keywords: ['lifestyle', 'mood', 'walk', 'park', 'picnic', 'relax', 'leisure', 'bike ride']
   },
   {
     id: 'stargazing',
@@ -360,7 +371,8 @@ const INTENT_MAP = [
     keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star', 'celestial', 'observatory', 'night vision', 'astrophotography', 'deep space', 'see stars', 'clear sky', 'dark sky'],
     fn: getStargazingAdvice,
     priority: 3,
-    section: 'Stargazing'
+    section: 'Stargazing',
+    keywords: ['star', 'moon', 'night sky', 'telescope', 'astronomy', 'galaxy', 'milky way', 'planet']
   },
   {
     id: 'farming',
@@ -368,15 +380,17 @@ const INTENT_MAP = [
     keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse', 'cow', 'chicken', 'livestock', 'poultry', 'yield', 'tractor', 'agriculture', 'orchard', 'ranch', 'cultivation', 'compost', 'mulch', 'prune', 'weed', 'pesticide', 'fertilizer'],
     fn: getFarmingAdvice,
     priority: 3,
-    section: 'Farming'
+    section: 'Farming',
+    keywords: ['farm', 'crop', 'plant', 'garden', 'soil', 'harvest']
   },
   {
     id: 'photography',
     name: 'Photography',
-    keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos', 'photographer', 'composition', 'exposure', 'aperture', 'shutter speed', 'videography', 'visual', 'image', 'editing', 'sunset photo', 'sunrise photo'],
+    keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos', 'photographer', 'composition', 'exposure', 'aperture', 'shutter speed', 'videography', 'visual', 'image', 'RAW', 'lightroom', 'photoshop', 'editing', 'sunset photo', 'sunrise photo'],
     fn: getPhotographyAdvice,
     priority: 3,
-    section: 'Photography'
+    section: 'Photography',
+    keywords: ['photo', 'camera', 'photography', 'shoot', 'picture', 'lens']
   },
   {
     id: 'events',
@@ -384,7 +398,8 @@ const INTENT_MAP = [
     keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue', 'birthday', 'anniversary', 'corporate', 'block party', 'fair', 'reception', 'social', 'occasion', 'gala', 'fundraiser', 'conference', 'meeting'],
     fn: getEventsAdvice,
     priority: 3,
-    section: 'Events'
+    section: 'Events',
+    keywords: ['event', 'party', 'wedding', 'bbq', 'picnic', 'festival', 'concert']
   },
   {
     id: 'pets',
@@ -392,7 +407,8 @@ const INTENT_MAP = [
     keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog', 'pet care', 'veterinarian', 'puppy training', 'cat care', 'dog walking', 'vet', 'animal shelter', 'wildlife', 'fish', 'hamster', 'guinea pig', 'reptile', 'snake'],
     fn: getPetsAdvice,
     priority: 3,
-    section: 'Pets'
+    section: 'Pets',
+    keywords: ['pet', 'dog', 'cat', 'animal', 'walk my dog', 'puppy']
   },
   {
     id: 'diy',
@@ -400,7 +416,8 @@ const INTENT_MAP = [
     keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying', 'home repair', 'fix', 'remodel', 'contractor', 'carpentry', 'plumbing', 'electrical', 'home improvement', 'handyman', 'project', 'saw', 'screwdriver', 'wrench', 'tool', 'workshop'],
     fn: getDIYConstructionAdvice,
     priority: 3,
-    section: 'DIY'
+    section: 'DIY',
+    keywords: ['diy', 'build', 'construction', 'paint', 'renovation', 'repair']
   },
   {
     id: 'energy',
@@ -408,7 +425,8 @@ const INTENT_MAP = [
     keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility', 'electric', 'gas', 'insulation', 'efficiency', 'smart home', 'temperature control', 'climate control', 'savings', 'kwh', 'solar panel', 'inverter', 'battery', 'generator'],
     fn: getEnergyHomeAdvice,
     priority: 3,
-    section: 'Energy'
+    section: 'Energy',
+    keywords: ['energy', 'power', 'electricity', 'bill', 'ac', 'heating', 'solar']
   },
   {
     id: 'traveling',
@@ -416,7 +434,8 @@ const INTENT_MAP = [
     keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey', 'traveling', 'destination', 'tourism', 'business trip', 'holiday', 'abroad', 'international', 'domestic', 'itinerary', 'layover', 'baggage', 'luggage', 'suitcase'],
     fn: getTravelingAdvice,
     priority: 3,
-    section: 'Travel'
+    section: 'Travel',
+    keywords: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport']
   },
   {
     id: 'skin_hair',
@@ -424,7 +443,8 @@ const INTENT_MAP = [
     keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty', 'skincare', 'hair care', 'beauty routine', 'cosmetics', 'face', 'scalp', 'complexion', 'rosacea', 'dandruff', 'oily skin', 'dry hair', 'curly hair', 'straight hair', 'shampoo', 'conditioner'],
     fn: getSkinHairAdvice,
     priority: 3,
-    section: 'Beauty'
+    section: 'Beauty',
+    keywords: ['skin', 'hair', 'sunscreen', 'makeup', 'beauty', 'skincare']
   }
 ]
 
@@ -441,6 +461,9 @@ const scoreQuestion = (question, intent) => {
       const weight = Math.min(keyLower.length / 2, 5)
       score += weight
       matched.push(keyLower)
+      if (keyLower.length > 8 && q.split(/\s+/).some(w => w === keyLower)) {
+        score += 3
+      }
     }
   }
 
@@ -449,7 +472,7 @@ const scoreQuestion = (question, intent) => {
     if (word.length < 3) continue
     for (const key of intent.keys) {
       if (key.includes(word) && word.length > 2) {
-        score += 0.5
+        score += 1
       }
     }
   }
@@ -595,11 +618,11 @@ const mergeResponses = (responses, intents, question) => {
   merged += '\n\n'
 
   if (secondary.length > 0) {
-    merged += 'Also consider:\n\n'
+    merged += `Also consider:\n\n`
     for (const sec of secondary) {
       merged += `${sec.header}\n`
       
-      // ─── FIX: Route gets full content ─────────────────────────────
+      // ─── Route gets full content ──────────────────────────────────────
       const isRoute = sec.header === 'Route'
       const maxLines = isRoute ? 999 : CONFIG.MAX_SECONDARY_LINES
       
@@ -624,7 +647,7 @@ const mergeResponses = (responses, intents, question) => {
   }
 
   if (allWarnings.length > 0 && primary.warnings.length === 0) {
-    merged += 'Warnings:\n'
+    merged += `Warnings:\n`
     for (const w of allWarnings.slice(0, CONFIG.MAX_WARNINGS)) {
       merged += `${w}\n`
     }
@@ -648,6 +671,36 @@ const mergeResponses = (responses, intents, question) => {
   return merged
 }
 
+// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────────
+
+const getDynamicSuggestions = (savedLocations = []) => {
+  const base = [
+    'Ask "stargazing tonight" or "moon phase"',
+    'Try "what should I wear" or "safe to run"',
+    'Ask "will it rain" or "UV burn time"',
+    'Type "paint drying time" or "best photo hour"',
+    'Compare "today vs tomorrow" for anything',
+    'Ask "biking vs running today?"',
+    'Try "drive or bike to work?"'
+  ]
+  
+  const suggestions = [...base]
+  
+  if (savedLocations.length > 0) {
+    const locNames = savedLocations.map(l => l.label || 'Untitled').filter(Boolean)
+    if (locNames.length > 0) {
+      suggestions.push(`Route to ${locNames[0]}?`)
+      suggestions.push(`Traffic to ${locNames[0]}?`)
+    }
+    if (locNames.length > 1) {
+      suggestions.push(`Compare ${locNames[0]} and ${locNames[1]} weather?`)
+      suggestions.push(`Route from ${locNames[0]} to ${locNames[1]}?`)
+    }
+  }
+  
+  return suggestions
+}
+
 // ─── SMART VERDICT GENERATOR ──────────────────────────────────────────
 
 const generateVerdict = (question, data, intent) => {
@@ -667,6 +720,7 @@ const generateVerdict = (question, data, intent) => {
     case 'stargazing': {
       const cloudCover = data.cloudCover || 0
       const moonIllumination = data.moonPhase ? Math.round(getMoonIllumination(data.moonPhase) * 100) : 0
+      const seeing = data.seeing || 5
       
       if (cloudCover > 70) {
         verdict = 'NO'
@@ -677,6 +731,9 @@ const generateVerdict = (question, data, intent) => {
       } else if (moonIllumination > 80) {
         verdict = 'MIGHT'
         confidence = 65
+      } else if (seeing <= 3 && cloudCover < 20 && moonIllumination < 30) {
+        verdict = 'YES'
+        confidence = 95
       } else if (cloudCover < 30 && moonIllumination < 50) {
         verdict = 'YES'
         confidence = 80
@@ -766,8 +823,9 @@ const generateVerdict = (question, data, intent) => {
       const rainChance = data.precipitationProb || 0
       const visibility = data.visibility || 10
       const wind = data.wind || 0
+      const condition = data.condition || ''
       
-      if (data.condition === 'thunderstorm' || data.condition === 'snow') {
+      if (condition === 'thunderstorm' || condition === 'snow') {
         verdict = 'NO'
         confidence = 95
       } else if (rainChance > 70 || visibility < 2 || wind > 50) {
@@ -826,28 +884,6 @@ const generateVerdict = (question, data, intent) => {
         } else {
           verdict = 'NO'
           confidence = 85
-        }
-      }
-      break
-    }
-    
-    case 'pets': {
-      const temp = data.temp || 0
-      const pavementTemp = data.temp ? data.temp + 25 : 45
-      
-      if (q.includes('walk') || q.includes('dog')) {
-        if (pavementTemp > 52) {
-          verdict = 'NO'
-          confidence = 95
-        } else if (temp > 35 || temp < -5) {
-          verdict = 'NO'
-          confidence = 90
-        } else if (temp > 30 || temp < 0) {
-          verdict = 'MIGHT'
-          confidence = 60
-        } else {
-          verdict = 'YES'
-          confidence = 90
         }
       }
       break
@@ -990,9 +1026,9 @@ const generateComparisonVerdict = (results, comparison, intent) => {
           if (diff > 3) {
             const hottest = times[tempValues.indexOf(max)]
             const coldest = times[tempValues.indexOf(min)]
-            verdict += `${hottest} is hottest at ${max}C, ${coldest} is coolest at ${min}C. `
+            verdict += `${hottest} is hottest at ${max}°C, ${coldest} is coolest at ${min}°C. `
           } else {
-            verdict += `Temperatures are similar across all times (${Math.round(temps.reduce((a,b) => a + b, 0) / temps.length)}C avg). `
+            verdict += `Temperatures are similar across all times (${Math.round(temps.reduce((a,b) => a + b, 0) / temps.length)}°C avg). `
           }
         }
       }
@@ -1045,7 +1081,7 @@ const generateComparisonVerdict = (results, comparison, intent) => {
           if (diff > 5) {
             const hottest = locs[tempValues.indexOf(max)]
             const coldest = locs[tempValues.indexOf(min)]
-            verdict += `${hottest} is warmer (${max}C) than ${coldest} (${min}C). `
+            verdict += `${hottest} is warmer (${max}°C) than ${coldest} (${min}°C). `
           }
         }
       }
@@ -1056,14 +1092,17 @@ const generateComparisonVerdict = (results, comparison, intent) => {
     
     case 'activity': {
       const activities = comparison.activities
-      verdict = `Comparing ${activities.join(' vs ')}. Consider weather impact on each activity. Check the details above for specific recommendations.`
+      verdict = `Comparing ${activities.join(' vs ')}. `
+      verdict += `Consider weather impact on each activity. `
+      verdict += `Check the details above for specific recommendations.`
       break
     }
     
     case 'scenario': {
       const scenarios = comparison.scenarios
       const dest = comparison.destination
-      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. Consider time, weather, and traffic for each option.`
+      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. `
+      verdict += `Consider time, weather, and traffic for each option.`
       break
     }
     
@@ -1072,36 +1111,6 @@ const generateComparisonVerdict = (results, comparison, intent) => {
   }
   
   return verdict
-}
-
-// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────────
-
-const getDynamicSuggestions = (savedLocations = []) => {
-  const base = [
-    'Ask "stargazing tonight" or "moon phase"',
-    'Try "what should I wear" or "safe to run"',
-    'Ask "will it rain" or "UV burn time"',
-    'Type "paint drying time" or "best photo hour"',
-    'Compare "today vs tomorrow" for anything',
-    'Ask "biking vs running today?"',
-    'Try "drive or bike to work?"'
-  ]
-  
-  const suggestions = [...base]
-  
-  if (savedLocations.length > 0) {
-    const locNames = savedLocations.map(l => l.label || 'Untitled').filter(Boolean)
-    if (locNames.length > 0) {
-      suggestions.push(`Route to ${locNames[0]}?`)
-      suggestions.push(`Traffic to ${locNames[0]}?`)
-    }
-    if (locNames.length > 1) {
-      suggestions.push(`Compare ${locNames[0]} and ${locNames[1]} weather?`)
-      suggestions.push(`Route from ${locNames[0]} to ${locNames[1]}?`)
-    }
-  }
-  
-  return suggestions
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────
@@ -1263,6 +1272,7 @@ export default function ZephyeFullScreen({
       stopGlobal()
       return
     }
+    // Clean text for TTS
     const cleanText = text
       .replace(/\*\*/g, '')
       .replace(/#/g, '')
@@ -1336,8 +1346,7 @@ export default function ZephyeFullScreen({
         
         for (const time of times) {
           const timeData = getTimeShiftedData(data, time, question)
-          const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
-          const response = isAsync ? await primaryIntent.fn(timeData, question) : primaryIntent.fn(timeData, question)
+          const response = await primaryIntent.fn(timeData, question)
           const tempMatch = response.match(/(\d+)°C/)
           const rainMatch = response.match(/(\d+)% rain/i)
           const cloudMatch = response.match(/Cloud Cover:\s*(\d+)%/)
@@ -1396,8 +1405,7 @@ export default function ZephyeFullScreen({
           freshData.lat = savedLoc.lat
           freshData.lon = savedLoc.lon
           
-          const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
-          const response = isAsync ? await primaryIntent.fn(freshData, question) : primaryIntent.fn(freshData, question)
+          const response = await primaryIntent.fn(freshData, question)
           const tempMatch = response.match(/(\d+)°C/)
           results.push({
             location: locName,
@@ -1442,8 +1450,7 @@ export default function ZephyeFullScreen({
           if (!intent) continue
           
           const activityQuestion = `Is it good for ${activity}?`
-          const isAsync = ['farming', 'stargazing'].includes(intent.id)
-          const response = isAsync ? await intent.fn(data, activityQuestion) : intent.fn(data, activityQuestion)
+          const response = await intent.fn(data, activityQuestion)
           
           results.push({
             activity,
@@ -1491,8 +1498,7 @@ export default function ZephyeFullScreen({
           if (!intent) continue
           
           const scenarioQuestion = `${scenario} to ${dest}?`
-          const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
-          const response = isAsync ? await intent.fn(data, scenarioQuestion) : intent.fn(data, scenarioQuestion)
+          const response = await intent.fn(data, scenarioQuestion)
           
           results.push({
             scenario,
@@ -1529,10 +1535,9 @@ export default function ZephyeFullScreen({
       const time1Data = getTimeShiftedData(data, comparison.time1, question)
       const time2Data = getTimeShiftedData(data, comparison.time2, question)
       
-      const isAsync = ['farming', 'stargazing'].includes(primaryIntent.id)
       const [response1, response2] = await Promise.all([
-        isAsync ? primaryIntent.fn(time1Data, question) : primaryIntent.fn(time1Data, question),
-        isAsync ? primaryIntent.fn(time2Data, question) : primaryIntent.fn(time2Data, question)
+        primaryIntent.fn(time1Data, question),
+        primaryIntent.fn(time2Data, question)
       ])
       
       const temp1 = response1.match(/(\d+)°C/)
@@ -1886,6 +1891,11 @@ export default function ZephyeFullScreen({
         .capsule-option.pro {
           opacity: 0.5;
           cursor: default;
+        }
+        .capsule-option.pro::after {
+          content: ' 🔒';
+          font-size: 10px;
+          opacity: 0.6;
         }
 
         .weather-badge {
