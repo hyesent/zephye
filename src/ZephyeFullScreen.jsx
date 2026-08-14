@@ -26,7 +26,7 @@ import {
   getVoiceForDetectedLanguage,
   LANGUAGE_NAMES,
   getVoiceForLocation
-} from './zephyeHelpers.js'
+} from './zephyeHelpers'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
