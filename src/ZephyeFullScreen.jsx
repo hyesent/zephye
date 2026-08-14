@@ -20,6 +20,90 @@ import { getWeatherAdvice } from './data/BasicWeatherAdvice.js'
 import { getTrafficAdvice } from './data/TrafficAdvice.js'
 import { getRouteAdvice } from './data/RouteAdvice.js'
 
+import { 
+  detectLanguageFromText, 
+  translateText, 
+  getVoiceForDetectedLanguage,
+  LANGUAGE_NAMES,
+  getVoiceForLocation
+} from './zephyeHelpers.js'
+
+// ─── SVG ICONS ──────────────────────────────────────────────────────────
+
+const MicIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    <line x1="12" y1="19" x2="12" y2="23"/>
+    <line x1="8" y1="23" x2="16" y2="23"/>
+  </svg>
+)
+
+const SendIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13"/>
+    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </svg>
+)
+
+const SpeakIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </svg>
+)
+
+const StopIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+  </svg>
+)
+
+const CopyIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </svg>
+)
+
+const CloseIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+)
+
+const BackIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+)
+
+const GlobeIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="2" y1="12" x2="22" y2="12"/>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  </svg>
+)
+
+const MaleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 4L16 8"/>
+    <path d="M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/>
+    <path d="M16 8l2.5 2.5"/>
+  </svg>
+)
+
+const FemaleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/>
+    <path d="M12 14v7"/>
+    <path d="M9 18h6"/>
+  </svg>
+)
+
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 
 const CONFIG = {
@@ -299,8 +383,7 @@ const INTENT_MAP = [
     keys: ['rain', 'storm', 'weather', 'temperature', 'hot', 'cold', 'windy', 'humid', 'tomorrow', 'today', 'morning', 'afternoon', 'evening', 'tonight', 'this week', 'weekend', 'forecast', 'snow', 'cloudy', 'clear', 'will it rain', 'temperature today', 'weather forecast', 'degrees', 'celsius', 'fahrenheit', 'precipitation', 'humidity', 'wind speed'],
     fn: getWeatherAdvice,
     priority: 1,
-    section: 'Weather',
-    keywords: ['weather', 'forecast', 'temperature', 'rain', 'storm']
+    section: 'Weather'
   },
   {
     id: 'sports',
@@ -308,8 +391,7 @@ const INTENT_MAP = [
     keys: ['sport', 'run', 'gym', 'workout', 'game', 'exercise', 'training', 'football', 'soccer', 'jog', 'tennis', 'golf', 'swim', 'hike', 'ski', 'marathon', 'safe to run', 'athlete', 'basketball', 'baseball', 'cycling', 'fitness', 'cardio', 'strength', 'physical', 'bike', 'biking', 'ride', 'mountain bike', 'road bike', 'peloton', 'spin', 'cyclist', 'trail run', 'track', 'sprint', 'workout', 'exercise', 'sports', 'game', 'match', 'tournament', 'practice', 'training', 'fitness'],
     fn: getSportsAdvice,
     priority: 1,
-    section: 'Sports',
-    keywords: ['bike', 'biking', 'ride', 'run', 'gym', 'exercise', 'sport', 'workout', 'training', 'game', 'football', 'tennis', 'swim', 'hike']
+    section: 'Sports'
   },
   {
     id: 'clothing',
@@ -317,8 +399,7 @@ const INTENT_MAP = [
     keys: ['wear', 'clothes', 'outfit', 'clothing', 'dress', 'jacket', 'shirt', 'pants', 'layer', 'sweater', 'coat', 'shorts', 'sandals', 'hoodie', 'umbrella', 'raincoat', 'hat', 'gloves', 'scarf', 'what should i wear', 'dress code', 'fashion', 'style', 'formal', 'casual', 'sweatshirt', 't-shirt', 'sweatpants', 'leggings', 'athletic wear', 'running shoes', 'cycling kit'],
     fn: getClothingAdvice,
     priority: 2,
-    section: 'Clothing',
-    keywords: ['wear', 'clothes', 'outfit', 'dress', 'jacket', 'fashion', 'style']
+    section: 'Clothing'
   },
   {
     id: 'route',
@@ -326,8 +407,7 @@ const INTENT_MAP = [
     keys: ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'trip', 'commute', 'eta', 'travel time', 'how far', 'navigate', 'direction', 'map', 'navigation', 'road trip', 'distance between', 'travel duration', 'way', 'bike route', 'cycling route', 'path', 'trail', 'route planner', 'shortest route', 'fastest route', 'scenic route'],
     fn: getRouteAdvice,
     priority: 2,
-    section: 'Route',
-    keywords: ['route', 'distance', 'how long', 'get to', 'from', 'to', 'directions', 'map', 'navigate']
+    section: 'Route'
   },
   {
     id: 'traffic',
@@ -335,8 +415,7 @@ const INTENT_MAP = [
     keys: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill', 'traffic conditions', 'is there traffic', 'traffic report', 'bumper to bumper', 'delay', 'construction traffic', 'road closure', 'car crash', 'bike lane blocked', 'cycle lane', 'traffic jam', 'stuck in traffic', 'rush hour', 'commute traffic'],
     fn: getTrafficAdvice,
     priority: 2,
-    section: 'Traffic',
-    keywords: ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow']
+    section: 'Traffic'
   },
   {
     id: 'driving',
@@ -344,8 +423,7 @@ const INTENT_MAP = [
     keys: ['drive', 'driving', 'road', 'car', 'commute', 'trip car', 'highway', 'cycling', 'bike', 'motorbike', 'motorcycle', 'bicycle', 'fog', 'black ice', 'hydroplaning', 'safe to drive', 'vehicle', 'transport', 'freeway', 'intersection', 'road bike', 'bike on road', 'cycle lane', 'driving conditions', 'road conditions', 'pavement', 'roads'],
     fn: getDrivingAdvice,
     priority: 3,
-    section: 'Driving',
-    keywords: ['drive', 'driving', 'road', 'car', 'vehicle', 'highway']
+    section: 'Driving'
   },
   {
     id: 'health',
@@ -353,8 +431,7 @@ const INTENT_MAP = [
     keys: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'headache', 'medical', 'migraine', 'arthritis', 'heart', 'diabetes', 'copd', 'breathing', 'safe to go outside', 'doctor', 'hospital', 'symptoms', 'medicine', 'condition', 'chronic', 'pain', 'injury', 'wellness', 'air quality', 'pollution', 'allergies', 'pollen', 'dust', 'smoke', 'fever', 'cough', 'sneeze'],
     fn: getHealthAdvice,
     priority: 3,
-    section: 'Health',
-    keywords: ['health', 'allergy', 'asthma', 'sick', 'cold', 'flu', 'breathing', 'air quality', 'pain']
+    section: 'Health'
   },
   {
     id: 'lifestyle',
@@ -362,8 +439,7 @@ const INTENT_MAP = [
     keys: ['lifestyle', 'mood', 'energy', 'vibe', 'feel', 'tired', 'productivity', 'motivation', 'jogging', 'walk', 'park', 'picnic', 'grill', 'bbq', 'bonfire', 'laundry', 'car wash', 'can i go', 'meditat', 'yoga', 'outdoor activity', 'leisure', 'recreation', 'fun', 'relax', 'exercise light', 'walking', 'bike ride', 'casual ride', 'leisure bike', 'hammock', 'read outside', 'garden', 'bird watching'],
     fn: getLifestyleAdvice,
     priority: 3,
-    section: 'Lifestyle',
-    keywords: ['lifestyle', 'mood', 'walk', 'park', 'picnic', 'relax', 'leisure', 'bike ride']
+    section: 'Lifestyle'
   },
   {
     id: 'stargazing',
@@ -371,8 +447,7 @@ const INTENT_MAP = [
     keys: ['star', 'moon', 'astro', 'planet', 'meteor', 'telescope', 'night sky', 'constellation', 'milky way', 'galaxy', 'nebula', 'iss', 'aurora', 'comet', 'eclipse', 'stargazing', 'astronomy', 'space', 'satellite', 'shooting star', 'celestial', 'observatory', 'night vision', 'astrophotography', 'deep space', 'see stars', 'clear sky', 'dark sky'],
     fn: getStargazingAdvice,
     priority: 3,
-    section: 'Stargazing',
-    keywords: ['star', 'moon', 'night sky', 'telescope', 'astronomy', 'galaxy', 'milky way', 'planet']
+    section: 'Stargazing'
   },
   {
     id: 'farming',
@@ -380,8 +455,7 @@ const INTENT_MAP = [
     keys: ['farm', 'crop', 'plant', 'harvest', 'soil', 'irrigation', 'seed', 'garden', 'gardening', 'watering', 'lawn', 'fertilize', 'greenhouse', 'cow', 'chicken', 'livestock', 'poultry', 'yield', 'tractor', 'agriculture', 'orchard', 'ranch', 'cultivation', 'compost', 'mulch', 'prune', 'weed', 'pesticide', 'fertilizer'],
     fn: getFarmingAdvice,
     priority: 3,
-    section: 'Farming',
-    keywords: ['farm', 'crop', 'plant', 'garden', 'soil', 'harvest']
+    section: 'Farming'
   },
   {
     id: 'photography',
@@ -389,8 +463,7 @@ const INTENT_MAP = [
     keys: ['photo', 'camera', 'golden hour', 'shoot', 'picture', 'photography', 'lighting', 'lens', 'drone', 'portrait', 'landscape', 'macro', 'photoshoot', 'photos', 'photographer', 'composition', 'exposure', 'aperture', 'shutter speed', 'videography', 'visual', 'image', 'RAW', 'lightroom', 'photoshop', 'editing', 'sunset photo', 'sunrise photo'],
     fn: getPhotographyAdvice,
     priority: 3,
-    section: 'Photography',
-    keywords: ['photo', 'camera', 'photography', 'shoot', 'picture', 'lens']
+    section: 'Photography'
   },
   {
     id: 'events',
@@ -398,8 +471,7 @@ const INTENT_MAP = [
     keys: ['event', 'party', 'wedding', 'outdoor', 'bbq', 'picnic', 'gathering', 'concert', 'festival', 'ceremony', 'celebration', 'venue', 'birthday', 'anniversary', 'corporate', 'block party', 'fair', 'reception', 'social', 'occasion', 'gala', 'fundraiser', 'conference', 'meeting'],
     fn: getEventsAdvice,
     priority: 3,
-    section: 'Events',
-    keywords: ['event', 'party', 'wedding', 'bbq', 'picnic', 'festival', 'concert']
+    section: 'Events'
   },
   {
     id: 'pets',
@@ -407,8 +479,7 @@ const INTENT_MAP = [
     keys: ['pet', 'dog', 'cat', 'walk', 'animal', 'puppy', 'kitten', 'paw', 'horse', 'bird', 'rabbit', 'chicken', 'fish pond', 'walk my dog', 'pet care', 'veterinarian', 'puppy training', 'cat care', 'dog walking', 'vet', 'animal shelter', 'wildlife', 'fish', 'hamster', 'guinea pig', 'reptile', 'snake'],
     fn: getPetsAdvice,
     priority: 3,
-    section: 'Pets',
-    keywords: ['pet', 'dog', 'cat', 'animal', 'walk my dog', 'puppy']
+    section: 'Pets'
   },
   {
     id: 'diy',
@@ -416,8 +487,7 @@ const INTENT_MAP = [
     keys: ['diy', 'build', 'concrete', 'paint', 'construction', 'renovation', 'hammer', 'drill', 'roof', 'deck', 'stain', 'woodwork', 'masonry', 'drywall', 'paint drying', 'home repair', 'fix', 'remodel', 'contractor', 'carpentry', 'plumbing', 'electrical', 'home improvement', 'handyman', 'project', 'saw', 'screwdriver', 'wrench', 'tool', 'workshop'],
     fn: getDIYConstructionAdvice,
     priority: 3,
-    section: 'DIY',
-    keywords: ['diy', 'build', 'construction', 'paint', 'renovation', 'repair']
+    section: 'DIY'
   },
   {
     id: 'energy',
@@ -425,8 +495,7 @@ const INTENT_MAP = [
     keys: ['energy', 'power', 'solar', 'home', 'electricity', 'bill', 'ac', 'heating', 'hvac', 'dehumidifier', 'humidifier', 'thermostat', 'pipe', 'freeze', 'utility', 'electric', 'gas', 'insulation', 'efficiency', 'smart home', 'temperature control', 'climate control', 'savings', 'kwh', 'solar panel', 'inverter', 'battery', 'generator'],
     fn: getEnergyHomeAdvice,
     priority: 3,
-    section: 'Energy',
-    keywords: ['energy', 'power', 'electricity', 'bill', 'ac', 'heating', 'solar']
+    section: 'Energy'
   },
   {
     id: 'traveling',
@@ -434,8 +503,7 @@ const INTENT_MAP = [
     keys: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport', 'tourist', 'pack', 'train', 'cruise', 'ferry', 'bus', 'road trip', 'flying', 'journey', 'traveling', 'destination', 'tourism', 'business trip', 'holiday', 'abroad', 'international', 'domestic', 'itinerary', 'layover', 'baggage', 'luggage', 'suitcase'],
     fn: getTravelingAdvice,
     priority: 3,
-    section: 'Travel',
-    keywords: ['travel', 'flight', 'trip', 'vacation', 'hotel', 'airport']
+    section: 'Travel'
   },
   {
     id: 'skin_hair',
@@ -443,8 +511,7 @@ const INTENT_MAP = [
     keys: ['skin', 'hair', 'sunscreen', 'uv', 'sunburn', 'tan', 'spf', 'dry skin', 'frizzy', 'makeup', 'moisturize', 'acne', 'eczema', 'curl', 'frizz', 'blowout', 'beauty', 'skincare', 'hair care', 'beauty routine', 'cosmetics', 'face', 'scalp', 'complexion', 'rosacea', 'dandruff', 'oily skin', 'dry hair', 'curly hair', 'straight hair', 'shampoo', 'conditioner'],
     fn: getSkinHairAdvice,
     priority: 3,
-    section: 'Beauty',
-    keywords: ['skin', 'hair', 'sunscreen', 'makeup', 'beauty', 'skincare']
+    section: 'Beauty'
   }
 ]
 
@@ -622,7 +689,6 @@ const mergeResponses = (responses, intents, question) => {
     for (const sec of secondary) {
       merged += `${sec.header}\n`
       
-      // ─── Route gets full content ──────────────────────────────────────
       const isRoute = sec.header === 'Route'
       const maxLines = isRoute ? 999 : CONFIG.MAX_SECONDARY_LINES
       
@@ -1125,7 +1191,7 @@ export default function ZephyeFullScreen({
   userName,
   lang = 'en',
   greeting,
-  voiceToUse
+  voiceToUse: propVoiceToUse
 }) {
   const { playGlobal, stopGlobal, isSpeaking } = useAudio()
 
@@ -1138,9 +1204,38 @@ export default function ZephyeFullScreen({
   const [activeTab, setActiveTab] = useState('ask')
   const [savedLocations, setSavedLocations] = useState([])
 
+  // ─── Translation & Voice State ────────────────────────────────────────
+  const [detectedLanguage, setDetectedLanguage] = useState('en')
+  const [isTranslating, setIsTranslating] = useState(false)
+  const [showOriginal, setShowOriginal] = useState(false)
+  const [genderPref, setGenderPref] = useState('female')
+
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
   const ghostIntervalRef = useRef(null)
+
+  // ─── Determine which voice to use ──────────────────────────────────────
+  const voiceToUse = useMemo(() => {
+    // If user typed in a non-English language, use that language's voice
+    if (detectedLanguage !== 'en' && detectedLanguage !== lang) {
+      const detectedVoice = getVoiceForDetectedLanguage(detectedLanguage, genderPref)
+      if (detectedVoice) return detectedVoice
+    }
+    // Otherwise use the prop voice
+    return propVoiceToUse
+  }, [detectedLanguage, genderPref, propVoiceToUse, lang])
+
+  // ─── Detect language on input change ──────────────────────────────────
+  useEffect(() => {
+    if (input && input.trim().length > 2) {
+      const detected = detectLanguageFromText(input)
+      if (detected !== 'en') {
+        setDetectedLanguage(detected)
+      } else {
+        setDetectedLanguage('en')
+      }
+    }
+  }, [input])
 
   // ─── Weather Data ──────────────────────────────────────────────────────
 
@@ -1272,7 +1367,6 @@ export default function ZephyeFullScreen({
       stopGlobal()
       return
     }
-    // Clean text for TTS
     const cleanText = text
       .replace(/\*\*/g, '')
       .replace(/#/g, '')
@@ -1389,7 +1483,6 @@ export default function ZephyeFullScreen({
             return `I couldn't find "${locName}" in your saved locations. Please save it first.`
           }
           
-          // ─── FETCH FRESH WEATHER FOR EACH LOCATION ──────────────────
           const freshData = await fetchFullWeather(savedLoc.lat, savedLoc.lon)
           if (!freshData) {
             results.push({
@@ -1687,33 +1780,69 @@ export default function ZephyeFullScreen({
   const handleAsk = useCallback(async (question) => {
     if (!question.trim()) return
 
-    setMessages(prev => [...prev, { role: 'user', content: question }])
+    // ─── DETECT LANGUAGE ──────────────────────────────────────────────────
+    const detectedLang = detectLanguageFromText(question)
+    if (detectedLang !== 'en') {
+      setDetectedLanguage(detectedLang)
+    }
+
+    // ─── TRANSLATE QUESTION TO ENGLISH IF NEEDED ────────────────────────
+    let englishQuestion = question
+    const needsTranslation = detectedLang !== 'en' && detectedLang !== lang
+
+    if (needsTranslation) {
+      setIsTranslating(true)
+      englishQuestion = await translateText(question, 'en')
+      setIsTranslating(false)
+    }
+
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      content: question,
+      originalLang: detectedLang
+    }])
     setInput('')
     setIsLoading(true)
     setStreamingText('')
 
     try {
-      const answer = await routeQuestion(question)
+      const answer = await routeQuestion(englishQuestion)
+
+      // ─── TRANSLATE RESPONSE BACK TO USER LANGUAGE ──────────────────────
+      let finalAnswer = answer
+      if (needsTranslation) {
+        setIsTranslating(true)
+        finalAnswer = await translateText(answer, detectedLang)
+        setIsTranslating(false)
+      }
 
       let text = ''
-      for (const word of answer.split(' ')) {
+      for (const word of finalAnswer.split(' ')) {
         text += word + ' '
         setStreamingText(text)
         await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
       }
 
-      setMessages(prev => [...prev, { role: 'assistant', content: answer }])
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: finalAnswer,
+        originalLang: detectedLang,
+        originalEnglish: needsTranslation ? answer : null
+      }])
       setStreamingText('')
 
-      if (voiceToUse) speakText(answer)
+      if (voiceToUse) speakText(finalAnswer)
 
     } catch (e) {
       const fallback = `Error getting advice. Current temp is ${weatherData.temp}°C with ${weatherData.condition}.`
-      setMessages(prev => [...prev, { role: 'assistant', content: fallback }])
+      const finalFallback = needsTranslation 
+        ? await translateText(fallback, detectedLang)
+        : fallback
+      setMessages(prev => [...prev, { role: 'assistant', content: finalFallback }])
     } finally {
       setIsLoading(false)
     }
-  }, [routeQuestion, weatherData, voiceToUse, speakText])
+  }, [routeQuestion, weatherData, voiceToUse, speakText, lang])
 
   // ─── Render ──────────────────────────────────────────────────────────
 
@@ -1735,10 +1864,98 @@ export default function ZephyeFullScreen({
       <div className="ai-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 10px' }}>
-            ←
+            <BackIcon />
           </button>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            {location?.name?.split(',')[0] || 'City'}
+          </span>
         </div>
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Language Indicator */}
+          {detectedLanguage !== 'en' && (
+            <span style={{ 
+              fontSize: '11px', 
+              color: 'var(--text-muted)', 
+              padding: '2px 10px',
+              background: 'rgba(56,189,248,0.1)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <GlobeIcon />
+              {LANGUAGE_NAMES[detectedLanguage] || detectedLanguage}
+              {isTranslating && ' ⌛'}
+            </span>
+          )}
+
+          {/* Show Original Toggle */}
+          {detectedLanguage !== 'en' && (
+            <button
+              onClick={() => setShowOriginal(!showOriginal)}
+              style={{
+                fontSize: '11px',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                background: showOriginal ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              {showOriginal ? 'Original' : 'Show Original'}
+            </button>
+          )}
+
+          {/* Gender Toggle */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255,255,255,0.06)',
+            borderRadius: '20px',
+            padding: '2px',
+            border: '1px solid rgba(255,255,255,0.06)'
+          }}>
+            <button
+              onClick={() => setGenderPref('female')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '18px',
+                fontSize: '12px',
+                fontWeight: '600',
+                background: genderPref === 'female' ? 'var(--accent)' : 'transparent',
+                color: genderPref === 'female' ? 'var(--bg-deep)' : 'var(--text-muted)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <FemaleIcon />
+            </button>
+            <button
+              onClick={() => setGenderPref('male')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '18px',
+                fontSize: '12px',
+                fontWeight: '600',
+                background: genderPref === 'male' ? 'var(--accent)' : 'transparent',
+                color: genderPref === 'male' ? 'var(--bg-deep)' : 'var(--text-muted)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <MaleIcon />
+            </button>
+          </div>
+
           <div className="capsule-switch">
             <button
               className={`capsule-option ${activeTab === 'ask' ? 'active' : ''}`}
@@ -1751,6 +1968,7 @@ export default function ZephyeFullScreen({
             </button>
           </div>
         </div>
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div className="weather-badge">
             <span>{location?.name?.split(',')[0] || 'City'}</span>
@@ -1809,14 +2027,40 @@ export default function ZephyeFullScreen({
                 {msg.role === 'assistant' && (
                   <div className="msg-actions-top">
                     <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
-                      {isSpeaking ? '⏹' : '🔊'}
+                      {isSpeaking ? <StopIcon /> : <SpeakIcon />}
                     </button>
                     <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
-                      📋
+                      <CopyIcon />
                     </button>
                   </div>
                 )}
+                
+                {/* Show original English if toggled */}
+                {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: 'var(--text-muted)', 
+                    marginBottom: '8px',
+                    paddingBottom: '8px',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                  }}>
+                    {msg.originalEnglish}
+                  </div>
+                )}
+                
                 <div className="msg-content">{msg.content}</div>
+                
+                {/* Language indicator */}
+                {msg.originalLang && msg.originalLang !== 'en' && (
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: 'var(--text-muted)', 
+                    marginTop: '6px',
+                    opacity: 0.5
+                  }}>
+                    {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -1849,7 +2093,7 @@ export default function ZephyeFullScreen({
               disabled={isLoading}
             />
             <button className="mic-btn" onClick={startListening} title="Voice input">
-              🎤
+              <MicIcon />
             </button>
           </div>
           <button
@@ -1858,7 +2102,7 @@ export default function ZephyeFullScreen({
             className="btn-primary"
             style={{ width: 'auto', padding: '10px 20px' }}
           >
-            Send
+            <SendIcon />
           </button>
         </div>
       </div>
@@ -1949,12 +2193,13 @@ export default function ZephyeFullScreen({
         .input-wrapper .mic-btn {
           background: transparent;
           border: none;
-          font-size: 20px;
           padding: 6px 12px 6px 6px;
           cursor: pointer;
           border-radius: 30px;
           transition: 0.2s;
           color: var(--text-muted);
+          display: flex;
+          align-items: center;
         }
         .input-wrapper .mic-btn:hover {
           color: var(--accent);
