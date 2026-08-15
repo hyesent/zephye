@@ -26,7 +26,7 @@ import {
   getVoiceForDetectedLanguage,
   LANGUAGE_NAMES,
   getVoiceForLocation
-} from './zephyeHelpers'
+} from './zephyeHelpers.js'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
@@ -93,18 +93,6 @@ const LocationIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
     <circle cx="12" cy="10" r="3"/>
-  </svg>
-)
-
-const ChevronDownIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="6 9 12 15 18 9"/>
-  </svg>
-)
-
-const ChevronUpIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="18 15 12 9 6 15"/>
   </svg>
 )
 
@@ -379,7 +367,9 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
   return data
 }
 
-// ─── SAMPLE QUESTIONS ──────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SAMPLE QUESTIONS ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const SAMPLE_QUESTIONS = [
   "Will it rain tomorrow?",
@@ -984,68 +974,73 @@ const detectComparison = (question) => {
 // ─── STRUCTURED RESPONSE COMPONENT ──────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-function StructuredResponse({ data, onSpeak, isSpeaking, onCopy }) {
+function StructuredResponse({ data, isSpeaking, onSpeak, onCopy }) {
   const [showDetails, setShowDetails] = useState(false)
   const [showFull, setShowFull] = useState(false)
 
-  if (!data || typeof data !== 'object') {
-    return <div className="msg-content">{String(data)}</div>
-  }
-
-  const { verdict, summary, note, details, fullText } = data
-
-  return (
-    <div className="structured-response">
-      {/* Verdict */}
-      <div className="verdict">{verdict}</div>
-      
-      {/* Summary */}
-      <div className="summary">{summary}</div>
-      
-      {/* Note */}
-      {note && <div className="note">{note}</div>}
-      
-      {/* Actions */}
-      <div className="response-actions">
-        {details && details.length > 0 && (
-          <button 
-            className="action-btn"
-            onClick={() => setShowDetails(!showDetails)}
-          >
-            {showDetails ? 'Hide details' : 'Why?'}
-          </button>
-        )}
-        {fullText && (
-          <button 
-            className="action-btn"
-            onClick={() => setShowFull(!showFull)}
-          >
+  // If data is a string, wrap it
+  if (typeof data === 'string') {
+    return (
+      <div className="structured-response">
+        <div className="summary">{data}</div>
+        <div className="response-actions">
+          <button className="action-btn" onClick={() => setShowFull(!showFull)}>
             {showFull ? 'Show less' : 'More details'}
           </button>
+        </div>
+        {showFull && (
+          <div className="full-section">
+            <div className="full-text">{data}</div>
+          </div>
         )}
       </div>
-      
-      {/* Details */}
-      {showDetails && details && details.length > 0 && (
-        <div className="details-section">
-          <div className="details-title">Why this recommendation?</div>
-          {details.map((d, i) => (
-            <div key={i} className="detail-row">
-              <span className="detail-label">{d.label}</span>
-              <span className="detail-value">{d.value}</span>
-            </div>
-          ))}
+    )
+  }
+
+  // If data is an object with verdict, use structured format
+  if (data && typeof data === 'object' && data.verdict) {
+    return (
+      <div className="structured-response">
+        <div className="verdict">{data.verdict}</div>
+        <div className="summary">{data.summary}</div>
+        {data.note && <div className="note">{data.note}</div>}
+        
+        <div className="response-actions">
+          {data.details && data.details.length > 0 && (
+            <button className="action-btn" onClick={() => setShowDetails(!showDetails)}>
+              {showDetails ? 'Hide details' : 'Why?'}
+            </button>
+          )}
+          {data.fullText && (
+            <button className="action-btn" onClick={() => setShowFull(!showFull)}>
+              {showFull ? 'Show less' : 'More details'}
+            </button>
+          )}
         </div>
-      )}
-      
-      {/* Full text */}
-      {showFull && fullText && (
-        <div className="full-section">
-          <div className="full-text">{fullText}</div>
-        </div>
-      )}
-    </div>
-  )
+        
+        {showDetails && data.details && data.details.length > 0 && (
+          <div className="details-section">
+            <div className="details-title">Why this recommendation?</div>
+            {data.details.map((d, i) => (
+              <div key={i} className="detail-row">
+                <span className="detail-label">{d.label}</span>
+                <span className="detail-value">{d.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {showFull && data.fullText && (
+          <div className="full-section">
+            <div className="full-text">{data.fullText}</div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Fallback: show as string
+  return <div className="msg-content">{String(data)}</div>
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -1262,7 +1257,6 @@ export default function ZephyeFullScreen({
       return
     }
     
-    // Extract text from structured response if needed
     let speakableText = text
     if (typeof text === 'object' && text !== null) {
       speakableText = `${text.verdict || ''} ${text.summary || ''} ${text.note || ''}`
@@ -1352,7 +1346,6 @@ export default function ZephyeFullScreen({
       }
       
       if (comparison.type === 'location') {
-        // Handle location comparison
         const locations = comparison.locations
         const results = []
         
@@ -1385,7 +1378,7 @@ export default function ZephyeFullScreen({
       return response
     }
 
-    // If only one intent, return structured response
+    // If only one intent, return the response directly (string or structured)
     if (detectedIntents.length === 1) {
       const intent = detectedIntents[0].intent
       const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
@@ -1393,19 +1386,7 @@ export default function ZephyeFullScreen({
         ? await intent.fn(data, question)
         : intent.fn(data, question)
       
-      // If response is already structured, return it
-      if (response && typeof response === 'object' && response.verdict) {
-        return response
-      }
-      
-      // If response is string, wrap it
-      return {
-        verdict: 'Here\'s what I found',
-        summary: String(response).slice(0, 200),
-        note: 'Check the full response below for all details.',
-        details: [],
-        fullText: String(response)
-      }
+      return response
     }
 
     // Multiple intents - merge
@@ -1452,7 +1433,7 @@ export default function ZephyeFullScreen({
     return {
       verdict: 'Here\'s what I found',
       summary: mergedSummary.trim(),
-      note: 'Multiple topics covered. Check each section below for details.',
+      note: 'Multiple topics covered.',
       details: mergedDetails.flatMap(d => d.details || []),
       fullText: validResults.map(r => {
         const content = r.response
@@ -1497,7 +1478,6 @@ export default function ZephyeFullScreen({
       let finalAnswer = answer
       if (needsTranslation) {
         setIsTranslating(true)
-        // Handle structured translation
         if (typeof answer === 'object' && answer.verdict) {
           finalAnswer = {
             ...answer,
@@ -1872,11 +1852,19 @@ export default function ZephyeFullScreen({
                       </div>
                     )}
                     
+                    {/* ─── Handle both structured and string responses ─── */}
                     {isStructured ? (
                       <StructuredResponse 
                         data={msg.content}
-                        onSpeak={() => speakText(msg.content)}
                         isSpeaking={isSpeaking}
+                        onSpeak={() => speakText(msg.content)}
+                        onCopy={() => copyText(msg.content)}
+                      />
+                    ) : typeof msg.content === 'string' ? (
+                      <StructuredResponse 
+                        data={msg.content}
+                        isSpeaking={isSpeaking}
+                        onSpeak={() => speakText(msg.content)}
                         onCopy={() => copyText(msg.content)}
                       />
                     ) : (
@@ -2224,36 +2212,6 @@ export default function ZephyeFullScreen({
           background: rgba(255,255,255,0.03);
           padding: 12px;
           border-radius: 8px;
-        }
-
-        /* ─── Comparison Styles ─────────────────────────────────────────── */
-        .comparison-container {
-          width: 100%;
-        }
-
-        .comparison-title {
-          font-weight: 600;
-          font-size: 15px;
-          margin-bottom: 12px;
-        }
-
-        .comparison-item {
-          margin-bottom: 12px;
-          padding: 12px;
-          background: rgba(255,255,255,0.03);
-          border-radius: 8px;
-          border-left: 2px solid var(--accent);
-        }
-
-        .comparison-item-label {
-          font-weight: 600;
-          font-size: 13px;
-          margin-bottom: 4px;
-          color: var(--text-muted);
-        }
-
-        .comparison-item-content {
-          font-size: 14px;
         }
       `}</style>
     </div>
