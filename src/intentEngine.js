@@ -555,7 +555,7 @@ const INTENT_MAP = [
       'sunset tonight', 'sunrise tomorrow',
       'when is the best time', 'what time to go out'
     ],
-    contextBoost: ['star', 'moon', 'planet', 'astronomy', 'telescope', 'galaxy', 'nebula', 'meteor', 'aurora', 'night sky'],
+    contextBoost: ['star', 'moon', 'planet', 'saturn', 'venus', 'astronomy', 'telescope', 'galaxy', 'nebula', 'meteor', 'aurora', 'night sky'],
     exclude: ['photo', 'camera', 'photography', 'golden hour photo', 'sunset photo', 'photoshoot']
   },
   {
