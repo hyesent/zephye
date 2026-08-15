@@ -20,6 +20,7 @@ import {
 // ============================================================================
 
 export const sampleQuestions = [
+  // TEAM SPORTS
   "Is it safe to play football today?",
   "Should I cancel my marathon?",
   "Good weather for tennis?",
@@ -76,7 +77,7 @@ export const sampleQuestions = [
   "Should I cancel the charity run?",
   "Can I play tennis on wet courts?",
   "Is it too windy for baseball?",
-  "Should I move the game earlier/later?",
+  "Should I move the game earlier or later?",
   "Can I do stadium stairs today?",
   "Is it safe for parkour?",
   "Should I cancel the sports camp?",
@@ -100,11 +101,14 @@ export const sampleQuestions = [
   "Should I cancel the 5K?",
   "Can I do a duathlon?",
   "Is it safe for adventure racing?",
-  "Should I cancel the sports day?"
+  "Should I cancel the sports day?",
+  "Can I play flag football today?",
+  "Is it safe for a charity walk?",
+  "Should I cancel the swim meet?"
 ];
 
 // ============================================================================
-// SPORT-SPECIFIC DATABASE
+// ENHANCED SPORT-SPECIFIC DATABASE
 // ============================================================================
 
 const SPORT_REQUIREMENTS = {
@@ -119,11 +123,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 5,
     lightningRisk: 10,
     equipmentWeight: 'light',
+    hydrationNeed: 'high',
     special: [
-      'Slide tackles dangerous on wet/hard ground',
+      'Slide tackles dangerous on wet or hard ground',
       'Goalkeeper specific: diving conditions affected by ground hardness',
-      'Headers affected by wind trajectory',
-      'Stud length matters: soft ground vs firm ground cleats'
+      'Headers affected by wind trajectory significantly',
+      'Stud length matters: soft ground versus firm ground cleats',
+      'Rain: ball becomes faster and more unpredictable',
+      'Heat: players cover 10-13km per match, extreme hydration need'
     ],
     cancellationThresholds: {
       wbgt: 32.3,
@@ -145,11 +152,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 7,
     lightningRisk: 10,
     equipmentWeight: 'heavy',
+    hydrationNeed: 'extreme',
     special: [
       'Equipment adds 5-8°C to perceived temperature',
-      'Helmets trap heat - 70% body heat lost through head',
-      'Shoulder pads restrict cooling',
-      'Hydration breaks mandatory above 28°C WBGT'
+      'Helmets trap heat - 70 percent body heat lost through head',
+      'Shoulder pads restrict cooling significantly',
+      'Hydration breaks mandatory above 28°C WBGT',
+      'Linemen at highest heat stroke risk (most equipment, constant exertion)',
+      'Cold: equipment becomes stiff, impacts harder'
     ],
     cancellationThresholds: {
       wbgt: 30.1,
@@ -171,11 +181,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 2,
     lightningRisk: 9,
     equipmentWeight: 'minimal',
+    hydrationNeed: 'moderate_high',
     special: [
-      'Court surface temp can be 15-25°C above air temp',
-      'Ball grip impossible when wet',
-      'Wind severely affects shooting accuracy',
-      'Asphalt radiated heat increases WBGT by 2-4°C'
+      'Court surface temperature can be 15-25°C above air temperature',
+      'Ball grip becomes impossible when wet',
+      'Wind severely affects shooting accuracy (especially 3-pointers)',
+      'Asphalt radiated heat increases WBGT by 2-4°C',
+      'Concrete courts cause more joint impact than wood courts',
+      'Sweat on court creates slip hazard'
     ],
     cancellationThresholds: {
       wbgt: 31.0,
@@ -197,11 +210,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 1,
     lightningRisk: 9,
     equipmentWeight: 'minimal',
+    hydrationNeed: 'moderate',
     special: [
-      'Hard courts radiate extreme heat',
+      'Hard courts radiate extreme heat (surface temp 55-65°C possible)',
       'Clay courts become unplayable when wet',
-      'Wind changes ball trajectory dramatically',
-      'Serve toss impossible in gusty conditions'
+      'Wind changes ball trajectory dramatically (most affected sport)',
+      'Serve toss becomes impossible in gusty conditions',
+      'Grass courts become slippery when wet (injury risk)',
+      'Sweat affects grip on racket handle'
     ],
     cancellationThresholds: {
       wbgt: 32.0,
@@ -223,11 +239,15 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 8,
     lightningRisk: 10,
     equipmentWeight: 'minimal',
+    hydrationNeed: 'extreme',
     special: [
-      'Core temp rises 1°C per 10 minutes at race pace',
-      'Dehydration of 2% body weight = 6% performance drop',
+      'Core temperature rises 1°C per 10 minutes at race pace',
+      'Dehydration of 2 percent body weight equals 6 percent performance drop',
       'Black flag conditions: cancel event entirely',
-      'Medical tent capacity must match conditions'
+      'Medical tent capacity must match conditions',
+      'Elite runners: 2-3 percent body weight fluid loss normal (high risk)',
+      'Heat stroke in marathons: 1 in 100,000 runners (more in heat)',
+      'Rain: chafing risk increases dramatically'
     ],
     cancellationThresholds: {
       wbgt: 28.0,
@@ -249,11 +269,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 9,
     lightningRisk: 10,
     equipmentWeight: 'minimal',
+    hydrationNeed: 'moderate',
     special: [
-      'Lightning: pool MUST be evacuated (water conducts)',
+      'Lightning: pool MUST be evacuated immediately (water conducts electricity)',
       'Open water: currents, waves, temperature stratification',
-      'Hypothermia risk below 21°C water temp',
-      'Sun reflection off water doubles UV exposure'
+      'Hypothermia risk below 21°C water temperature',
+      'Sun reflection off water doubles UV exposure',
+      'Chlorine + sun = eye irritation risk',
+      'Open water swimmers: start slow to adjust to cold'
     ],
     cancellationThresholds: {
       waterTemp: 16,
@@ -275,11 +298,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 4,
     lightningRisk: 8,
     equipmentWeight: 'light',
+    hydrationNeed: 'extreme',
     special: [
-      'Wind chill at speed: 40km/h riding = 15km/h wind + 25km/h apparent wind',
-      'Wet roads = 40% less braking power',
-      'Crosswinds dangerous above 35km/h',
-      'Descending in cold = extreme wind chill'
+      'Wind chill at speed: 40km/h riding equals 15km/h wind plus 25km/h apparent wind',
+      'Wet roads reduce braking power by 40 percent',
+      'Crosswinds are dangerous above 35km/h',
+      'Descending in cold creates extreme wind chill',
+      'Corners: speed must be reduced 25% on wet roads',
+      'Drafting reduces energy cost by 30 percent'
     ],
     cancellationThresholds: {
       wbgt: 30.0,
@@ -301,11 +327,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 3,
     lightningRisk: 10,
     equipmentWeight: 'clubs_and_cart',
+    hydrationNeed: 'moderate',
     special: [
-      'Lightning: golf courses are open fields (worst place)',
-      'Wind: every 10km/h = 1 club difference',
-      'Greens: unplayable when waterlogged',
-      'Metal clubs = lightning conductors'
+      'Lightning: golf courses are open fields (worst possible place)',
+      'Wind: every 10km/h equals 1 club difference',
+      'Greens become unplayable when waterlogged',
+      'Metal clubs are lightning conductors (do not hold them in storm)',
+      'Hot: golf carts can become ovens (black seats burn)',
+      'Putting: wind affects ball on greens significantly'
     ],
     cancellationThresholds: {
       wbgt: 33.0,
@@ -327,11 +356,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 3,
     lightningRisk: 10,
     equipmentWeight: 'moderate',
+    hydrationNeed: 'moderate',
     special: [
-      "Infield becomes mud pit when wet",
-      "Wind: fly balls unpredictable",
-      "Batter's box: extreme sun exposure",
-      "Catcher's gear: heat trap, highest heat stroke risk"
+      'Infield becomes a mud pit when wet',
+      'Wind makes fly balls unpredictable',
+      'Batter\'s box has extreme sun exposure (no shade)',
+      'Catcher\'s gear is a heat trap, highest heat stroke risk position',
+      'Dirt infield: sliding injuries increase on hard ground',
+      'Pitcher\'s mound: traction issues when wet'
     ],
     cancellationThresholds: {
       wbgt: 31.0,
@@ -353,11 +385,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 2,
     lightningRisk: 9,
     equipmentWeight: 'minimal',
+    hydrationNeed: 'high',
     special: [
-      'Sand temp can exceed 60°C in direct sun',
-      'Wind: serves and sets unpredictable',
-      'Sand reflects UV, increasing exposure 25%',
-      'Bare feet on hot sand = burns in seconds'
+      'Sand temperature can exceed 60°C in direct sun',
+      'Wind: serves and sets become highly unpredictable',
+      'Sand reflects UV, increasing exposure by 25 percent',
+      'Bare feet on hot sand = burns in seconds',
+      'Footwork requires 30% more energy on sand',
+      'Rain: sand becomes heavy and unplayable'
     ],
     cancellationThresholds: {
       wbgt: 31.0,
@@ -379,11 +414,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 5,
     lightningRisk: 9,
     equipmentWeight: 'backpack',
+    hydrationNeed: 'high',
     special: [
-      'Temperature drops 6.5°C per 1000m elevation',
-      'Exposure: above treeline = no shelter from elements',
-      'Stream crossings dangerous after heavy rain',
-      'Navigation impossible in fog/whiteout'
+      'Temperature drops 6.5°C per 1000m elevation gain',
+      'Exposure: above treeline equals no shelter from elements',
+      'Stream crossings become dangerous after heavy rain',
+      'Navigation becomes impossible in fog or whiteout',
+      'Sun exposure: 10% more UV per 1000m elevation',
+      'Backpack weight increases perceived exertion by 15-20%'
     ],
     cancellationThresholds: {
       wbgt: 30.0,
@@ -405,11 +443,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 2,
     lightningRisk: 7,
     equipmentWeight: 'heavy',
+    hydrationNeed: 'moderate',
     special: [
-      'Wind chill at speed: 60km/h skiing = significant',
-      'Whiteout conditions: depth perception lost',
-      'Avalanche risk after heavy snow/wind',
-      'Frostbite on exposed skin in minutes'
+      'Wind chill at speed: 60km/h skiing creates significant cold stress',
+      'Whiteout conditions cause depth perception loss',
+      'Avalanche risk increases after heavy snow or wind',
+      'Frostbite on exposed skin in minutes in extreme cold',
+      'Sunburn at altitude: UV increases 10% per 1000m elevation',
+      'Snow blindness: wear goggles even on cloudy days'
     ],
     cancellationThresholds: {
       wbgt: 'N/A',
@@ -431,11 +472,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 9,
     lightningRisk: 10,
     equipmentWeight: 'light',
+    hydrationNeed: 'high',
     special: [
-      'Tackling on hard/frozen ground = severe injury risk',
+      'Tackling on hard or frozen ground equals severe injury risk',
       'Scrum collapses increase in wet conditions',
       'Mud adds 5-10kg to jersey weight',
-      'Rain improves grip (controversial - scrum advantage)'
+      'Rain improves grip controversially - scrum advantage',
+      'Cold: muscles tighten, injury risk increases 30%',
+      'Ball becomes slippery in rain: handling errors increase'
     ],
     cancellationThresholds: {
       wbgt: 30.0,
@@ -457,11 +501,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 2,
     lightningRisk: 9,
     equipmentWeight: 'moderate_heavy',
+    hydrationNeed: 'moderate',
     special: [
-      'Pitch condition critically affected by moisture',
-      'Swing bowling enhanced by humidity/cloud cover',
-      'Batsmen in full protective gear = extreme heat risk',
-      'Bad light stops play (visibility rules)'
+      'Pitch condition is critically affected by moisture',
+      'Swing bowling is enhanced by humidity and cloud cover',
+      'Batsmen in full protective gear face extreme heat risk',
+      'Bad light stops play based on visibility rules',
+      'Outfield becomes slow when wet (affects scoring)',
+      'Spin bowling: dust on pitch helps turn'
     ],
     cancellationThresholds: {
       wbgt: 32.0,
@@ -483,11 +530,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 4,
     lightningRisk: 9,
     equipmentWeight: 'various',
+    hydrationNeed: 'extreme',
     special: [
-      'Rhabdomyolysis risk increases with heat',
-      'Kipping movements dangerous on wet bars',
-      'Barbells become slippery when wet',
-      'Breathing intensity = higher air pollution intake'
+      'Rhabdomyolysis risk increases significantly with heat',
+      'Kipping movements become dangerous on wet bars',
+      'Barbells become slippery when wet (grip failure)',
+      'Breathing intensity equals higher air pollution intake',
+      'Metabolic conditioning in heat doubles cardiovascular strain',
+      'Cool-down essential: 10-15 minutes of walking after WOD'
     ],
     cancellationThresholds: {
       wbgt: 28.0,
@@ -509,11 +559,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 5,
     lightningRisk: 9,
     equipmentWeight: 'helmet_and_boots',
+    hydrationNeed: 'moderate',
     special: [
       'Horses overheat faster than humans',
-      'Horse sweat = 3x human sweat rate',
-      'Spooking risk in high wind (leaves, debris)',
-      'Ground conditions critical for hoof safety'
+      'Horse sweat rate is 3x human sweat rate',
+      'Spooking risk increases in high wind (leaves, debris)',
+      'Ground conditions are critical for hoof safety',
+      'Hot horses: cool down with water (not ice)',
+      'Cold: horses need warm water to drink'
     ],
     cancellationThresholds: {
       wbgt: 30.0,
@@ -535,11 +588,14 @@ const SPORT_REQUIREMENTS = {
     rainTolerance: 8,
     lightningRisk: 10,
     equipmentWeight: 'life_jacket_paddle',
+    hydrationNeed: 'moderate',
     special: [
-      'Water temp + air temp must sum > 30°C for safety',
-      'Hypothermia in water 4x faster than air',
-      'Wind creates waves: whitecaps at 20km/h',
-      'Currents change with wind direction/speed'
+      'Water temperature plus air temperature must sum over 30°C for safety',
+      'Hypothermia in water is 4x faster than in air',
+      'Wind creates waves: whitecaps appear at 20km/h',
+      'Currents change direction and speed with wind',
+      'Cold shock: involuntary gasp reflex at water under 15°C',
+      'PFDs: essential, not optional'
     ],
     cancellationThresholds: {
       waterTemp: 15,
@@ -549,74 +605,142 @@ const SPORT_REQUIREMENTS = {
       visibility: 500,
       waves: 1
     }
+  },
+  marathon_ultra: {
+    fieldType: 'road_or_trail',
+    typicalDuration: 600,
+    intensity: 'endurance',
+    playersOnField: 'small_field',
+    heatSensitivity: 10,
+    coldSensitivity: 3,
+    windSensitivity: 6,
+    rainTolerance: 6,
+    lightningRisk: 10,
+    equipmentWeight: 'minimal',
+    hydrationNeed: 'extreme',
+    special: [
+      'Ultra-runners: 50-100km events with extreme weather exposure',
+      'Aid stations every 5-10km critical for survival',
+      'Pacing: 30-60 seconds slower per km per 5°C above 15°C',
+      'Night running: headlamps, reflective gear, temperature drop',
+      'Cutoff times: adjust for extreme conditions',
+      'Medical team: must include hypothermia AND heat stroke capability'
+    ],
+    cancellationThresholds: {
+      wbgt: 27.0,
+      windChill: -10,
+      wind: 40,
+      lightning: true,
+      visibility: 500,
+      roadFlooding: true
+    }
+  },
+  triathlon: {
+    fieldType: 'mixed',
+    typicalDuration: 300,
+    intensity: 'endurance',
+    playersOnField: 'variable',
+    heatSensitivity: 9,
+    coldSensitivity: 6,
+    windSensitivity: 7,
+    rainTolerance: 5,
+    lightningRisk: 10,
+    equipmentWeight: 'bike_and_gear',
+    hydrationNeed: 'extreme',
+    special: [
+      'Swim: water temperature critical (wetsuit rules)',
+      'Bike: drafting, wind, heat management',
+      'Run: most heat stroke events occur in the run leg',
+      'Transition area: must have shade and cooling stations',
+      'Cumulative stress: heat + cold + wind across all legs',
+      'Nutrition plan must account for sweat losses'
+    ],
+    cancellationThresholds: {
+      wbgt: 28.0,
+      windChill: -5,
+      wind: 40,
+      lightning: true,
+      visibility: 500,
+      roadFlooding: true
+    }
   }
 };
 
 // ============================================================================
-// WBGT FLAG SYSTEM (International Standard)
+// ENHANCED WBGT FLAG SYSTEM
 // ============================================================================
 
 function getWBGTCategory(wbgt) {
-  if (wbgt >= 32.3) return {
-    flag: 'BLACK',
-    color: '#1a1a1a',
-    action: 'CANCEL ALL OUTDOOR ACTIVITY',
-    risk: 'Extreme - Heat stroke imminent',
-    breaks: 'N/A - Cancel',
-    hydration: 'N/A - Cancel',
-    equipment: 'Remove all equipment',
-    acclimatization: 'No activity safe',
-    youth: 'Cancel all youth sports',
-    special: 'Medical personnel must be on standby if any activity attempted'
-  };
-  if (wbgt >= 30.1) return {
-    flag: 'RED',
-    color: '#ef4444',
-    action: 'Extreme caution - Modify significantly',
-    risk: 'Very High - Heat exhaustion likely',
-    breaks: '15 min rest per 45 min activity',
-    hydration: '500ml per 20 min',
-    equipment: 'Remove helmets/pads when possible',
-    acclimatization: 'Limit to 1 hour for non-acclimated',
-    youth: 'Cancel youth contact sports',
-    special: 'Cold water immersion tub must be available'
-  };
-  if (wbgt >= 28.0) return {
-    flag: 'ORANGE',
-    color: '#f97316',
-    action: 'High risk - Reduce intensity',
-    risk: 'High - Heat cramps, exhaustion possible',
-    breaks: '10 min per 30 min activity',
-    hydration: '400ml per 20 min',
-    equipment: 'Remove equipment during breaks',
-    acclimatization: 'Reduce intensity by 25% for non-acclimated',
-    youth: 'Monitor youth athletes every 15 min',
-    special: 'Shade mandatory for rest breaks'
-  };
-  if (wbgt >= 25.7) return {
-    flag: 'YELLOW',
-    color: '#eab308',
-    action: 'Moderate risk - Use caution',
-    risk: 'Moderate - Monitor for heat illness',
-    breaks: '5 min per 30 min activity',
-    hydration: '300ml per 20 min',
-    equipment: 'Optional equipment removal',
-    acclimatization: 'Watch newcomers carefully',
-    youth: 'Regular hydration breaks',
-    special: 'Watch for early heat illness signs'
-  };
-  if (wbgt >= 21.0) return {
-    flag: 'GREEN',
-    color: '#22c55e',
-    action: 'Low risk - Normal activity',
-    risk: 'Low - Standard precautions',
-    breaks: 'As needed',
-    hydration: '200ml per 20 min',
-    equipment: 'Normal use',
-    acclimatization: 'Normal activity',
-    youth: 'Normal activity',
-    special: 'Maintain regular hydration'
-  };
+  if (wbgt >= 32.3) {
+    return {
+      flag: 'BLACK',
+      color: '#1a1a1a',
+      action: 'CANCEL ALL OUTDOOR ACTIVITY',
+      risk: 'Extreme - Heat stroke is imminent within 15 minutes',
+      breaks: 'N/A - Cancel immediately',
+      hydration: 'N/A - Cancel',
+      equipment: 'Remove all equipment',
+      acclimatization: 'No activity is safe',
+      youth: 'Cancel all youth sports',
+      special: 'Medical personnel must be on standby if any activity is attempted'
+    };
+  }
+  if (wbgt >= 30.1) {
+    return {
+      flag: 'RED',
+      color: '#ef4444',
+      action: 'Extreme caution - Modify significantly',
+      risk: 'Very High - Heat exhaustion is likely within 30 minutes',
+      breaks: '15 minutes rest per 45 minutes activity',
+      hydration: '500ml per 20 minutes',
+      equipment: 'Remove helmets and pads when possible',
+      acclimatization: 'Limit to 1 hour for non-acclimated athletes',
+      youth: 'Cancel youth contact sports',
+      special: 'Cold water immersion tub must be available on-site'
+    };
+  }
+  if (wbgt >= 28.0) {
+    return {
+      flag: 'ORANGE',
+      color: '#f97316',
+      action: 'High risk - Reduce intensity significantly',
+      risk: 'High - Heat cramps and exhaustion possible',
+      breaks: '10 minutes per 30 minutes activity',
+      hydration: '400ml per 20 minutes',
+      equipment: 'Remove equipment during breaks',
+      acclimatization: 'Reduce intensity by 25% for non-acclimated',
+      youth: 'Monitor youth athletes every 15 minutes',
+      special: 'Shade is mandatory for rest breaks'
+    };
+  }
+  if (wbgt >= 25.7) {
+    return {
+      flag: 'YELLOW',
+      color: '#eab308',
+      action: 'Moderate risk - Use caution',
+      risk: 'Moderate - Monitor for signs of heat illness',
+      breaks: '5 minutes per 30 minutes activity',
+      hydration: '300ml per 20 minutes',
+      equipment: 'Optional equipment removal',
+      acclimatization: 'Watch newcomers carefully',
+      youth: 'Regular hydration breaks required',
+      special: 'Watch for early signs of heat illness'
+    };
+  }
+  if (wbgt >= 21.0) {
+    return {
+      flag: 'GREEN',
+      color: '#22c55e',
+      action: 'Low risk - Normal activity',
+      risk: 'Low - Standard precautions sufficient',
+      breaks: 'As needed',
+      hydration: '200ml per 20 minutes',
+      equipment: 'Normal use',
+      acclimatization: 'Normal activity',
+      youth: 'Normal activity',
+      special: 'Maintain regular hydration'
+    };
+  }
   return {
     flag: 'WHITE',
     color: '#ffffff',
@@ -632,47 +756,65 @@ function getWBGTCategory(wbgt) {
 }
 
 // ============================================================================
-// COLD WEATHER RISK ASSESSMENT
+// ENHANCED COLD WEATHER RISK ASSESSMENT
 // ============================================================================
 
 function getColdRiskCategory(windChill) {
-  if (windChill <= -30) return {
-    level: 'EXTREME COLD',
-    frostbiteTime: '5-10 minutes',
-    action: 'CANCEL all outdoor activity',
-    clothing: 'Expedition gear only',
-    warning: 'Exposed skin freezes almost instantly',
-    special: 'No outdoor sports possible. Indoor only.'
-  };
-  if (windChill <= -20) return {
-    level: 'SEVERE COLD',
-    frostbiteTime: '10-30 minutes',
-    action: 'Limit to 30 minutes maximum',
-    clothing: 'Full winter gear: thermal base + fleece + windproof',
-    warning: 'Check extremities every 10 minutes for numbness',
-    special: 'No metal equipment (sticks to skin)'
-  };
-  if (windChill <= -10) return {
-    level: 'VERY COLD',
-    frostbiteTime: '30-60 minutes',
-    action: 'Shortened sessions, indoor warmup',
-    clothing: 'Multiple layers, face protection, hand/toe warmers',
-    warning: 'Muscle tears more likely - extended warmup required',
-    special: 'Asthma: cold air triggers attacks'
-  };
-  if (windChill <= 0) return {
-    level: 'COLD',
-    frostbiteTime: '>2 hours',
-    action: 'Normal with precautions',
-    clothing: 'Base layer + insulating layer + wind layer',
-    warning: 'Keep moving - standing around = rapid cooling',
-    special: 'Warm up 2x normal duration'
-  };
+  if (windChill <= -35) {
+    return {
+      level: 'EXTREME COLD - LIFE THREATENING',
+      frostbiteTime: '2-5 minutes',
+      action: 'CANCEL all outdoor activity immediately',
+      clothing: 'Expedition gear only. No exposed skin.',
+      warning: 'Exposed skin freezes almost instantly. Frostbite before you feel it.',
+      special: 'No outdoor sports possible. Indoor only. Life-threatening.'
+    };
+  }
+  if (windChill <= -25) {
+    return {
+      level: 'SEVERE COLD',
+      frostbiteTime: '5-10 minutes',
+      action: 'Limit to 15 minutes maximum',
+      clothing: 'Thermal base + fleece + windproof + face protection',
+      warning: 'Check extremities every 5 minutes for numbness',
+      special: 'No metal equipment (sticks to skin). Frostbite risk extreme.'
+    };
+  }
+  if (windChill <= -15) {
+    return {
+      level: 'VERY COLD',
+      frostbiteTime: '15-30 minutes',
+      action: 'Shortened sessions, indoor warmup required',
+      clothing: 'Multiple layers, face protection, hand and toe warmers',
+      warning: 'Muscle tears are more likely - extended warmup required',
+      special: 'Asthma: cold air triggers attacks. Wear scarf over mouth.'
+    };
+  }
+  if (windChill <= -5) {
+    return {
+      level: 'COLD',
+      frostbiteTime: 'Over 30 minutes',
+      action: 'Normal with precautions',
+      clothing: 'Base layer + insulating layer + wind layer',
+      warning: 'Keep moving - standing around causes rapid cooling',
+      special: 'Warm up for 2x normal duration'
+    };
+  }
+  if (windChill <= 0) {
+    return {
+      level: 'CHILLY',
+      frostbiteTime: 'Over 2 hours',
+      action: 'Normal activity with layers',
+      clothing: 'Appropriate cold weather gear',
+      warning: 'Watch for early signs of cold stress',
+      special: 'Hydration still important in cold'
+    };
+  }
   return null;
 }
 
 // ============================================================================
-// PERFORMANCE IMPACT CALCULATOR
+// ENHANCED PERFORMANCE IMPACT CALCULATOR
 // ============================================================================
 
 function calculatePerformanceImpact(data, sportType) {
@@ -684,72 +826,191 @@ function calculatePerformanceImpact(data, sportType) {
   let impact = 0;
   let factors = [];
   
-  if (effectiveTemp > 35) { impact -= 25; factors.push(`Extreme heat: -25% performance`); }
-  else if (effectiveTemp > 30) { impact -= 15; factors.push(`High heat: -15% performance`); }
-  else if (effectiveTemp > 27) { impact -= 8; factors.push(`Moderate heat: -8% performance`); }
-  else if (effectiveTemp < -5) { impact -= 20; factors.push(`Extreme cold: -20% performance`); }
-  else if (effectiveTemp < 5) { impact -= 10; factors.push(`Cold: -10% performance`); }
-  else if (effectiveTemp < 10) { impact -= 5; factors.push(`Cool: -5% performance`); }
-  
-  if (humidity > 90 && temp > 25) { impact -= 10; factors.push(`Oppressive humidity: -10%`); }
-  else if (humidity > 80 && temp > 28) { impact -= 5; factors.push(`High humidity: -5%`); }
-  
-  if (sportType === 'cycling' && wind > 30) { impact -= 20; factors.push(`Strong headwind: -20% cycling`); }
-  else if (sportType === 'golf' && wind > 25) { impact -= 15; factors.push(`Wind affecting accuracy: -15%`); }
-  else if (sportType === 'running' && wind > 30) { impact -= 10; factors.push(`Headwind resistance: -10%`); }
-  
-  if (aqi > 150) { impact -= 15; factors.push(`Poor air quality: -15%`); }
-  else if (aqi > 100) { impact -= 8; factors.push(`Moderate air quality: -8%`); }
-  
-  if (uvIndex > 8 && sportType !== 'swimming_outdoor') { 
-    impact -= 5; 
-    factors.push(`High UV fatigue: -5%`); 
+  // Temperature impact
+  if (effectiveTemp > 38) {
+    impact -= 35;
+    factors.push('Extreme heat: -35% performance, heat stroke risk');
+  } else if (effectiveTemp > 35) {
+    impact -= 25;
+    factors.push('Extreme heat: -25% performance');
+  } else if (effectiveTemp > 32) {
+    impact -= 18;
+    factors.push('Severe heat: -18% performance');
+  } else if (effectiveTemp > 30) {
+    impact -= 12;
+    factors.push('High heat: -12% performance');
+  } else if (effectiveTemp > 27) {
+    impact -= 7;
+    factors.push('Moderate heat: -7% performance');
+  } else if (effectiveTemp < -10) {
+    impact -= 25;
+    factors.push('Extreme cold: -25% performance');
+  } else if (effectiveTemp < -5) {
+    impact -= 18;
+    factors.push('Severe cold: -18% performance');
+  } else if (effectiveTemp < 0) {
+    impact -= 10;
+    factors.push('Cold: -10% performance');
+  } else if (effectiveTemp < 5) {
+    impact -= 5;
+    factors.push('Cool: -5% performance');
   }
   
-  return { impact, factors, performanceLevel: impact < -20 ? 'Severely Degraded' : 
-    impact < -10 ? 'Significantly Reduced' : 
-    impact < -5 ? 'Slightly Reduced' : 
-    impact < 0 ? 'Minimally Affected' : 'Optimal' };
+  // Humidity impact
+  if (humidity > 90 && temp > 25) {
+    impact -= 12;
+    factors.push('Oppressive humidity: -12% performance');
+  } else if (humidity > 80 && temp > 28) {
+    impact -= 8;
+    factors.push('High humidity: -8% performance');
+  } else if (humidity > 80) {
+    impact -= 5;
+    factors.push('High humidity: -5% performance');
+  }
+  
+  // Wind impact by sport type
+  if (sportType === 'cycling' && wind > 30) {
+    impact -= 20;
+    factors.push('Strong headwind: -20% cycling performance');
+  } else if (sportType === 'cycling' && wind > 20) {
+    impact -= 10;
+    factors.push('Moderate headwind: -10% cycling performance');
+  } else if (sportType === 'golf' && wind > 25) {
+    impact -= 15;
+    factors.push('Wind affecting accuracy: -15% scoring');
+  } else if (sportType === 'tennis' && wind > 25) {
+    impact -= 15;
+    factors.push('Wind affecting ball control: -15% accuracy');
+  } else if (sportType === 'running_marathon' && wind > 30) {
+    impact -= 10;
+    factors.push('Headwind resistance: -10% pace');
+  } else if (sportType === 'running_marathon' && wind > 20) {
+    impact -= 5;
+    factors.push('Headwind: -5% pace');
+  } else if (wind > 20 && sportType.includes('ball')) {
+    impact -= 5;
+    factors.push('Wind affecting ball trajectory: -5% accuracy');
+  }
+  
+  // Air quality impact
+  if (aqi > 200) {
+    impact -= 25;
+    factors.push('Hazardous air quality: -25% performance, health risk');
+  } else if (aqi > 150) {
+    impact -= 15;
+    factors.push('Very poor air quality: -15% performance');
+  } else if (aqi > 100) {
+    impact -= 8;
+    factors.push('Poor air quality: -8% performance');
+  }
+  
+  // UV impact
+  if (uvIndex > 10) {
+    impact -= 8;
+    factors.push('Extreme UV: -8% performance, fatigue risk');
+  } else if (uvIndex > 8) {
+    impact -= 5;
+    factors.push('Very high UV: -5% performance');
+  } else if (uvIndex > 6) {
+    impact -= 3;
+    factors.push('High UV: -3% performance');
+  }
+  
+  // Rain impact
+  if (condition === 'rain' || condition === 'drizzle') {
+    if (sportType.includes('ball')) {
+      impact -= 10;
+      factors.push('Rain affecting ball control: -10% performance');
+    }
+    if (sportType === 'cycling') {
+      impact -= 15;
+      factors.push('Wet roads: -15% performance, braking reduced');
+    }
+    if (sportType === 'running_marathon') {
+      impact -= 5;
+      factors.push('Rain: -5% performance, chafing risk');
+    }
+  }
+  
+  // Performance level
+  let performanceLevel = '';
+  if (impact < -25) performanceLevel = 'EXTREME - Reschedule or cancel';
+  else if (impact < -15) performanceLevel = 'SEVERELY DEGRADED - Significant modifications needed';
+  else if (impact < -8) performanceLevel = 'SIGNIFICANTLY REDUCED - Adjust expectations';
+  else if (impact < -3) performanceLevel = 'SLIGHTLY REDUCED - Minor adjustments';
+  else performanceLevel = 'OPTIMAL - Full performance possible';
+  
+  return {
+    impact: Math.max(-50, impact),
+    factors,
+    performanceLevel,
+    maxPerformance: Math.max(50, 100 + impact)
+  };
 }
 
 // ============================================================================
-// HYDRATION CALCULATOR
+// ENHANCED HYDRATION CALCULATOR
 // ============================================================================
 
 function getHydrationPlan(data, sportIntensity, durationMinutes) {
   const { temp, humidity } = data;
   const heatIndex = calcHeatIndex(temp, humidity);
   const sweatRate = calculateSweatRate(temp, humidity, sportIntensity);
+  const totalSweat = sweatRate * (durationMinutes / 60);
   
   let plan = [];
   
-  plan.push("PRE-ACTIVITY (2-3 hours before):");
-  plan.push(`• Drink 500-600ml water`);
-  plan.push(`• Urine should be light yellow`);
+  plan.push('HYDRATION PLAN:');
+  plan.push('');
   
-  plan.push(`\nDURING ACTIVITY (every 15-20 minutes):`);
-  if (heatIndex > 32) {
-    plan.push(`• Drink 250-300ml water/sports drink`);
-    plan.push(`• Sports drink preferred (electrolyte loss extreme)`);
-    plan.push(`• Total: ${Math.round(sweatRate * durationMinutes / 60)}L estimated sweat loss`);
+  plan.push('BEFORE ACTIVITY (2-3 hours prior):');
+  plan.push('  • Drink 500-600ml water');
+  plan.push('  • Urine should be light yellow to clear');
+  plan.push('  • Avoid alcohol and caffeine (diuretics)');
+  plan.push('  • If urine is dark, drink 500ml immediately');
+  
+  plan.push('');
+  plan.push('DURING ACTIVITY:');
+  
+  if (heatIndex > 35) {
+    plan.push('  EXTREME HEAT - Aggressive hydration required:');
+    plan.push(`  • Drink 250-300ml every 15 minutes`);
+    plan.push(`  • Sports drink recommended (electrolyte loss is extreme)`);
+    plan.push(`  • Estimated sweat loss: ${totalSweat.toFixed(1)}L for this session`);
+    plan.push('  • Use sports drink with sodium (300-600mg per 500ml)');
+    plan.push('  • Set phone timer for hydration reminders');
+  } else if (heatIndex > 30) {
+    plan.push('  HIGH HEAT - Increased hydration needed:');
+    plan.push('  • Drink 200-250ml every 20 minutes');
+    plan.push('  • Alternate water and sports drink');
+    plan.push(`  • Estimated sweat loss: ${totalSweat.toFixed(1)}L for this session`);
   } else if (heatIndex > 27) {
-    plan.push(`• Drink 200-250ml water`);
-    plan.push(`• Alternate water and sports drink`);
+    plan.push('  WARM CONDITIONS - Standard hydration:');
+    plan.push('  • Drink 150-200ml every 20 minutes');
+    plan.push('  • Water is sufficient for under 1 hour');
+  } else if (temp < 10) {
+    plan.push('  COLD CONDITIONS - Still need hydration:');
+    plan.push('  • Drink 150ml every 20-30 minutes');
+    plan.push('  • Warm fluids preferred');
   } else {
-    plan.push(`• Drink 150-200ml water`);
-    plan.push(`• Water sufficient for <1 hour activity`);
+    plan.push('  MODERATE CONDITIONS - Normal hydration:');
+    plan.push('  • Drink 150-200ml every 20-30 minutes');
   }
   
-  plan.push(`\nPOST-ACTIVITY:`);
-  plan.push(`• Weigh yourself: drink 1.5L per kg lost`);
-  plan.push(`• Sodium replacement: salty snack or electrolyte drink`);
-  plan.push(`• Continue hydrating for 4-6 hours post-exercise`);
+  plan.push('');
+  plan.push('POST-ACTIVITY (within 30 minutes):');
+  plan.push('  • Weigh yourself before and after: drink 1.5L per kg lost');
+  plan.push('  • Sodium replacement: salty snack or electrolyte drink');
+  plan.push('  • Continue hydrating for 4-6 hours post-exercise');
+  plan.push('  • Recovery drink: 3:1 carb to protein ratio');
   
-  plan.push(`\n⚠️ DEHYDRATION WARNING SIGNS:`);
-  plan.push(`• Thirst (already 1-2% dehydrated)`);
-  plan.push(`• Dark urine (dehydrated)`);
-  plan.push(`• Dizziness, headache, nausea (STOP ACTIVITY)`);
-  plan.push(`• Muscle cramps (electrolyte deficiency)`);
+  plan.push('');
+  plan.push('DEHYDRATION WARNING SIGNS:');
+  plan.push('  • Thirst - already 1-2 percent dehydrated');
+  plan.push('  • Dark urine - dehydrated');
+  plan.push('  • Dizziness, headache, nausea - STOP ACTIVITY');
+  plan.push('  • Muscle cramps - electrolyte deficiency');
+  plan.push('  • Decreased performance - listen to your body');
   
   return plan;
 }
@@ -757,68 +1018,74 @@ function getHydrationPlan(data, sportIntensity, durationMinutes) {
 function calculateSweatRate(temp, humidity, intensity) {
   const intensityMultiplier = {
     'low': 0.5,
-    'low_moderate': 0.75,
-    'moderate': 1.0,
-    'moderate_high': 1.25,
-    'high': 1.5,
-    'very_high': 1.75,
-    'endurance': 2.0,
-    'extreme': 2.5
+    'low_moderate': 0.7,
+    'moderate': 0.85,
+    'moderate_high': 1.0,
+    'high': 1.2,
+    'very_high': 1.4,
+    'endurance': 1.6,
+    'extreme': 2.0
   };
   
-  const baseRate = 0.5;
-  const tempEffect = Math.max(0, (temp - 20) * 0.05);
-  const humidityEffect = Math.max(0, (humidity - 50) * 0.02);
+  const baseRate = 0.5; // L per hour
+  const tempEffect = Math.max(0, (temp - 20) * 0.04);
+  const humidityEffect = Math.max(0, (humidity - 50) * 0.015);
+  const multiplier = intensityMultiplier[intensity] || 1.0;
   
-  return baseRate + tempEffect + humidityEffect * (intensityMultiplier[intensity] || 1.0);
+  return (baseRate + tempEffect + humidityEffect) * multiplier;
 }
 
 // ============================================================================
-// LIGHTNING SAFETY PROTOCOL
+// ENHANCED LIGHTNING SAFETY PROTOCOL
 // ============================================================================
 
 function getLightningProtocol() {
   return [
-    "⛈️ LIGHTNING SAFETY PROTOCOL (30-30 RULE):",
-    "",
-    "30 SECOND RULE:",
-    "• If thunder follows lightning in < 30 seconds, seek shelter IMMEDIATELY",
-    "• Lightning can strike 10+ miles from storm",
-    "• If you hear thunder, you're in danger",
-    "",
-    "30 MINUTE RULE:",
-    "• Wait 30 minutes after LAST thunder before returning outdoors",
-    "• Lightning can strike after storm appears to pass",
-    "• Each new lightning strike resets the clock",
-    "",
-    "SAFE SHELTER:",
-    "• Fully enclosed building with plumbing/wiring",
-    "• Hard-topped vehicle (NOT convertible/golf cart)",
-    "• Avoid: trees, open fields, metal bleachers, water",
-    "",
-    "UNSAFE LOCATIONS:",
-    "• Open fields (you become the tallest object)",
-    "• Under trees (side flash risk)",
-    "• Near metal objects (conductors)",
-    "• Water (pool, lake, ocean - excellent conductor)",
-    "• Tents/canopies (no protection)",
-    "",
-    "IF NO SHELTER (LAST RESORT):",
-    "• Crouch low on balls of feet (minimize ground contact)",
-    "• Feet together, hands over ears",
-    "• NO lying flat (increases ground current risk)",
-    "• Spread group out (minimize multiple casualties)",
-    "",
-    "VENUE RESPONSIBILITY:",
-    "• Designated weather monitor with authority to suspend",
-    "• Lightning detection system or weather app",
-    "• Evacuation plan communicated in advance",
-    "• Safe shelter identified and accessible"
+    'LIGHTNING SAFETY PROTOCOL - 30-30 RULE:',
+    '',
+    '30 SECOND RULE:',
+    '  • If thunder follows lightning in under 30 seconds, seek shelter IMMEDIATELY',
+    '  • Lightning can strike 10+ miles from the storm',
+    '  • If you hear thunder, you are in danger',
+    '  • Do not wait for rain to start before taking shelter',
+    '',
+    '30 MINUTE RULE:',
+    '  • Wait 30 minutes after the LAST thunder before returning outdoors',
+    '  • Lightning can strike after the storm appears to pass',
+    '  • Each new lightning strike resets the clock',
+    '  • The deadliest strikes often occur after the storm passes',
+    '',
+    'SAFE SHELTER LOCATIONS:',
+    '  • Fully enclosed building with plumbing and wiring',
+    '  • Hard-topped vehicle (NOT convertible, NOT golf cart)',
+    '  • Stay in center of vehicle, do not touch metal',
+    '  • Underground parking or basement',
+    '',
+    'UNSAFE LOCATIONS:',
+    '  • Open fields (you become the tallest object)',
+    '  • Under trees (side flash risk)',
+    '  • Near metal objects (conductors)',
+    '  • Water (pool, lake, ocean - excellent conductor)',
+    '  • Tents, canopies, umbrellas (no protection)',
+    '  • Golf carts (metal frame, open sides)',
+    '',
+    'IF NO SHELTER AVAILABLE (LAST RESORT):',
+    '  • Crouch low on balls of feet (minimize ground contact)',
+    '  • Feet together, hands over ears',
+    '  • NO lying flat (increases ground current risk)',
+    '  • Spread group out (minimize multiple casualties)',
+    '',
+    'VENUE RESPONSIBILITIES:',
+    '  • Designated weather monitor with authority to suspend play',
+    '  • Lightning detection system or reliable weather app',
+    '  • Evacuation plan communicated in advance',
+    '  • Safe shelter identified and accessible',
+    '  • Post-incident protocol: check for injuries, report to authorities'
   ];
 }
 
 // ============================================================================
-// YOUTH & SPECIAL POPULATIONS
+// ENHANCED YOUTH & SPECIAL POPULATIONS
 // ============================================================================
 
 function getYouthSportsAdvice(data) {
@@ -826,90 +1093,151 @@ function getYouthSportsAdvice(data) {
   const heatIndex = calcHeatIndex(temp, humidity);
   const advice = [];
   
-  advice.push("🧒 YOUTH SPORTS CONSIDERATIONS:");
-  advice.push("");
-  advice.push("Children differ from adults:");
-  advice.push("• Sweat rate 50% lower = overheat 3-5x faster");
-  advice.push("• Core temperature rises faster");
-  advice.push("• Less blood volume relative to body size");
-  advice.push("• Don't recognize thirst (must be told to drink)");
-  advice.push("• Heat tolerance not fully developed until puberty");
-  advice.push("");
+  advice.push('YOUTH SPORTS CONSIDERATIONS:');
+  advice.push('');
+  advice.push('Children differ from adults in critical ways:');
+  advice.push('  • Sweat rate is 50 percent lower = overheat 3-5x faster');
+  advice.push('  • Core temperature rises faster during exercise');
+  advice.push('  • Less blood volume relative to body size');
+  advice.push('  • Do not recognize thirst (must be told to drink)');
+  advice.push('  • Heat tolerance not fully developed until puberty');
+  advice.push('  • Surface area to mass ratio is higher (lose heat faster in cold)');
+  advice.push('');
   
-  if (wbgt > 28.0) {
-    advice.push("CANCEL all youth outdoor sports. Children cannot safely");
-    advice.push("regulate body temperature in these conditions.");
-    advice.push("Heat stroke in children can be fatal within 30 minutes.");
+  if (wbgt > 30.0) {
+    advice.push('CRITICAL: CANCEL all youth outdoor sports.');
+    advice.push('Children cannot safely regulate body temperature in these conditions.');
+    advice.push('Heat stroke in children can be fatal within 30 minutes.');
+    advice.push('Fatalities have occurred at WBGT 28-30°C.');
+  } else if (wbgt > 28.0) {
+    advice.push('HIGH RISK: Limit youth sports to 30 minutes maximum.');
+    advice.push('Mandatory water breaks every 10-15 minutes.');
+    advice.push('No full equipment. No conditioning drills.');
+    advice.push('Shade mandatory for all rest periods.');
+    advice.push('Heat illness signs: flushed face, lethargy, nausea, headache.');
   } else if (wbgt > 25.7) {
-    advice.push("LIMIT youth sports to 45 minutes maximum.");
-    advice.push("Mandatory water breaks every 15 minutes.");
-    advice.push("No full equipment. No conditioning drills.");
-    advice.push("Shade mandatory for all rest periods.");
+    advice.push('MODERATE RISK: Monitor all youth athletes closely.');
+    advice.push('Water breaks every 20 minutes.');
+    advice.push('Watch for: disorientation, confusion, or excessive fatigue.');
+    advice.push('Younger children (under 12) at higher risk.');
+  } else {
+    advice.push('CONDITIONS ACCEPTABLE for youth sports with normal precautions.');
+    advice.push('Ensure hydration is available at all times.');
   }
   
-  if (temp > 30 && humidity > 60) {
-    advice.push("HIGH RISK for youth athletes. Strongly consider cancellation.");
+  if (heatIndex > 30) {
+    advice.push('');
+    advice.push('SPECIAL PRECAUTIONS:');
+    advice.push('  • Light-colored, loose-fitting clothing recommended');
+    advice.push('  • Hats and sunglasses for outdoor sports');
+    advice.push('  • Sunscreen SPF 30+');
+    advice.push('  • Ice towels available for cooling');
   }
   
   return advice;
 }
 
 function getElderlyExerciseAdvice(data) {
-  const { temp, windChill, humidity } = data;
+  const { temp, windChill, humidity, uvIndex } = data;
   const heatIndex = calcHeatIndex(temp, humidity);
   const advice = [];
   
-  advice.push("👴 ELDERLY EXERCISE CONSIDERATIONS:");
-  advice.push("");
-  advice.push("• Reduced thirst sensation = dehydration risk");
-  advice.push("• Medications may affect temperature regulation");
-  advice.push("• Cardiovascular system less adaptable to heat stress");
-  advice.push("• Reduced sweating capacity");
-  advice.push("");
+  advice.push('ELDERLY EXERCISE CONSIDERATIONS:');
+  advice.push('');
+  advice.push('Key physiological differences:');
+  advice.push('  • Reduced thirst sensation = dehydration risk');
+  advice.push('  • Medications may affect temperature regulation');
+  advice.push('  • Cardiovascular system less adaptable to heat stress');
+  advice.push('  • Reduced sweating capacity');
+  advice.push('  • Reduced proprioception = fall risk');
+  advice.push('  • Vision changes affect balance');
+  advice.push('');
   
-  if (heatIndex > 32) {
-    advice.push("DO NOT exercise outdoors. Heat stroke risk significantly");
-    advice.push("elevated for elderly individuals. Move to air-conditioned space.");
-  } else if (heatIndex > 28) {
-    advice.push("Exercise with extreme caution. Limit to 20 minutes.");
-    advice.push("Shade only. Hydrate before feeling thirsty.");
+  if (heatIndex > 34) {
+    advice.push('DO NOT EXERCISE OUTDOORS. Heat stroke risk is significantly');
+    advice.push('elevated for elderly individuals. Move to air-conditioned space.');
+    advice.push('Even indoor exercise should be light and monitored.');
+  } else if (heatIndex > 30) {
+    advice.push('Exercise with EXTREME CAUTION. Limit to 20 minutes maximum.');
+    advice.push('Stay in shade. Hydrate before feeling thirsty.');
+    advice.push('Best time: early morning (before 8am) or evening (after 7pm).');
+  } else if (heatIndex > 27) {
+    advice.push('Exercise with caution. Limit to 30-40 minutes.');
+    advice.push('Shade recommended. Hydrate before, during, and after.');
   }
   
-  if (windChill < 0) {
-    advice.push("Cold increases blood pressure and heart strain.");
-    advice.push("Indoor exercise preferred. If outside: layer, cover extremities.");
+  if (windChill < -5) {
+    advice.push('');
+    advice.push('COLD WEATHER:');
+    advice.push('  • Cold increases blood pressure and heart strain');
+    advice.push('  • Indoor exercise preferred in extreme cold');
+    advice.push('  • If outside: layer clothing, cover extremities');
+    advice.push('  • Watch for shivering, confusion (hypothermia signs)');
   }
+  
+  advice.push('');
+  advice.push('GENERAL RECOMMENDATIONS:');
+  advice.push('  • Walk with a partner or in populated areas');
+  advice.push('  • Wear supportive, non-slip footwear');
+  advice.push('  • Take breaks every 15-20 minutes');
+  advice.push('  • Listen to your body - stop if any discomfort');
+  advice.push('  • Carry a phone for emergencies');
   
   return advice;
 }
 
 function getPregnancyExerciseAdvice(data) {
-  const { temp, humidity } = data;
+  const { temp, humidity, uvIndex } = data;
   const heatIndex = calcHeatIndex(temp, humidity);
   const advice = [];
   
-  advice.push("🤰 PREGNANCY EXERCISE CONSIDERATIONS:");
-  advice.push("");
-  advice.push("• Body temperature already elevated");
-  advice.push("• Blood volume doubled = heart works harder");
-  advice.push("• Joints looser (relaxin hormone) = injury risk");
-  advice.push("• Balance changes with pregnancy progression");
-  advice.push("• Overheating risks fetal development (first trimester especially)");
-  advice.push("");
+  advice.push('PREGNANCY EXERCISE CONSIDERATIONS:');
+  advice.push('');
+  advice.push('Physiological changes:');
+  advice.push('  • Body temperature is already elevated');
+  advice.push('  • Blood volume is doubled = heart works harder');
+  advice.push('  • Joints are looser (relaxin hormone) = injury risk');
+  advice.push('  • Balance changes with pregnancy progression');
+  advice.push('  • Overheating risks fetal development (first trimester especially)');
+  advice.push('  • Core temperature should not exceed 38°C');
+  advice.push('');
   
-  if (heatIndex > 30) {
-    advice.push("AVOID outdoor exercise. Overheating risk to mother and fetus.");
-    advice.push("Pool exercise or air-conditioned indoor activity only.");
-  } else if (heatIndex > 27) {
-    advice.push("Limit to 15-20 minutes. Stay in shade. Hydrate constantly.");
-    advice.push("Stop immediately if feeling hot, dizzy, or nauseous.");
+  if (heatIndex > 32) {
+    advice.push('AVOID OUTDOOR EXERCISE. Overheating risk to mother and fetus.');
+    advice.push('Pool exercise or air-conditioned indoor activity only.');
+    advice.push('Swimming is an excellent, safe option.');
+  } else if (heatIndex > 29) {
+    advice.push('CAUTION: Limit outdoor exercise to 15-20 minutes.');
+    advice.push('Stay in shade. Hydrate constantly.');
+    advice.push('Stop immediately if feeling hot, dizzy, or nauseous.');
+    advice.push('Monitor fetal movement after exercise.');
+  } else if (heatIndex > 26) {
+    advice.push('Acceptable with precautions. Stay hydrated.');
+    advice.push('Take breaks every 15 minutes.');
+    advice.push('Shade recommended, especially in second and third trimesters.');
+  } else {
+    advice.push('Conditions favorable for pregnancy exercise.');
+    advice.push('Walking, swimming, and prenatal yoga are excellent choices.');
   }
+  
+  advice.push('');
+  advice.push('RECOMMENDED ACTIVITIES:');
+  advice.push('  • Walking (flat surfaces, good footwear)');
+  advice.push('  • Swimming and water aerobics (best option)');
+  advice.push('  • Stationary cycling');
+  advice.push('  • Prenatal yoga (avoid heated yoga)');
+  advice.push('');
+  advice.push('AVOID:');
+  advice.push('  • Activities with fall risk (skiing, skating, gymnastics)');
+  advice.push('  • Contact sports (basketball, soccer, rugby)');
+  advice.push('  • Activities requiring lying flat on back (after 20 weeks)');
+  advice.push('  • Hot yoga or saunas');
   
   return advice;
 }
 
 // ============================================================================
-// MAIN SPORTS ADVICE FUNCTION
+// MAIN SPORTS ADVICE FUNCTION (EXPANDED)
 // ============================================================================
 
 export const getSportsAdvice = (data, question = '') => {
@@ -921,7 +1249,7 @@ export const getSportsAdvice = (data, question = '') => {
     tempMin, tempMax, dewPoint, pressure
   } = data;
 
-  // ═══ TIME-SHIFT AWARENESS ═══
+  // Time-shift awareness for hourly data
   if (data._hourIndex !== undefined && data.hourly) {
     const idx = data._hourIndex
     if (data.hourly.temperature_2m?.[idx] !== undefined) temp = Math.round(data.hourly.temperature_2m[idx])
@@ -948,8 +1276,8 @@ export const getSportsAdvice = (data, question = '') => {
     if (data.daily.precipitation_sum?.[d] !== undefined) precipitation = data.daily.precipitation_sum[d]
     if (data.daily.uv_index_max?.[d] !== undefined) uvIndex = data.daily.uv_index_max[d]
   }
-  // ═══ END TIME-SHIFT ═══
   
+  const q = question.toLowerCase();
   const heatIndex = calcHeatIndex(temp, humidity);
   const windChill = calcWindChill(temp, wind);
   const wbgt = calcWetBulbGlobeTemp(temp, humidity, wind, condition === 'clear' ? 1 : 0);
@@ -961,15 +1289,17 @@ export const getSportsAdvice = (data, question = '') => {
   const uvLevel = getUVLevel(uvIndex);
   const aqiLevel = getAQICategory(aqi);
   
-  const q = question.toLowerCase();
+  // Detect sport type from question
   let sportType = 'running_marathon';
-  for (const [key, config] of Object.entries(SPORT_REQUIREMENTS)) {
+  for (const [key] of Object.entries(SPORT_REQUIREMENTS)) {
     const sportKey = key.replace(/_/g, ' ');
     if (q.includes(sportKey) || q.includes(key)) {
       sportType = key;
       break;
     }
   }
+  
+  // Override based on specific keywords
   if (q.includes('football') || q.includes('soccer')) sportType = 'football_soccer';
   if (q.includes('tennis')) sportType = 'tennis';
   if (q.includes('basketball')) sportType = 'basketball_outdoor';
@@ -986,12 +1316,15 @@ export const getSportsAdvice = (data, question = '') => {
   if (q.includes('crossfit') || q.includes('workout') || q.includes('boot camp')) sportType = 'crossfit_outdoor';
   if (q.includes('horse') || q.includes('riding')) sportType = 'horseback_riding';
   if (q.includes('kayak') || q.includes('rowing') || q.includes('paddle')) sportType = 'water_sports';
+  if (q.includes('triathlon')) sportType = 'triathlon';
+  if (q.includes('ultra')) sportType = 'marathon_ultra';
   
-  const sportConfig = SPORT_REQUIREMENTS[sportType];
+  const sportConfig = SPORT_REQUIREMENTS[sportType] || SPORT_REQUIREMENTS.running_marathon;
   const wbgtCategory = getWBGTCategory(wbgt);
   const coldRisk = getColdRiskCategory(windChill);
   const performance = calculatePerformanceImpact(data, sportType);
   
+  // Build response sections
   let verdict = [];
   let safety = [];
   let performanceAdvice = [];
@@ -1002,168 +1335,173 @@ export const getSportsAdvice = (data, question = '') => {
   let specialPopulationAdvice = [];
   let cancellationReason = null;
 
+  // Check for cancellation conditions
   if (isStorm && sportConfig.lightningRisk >= 8) {
     cancellationReason = 'LIGHTNING DANGER';
-    verdict.push("🚫 CANCEL IMMEDIATELY: Lightning risk.");
+    verdict.push('CANCEL IMMEDIATELY: Lightning risk.');
     safety.push(...getLightningProtocol());
-    warnings.push("LIGHTNING DOES NOT CARE ABOUT YOUR GAME SCORE.");
-    warnings.push("More people die from lightning during sports than any other activity.");
+    warnings.push('LIGHTNING DOES NOT CARE ABOUT YOUR GAME SCORE.');
+    warnings.push('More people die from lightning during sports than any other activity.');
   }
   
   if (aqi > 200) {
     cancellationReason = 'HAZARDOUS AIR QUALITY';
-    verdict.push("🚫 CANCEL: Air quality hazardous to all athletes.");
+    verdict.push('CANCEL: Air quality hazardous to all athletes.');
     warnings.push(`AQI ${aqi}: Lung damage risk even for elite athletes.`);
-    safety.push("Indoor activity with HEPA filtration only.");
+    safety.push('Indoor activity with HEPA filtration only.');
   }
   
   if (wbgt >= sportConfig.cancellationThresholds.wbgt) {
-    cancellationReason = 'EXTREME HEAT (BLACK FLAG)';
-    verdict.push(`🚫 BLACK FLAG: WBGT ${wbgt.toFixed(1)}°C exceeds safety threshold.`);
-    warnings.push("Heat stroke can kill. No outdoor activity is safe.");
+    cancellationReason = 'EXTREME HEAT BLACK FLAG';
+    verdict.push(`BLACK FLAG: WBGT ${wbgt.toFixed(1)}°C exceeds safety threshold.`);
+    warnings.push('Heat stroke can kill. No outdoor activity is safe.');
   }
   
   if (windChill <= sportConfig.cancellationThresholds.windChill && coldRisk) {
     cancellationReason = 'EXTREME COLD';
-    verdict.push(`🚫 CANCEL: Wind chill ${windChill}°C. Frostbite risk.`);
+    verdict.push(`CANCEL: Wind chill ${Math.round(windChill)}°C. Frostbite risk.`);
     warnings.push(`Exposed skin freezes in ${coldRisk.frostbiteTime}.`);
   }
   
   if (wind > sportConfig.cancellationThresholds.wind) {
     cancellationReason = 'DANGEROUS WIND';
-    verdict.push(`🚫 CANCEL: Wind ${wind}km/h exceeds safe limits.`);
-    warnings.push("Equipment failure, flying debris, uncontrollable conditions.");
+    verdict.push(`CANCEL: Wind ${Math.round(wind)}km/h exceeds safe limits.`);
+    warnings.push('Equipment failure, flying debris, uncontrollable conditions.');
   }
   
   if (visibility < sportConfig.cancellationThresholds.visibility) {
     cancellationReason = 'LOW VISIBILITY';
-    verdict.push(`🚫 CANCEL: Visibility under ${visibility}km. Collision risk.`);
-    warnings.push("Cannot see field, players, or hazards.");
+    verdict.push(`CANCEL: Visibility under ${visibility}km. Collision risk.`);
+    warnings.push('Cannot see field, players, or hazards.');
   }
 
+  // If not cancelled, provide detailed advice
   if (!cancellationReason) {
     if (wbgtCategory.flag === 'RED') {
-      verdict.push(`🔴 RED FLAG: ${wbgtCategory.action}`);
+      verdict.push(`RED FLAG: ${wbgtCategory.action}`);
       warnings.push(`WBGT ${wbgt.toFixed(1)}°C: ${wbgtCategory.risk}`);
       safety.push(`Breaks: ${wbgtCategory.breaks}`);
       safety.push(`Hydration: ${wbgtCategory.hydration}`);
       safety.push(`Equipment: ${wbgtCategory.equipment}`);
-      if (sportConfig.special.includes('Equipment adds 5-8°C')) {
-        safety.push("CRITICAL: Heavy equipment significantly increases heat risk.");
-        safety.push("Remove helmets/pads whenever possible.");
+      if (sportConfig.equipmentWeight === 'heavy') {
+        safety.push('CRITICAL: Heavy equipment significantly increases heat risk.');
+        safety.push('Remove helmets and pads whenever possible.');
       }
     } else if (wbgtCategory.flag === 'ORANGE') {
-      verdict.push(`🟠 ORANGE FLAG: ${wbgtCategory.action}`);
+      verdict.push(`ORANGE FLAG: ${wbgtCategory.action}`);
       safety.push(`WBGT ${wbgt.toFixed(1)}°C: ${wbgtCategory.risk}`);
       safety.push(wbgtCategory.breaks);
       safety.push(wbgtCategory.hydration);
     } else if (wbgtCategory.flag === 'YELLOW') {
-      verdict.push(`🟡 YELLOW FLAG: ${wbgtCategory.action}`);
+      verdict.push(`YELLOW FLAG: ${wbgtCategory.action}`);
       safety.push(`WBGT ${wbgt.toFixed(1)}°C: Monitor athletes.`);
     } else if (wbgtCategory.flag === 'GREEN') {
-      verdict.push(`🟢 GREEN FLAG: ${wbgtCategory.action}`);
+      verdict.push(`GREEN FLAG: ${wbgtCategory.action}`);
     }
     
     if (coldRisk) {
-      verdict.push(`❄️ ${coldRisk.level}: Frostbite in ${coldRisk.frostbiteTime}`);
+      verdict.push(`${coldRisk.level}: Frostbite in ${coldRisk.frostbiteTime}`);
       safety.push(coldRisk.warning);
       equipmentAdvice.push(`Clothing: ${coldRisk.clothing}`);
       if (coldRisk.level === 'SEVERE COLD' || coldRisk.level === 'EXTREME COLD') {
-        safety.push("Indoor warmup mandatory. Check extremities frequently.");
+        safety.push('Indoor warmup mandatory. Check extremities frequently.');
       }
     }
     
     if (isRaining && precipitation > 5) {
-      safety.push("Heavy rain: field conditions dangerous, visibility reduced.");
-      warnings.push("Slip/fall injuries increase 3x on wet surfaces.");
+      safety.push('Heavy rain: field conditions dangerous, visibility reduced.');
+      warnings.push('Slip and fall injuries increase 3x on wet surfaces.');
       if (sportConfig.fieldType.includes('grass')) {
-        warnings.push("Grass fields will be destroyed by play in heavy rain.");
-        warnings.push("Footing unstable: ACL/MCL tear risk significantly elevated.");
+        warnings.push('Grass fields will be destroyed by play in heavy rain.');
+        warnings.push('Footing unstable: ACL and MCL tear risk significantly elevated.');
       }
-      performanceAdvice.push("Ball handling severely compromised. Expect 30-40% performance drop.");
+      performanceAdvice.push('Ball handling severely compromised. Expect 30-40% performance drop.');
     } else if (isRaining) {
-      performanceAdvice.push("Wet conditions: ball will skid. Adjust play accordingly.");
-      equipmentAdvice.push("Towel for grip. Change of clothes for after.");
+      performanceAdvice.push('Wet conditions: ball will skid. Adjust play accordingly.');
+      equipmentAdvice.push('Towel for grip. Change of clothes for after.');
       if (temp < 15) {
-        warnings.push(`Cold rain at ${temp}°C: hypothermia risk. Get dry immediately after.`);
+        warnings.push(`Cold rain at ${Math.round(temp)}°C: hypothermia risk. Get dry immediately after.`);
       }
     }
     
     if (wind > 30) {
-      performanceAdvice.push(`Wind ${wind}km/h severely affects ball trajectory.`);
+      performanceAdvice.push(`Wind ${Math.round(wind)}km/h severely affects ball trajectory.`);
       if (sportType === 'golf') {
-        performanceAdvice.push(`Add 2-3 clubs into wind. Putting severely affected.`);
+        performanceAdvice.push('Add 2-3 clubs into wind. Putting severely affected.');
       }
       if (sportType === 'tennis') {
-        performanceAdvice.push("Serve toss becomes unpredictable. Use lower ball toss.");
+        performanceAdvice.push('Serve toss becomes unpredictable. Use lower ball toss.');
       }
       if (sportType === 'cycling') {
-        warnings.push(`Crosswinds dangerous. Wind chill at speed = ${calcWindChill(temp, wind+30).toFixed(0)}°C`);
+        warnings.push(`Crosswinds dangerous. Wind chill at speed = ${Math.round(calcWindChill(temp, wind + 30))}°C`);
       }
     } else if (wind > 20) {
-      performanceAdvice.push(`Moderate wind ${wind}km/h: adjust for wind drift.`);
+      performanceAdvice.push(`Moderate wind ${Math.round(wind)}km/h: adjust for wind drift.`);
     }
     
     if (uvIndex >= 10) {
       warnings.push(`EXTREME UV ${uvIndex}: Burn in ${burnMin} minutes.`);
-      safety.push("SPF 50+ mandatory. Reapply every 2 hours. UV-protective clothing.");
-      equipmentAdvice.push("Sunglasses/eye protection essential.");
-      performanceAdvice.push("Glare affects depth perception and ball tracking.");
+      safety.push('SPF 50+ mandatory. Reapply every 2 hours. UV-protective clothing.');
+      equipmentAdvice.push('Sunglasses or eye protection essential.');
+      performanceAdvice.push('Glare affects depth perception and ball tracking.');
     } else if (uvIndex >= 6) {
       safety.push(`High UV ${uvIndex}: SPF 30+ required. Reapply frequently.`);
     }
     
     if (aqi > 150) {
-      warnings.push(`Unhealthy air ${aqi}: Reduce intensity 50%.`);
-      safety.push("Asthmatic athletes: DO NOT participate.");
-      performanceAdvice.push("Endurance performance drops 15-20%.");
+      warnings.push(`Unhealthy air ${aqi}: Reduce intensity 50 percent.`);
+      safety.push('Asthmatic athletes: DO NOT participate.');
+      performanceAdvice.push('Endurance performance drops 15-20 percent.');
     } else if (aqi > 100) {
       safety.push(`Moderate air ${aqi}: Sensitive individuals reduce activity.`);
     }
     
     if (precipitation > 10 && sportConfig.fieldType.includes('grass')) {
-      warnings.push("FIELD CONDITIONS: Waterlogged. Playing will destroy field.");
-      warnings.push("Footing unstable: ankle/knee injury risk 5x higher.");
-      equipmentAdvice.push("Long studs/cleats if playing (but recommended to cancel).");
+      warnings.push('FIELD CONDITIONS: Waterlogged. Playing will destroy field.');
+      warnings.push('Footing unstable: ankle and knee injury risk 5x higher.');
+      equipmentAdvice.push('Long studs or cleats if playing but recommended to cancel.');
     }
   }
 
   hydration = getHydrationPlan(data, sportConfig.intensity, sportConfig.typicalDuration);
 
+  // Equipment advice
   if (wbgt > 25.7) {
-    equipmentAdvice.push("Light-colored, breathable clothing essential.");
-    equipmentAdvice.push("Cooling towel around neck during breaks.");
-    equipmentAdvice.push("Extra water bottles (will drink 2-3x normal).");
+    equipmentAdvice.push('Light-colored, breathable clothing essential.');
+    equipmentAdvice.push('Cooling towel around neck during breaks.');
+    equipmentAdvice.push('Extra water bottles (will drink 2-3x normal).');
     if (sportConfig.equipmentWeight === 'heavy') {
-      equipmentAdvice.push("Remove equipment during ALL breaks.");
+      equipmentAdvice.push('Remove equipment during ALL breaks.');
     }
   }
   
   if (windChill < 0) {
-    equipmentAdvice.push("Moisture-wicking base layer (NO cotton).");
-    equipmentAdvice.push("Windproof outer layer. Hand/toe warmers recommended.");
-    equipmentAdvice.push("Extra layers available on sideline.");
+    equipmentAdvice.push('Moisture-wicking base layer - NO cotton.');
+    equipmentAdvice.push('Windproof outer layer. Hand and toe warmers recommended.');
+    equipmentAdvice.push('Extra layers available on sideline.');
   }
   
   if (condition === 'rain') {
-    equipmentAdvice.push("Waterproof bag for dry clothes/electronics.");
-    equipmentAdvice.push("Extra socks (wet feet = blisters).");
-    equipmentAdvice.push("Grip-enhancing products for wet equipment.");
+    equipmentAdvice.push('Waterproof bag for dry clothes and electronics.');
+    equipmentAdvice.push('Extra socks (wet feet equals blisters).');
+    equipmentAdvice.push('Grip-enhancing products for wet equipment.');
   }
 
+  // Timing advice
   if (wbgt > 28.0) {
-    timingAdvice.push("Schedule for early morning (6-9am) or late evening (after 7pm).");
-    timingAdvice.push("AVOID 11am-4pm when WBGT peaks.");
+    timingAdvice.push('Schedule for early morning (6-9am) or late evening (after 7pm).');
+    timingAdvice.push('AVOID 11am-4pm when WBGT peaks.');
   }
   if (timeOfDay === 'midday' && uvIndex > 6) {
-    timingAdvice.push("Peak sun hours: shade essential if activity continues.");
+    timingAdvice.push('Peak sun hours: shade essential if activity continues.');
   }
   if (wind > 20 && timeOfDay === 'afternoon') {
-    timingAdvice.push("Winds typically decrease after sunset.");
+    timingAdvice.push('Winds typically decrease after sunset.');
   }
 
+  // Special populations
   if (q.includes('kid') || q.includes('child') || q.includes('youth') || q.includes('pee wee')) {
-    specialPopulationAdvice = getYouthSportsAdvice({...data, wbgt});
+    specialPopulationAdvice = getYouthSportsAdvice({ ...data, wbgt });
   }
   if (q.includes('elder') || q.includes('senior') || q.includes('old')) {
     specialPopulationAdvice = getElderlyExerciseAdvice(data);
@@ -1172,136 +1510,180 @@ export const getSportsAdvice = (data, question = '') => {
     specialPopulationAdvice = getPregnancyExerciseAdvice(data);
   }
 
+  // ========================================================================
+  // ASSEMBLE FINAL RESPONSE
+  // ========================================================================
+  
   const intros = [
-    "🏃 Sports weather check:",
-    "⚽ Athlete safety report:",
-    "🎾 Game day conditions:",
-    "🏈 Training weather:",
-    "⚾ Zephye's sports advisory:",
-    "🏊 Athletic conditions report:",
-    "🚴 Exercise weather analysis:"
+    "SPORTS WEATHER ASSESSMENT",
+    "ATHLETIC SAFETY REPORT",
+    "GAME DAY CONDITIONS ANALYSIS",
+    "TRAINING WEATHER ADVISORY",
+    "SPORTS CONDITIONS EVALUATION"
   ];
 
-  let response = `${random(intros)} ${city}\n\n`;
+  let response = `${random(intros)}\n`;
+  if (city) response += `Location: ${city}\n`;
+  if (data._timeLabel) response += `Time: ${data._timeLabel}\n`;
+  response += `\n`;
   
-  if (data._timeLabel) {
-    response += `📅 **Time:** ${data._timeLabel}\n\n`;
-  }
+  // Sport info
+  response += `=== SPORT ===\n`;
+  response += `  ${sportType.replace(/_/g, ' ').toUpperCase()}\n`;
+  response += `  Duration: ${sportConfig.typicalDuration} minutes\n`;
+  response += `  Intensity: ${sportConfig.intensity}\n`;
+  response += `  Equipment weight: ${sportConfig.equipmentWeight}\n`;
+  response += `  Hydration need: ${sportConfig.hydrationNeed || 'moderate'}\n`;
+  response += `\n`;
   
-  response += `🎯 SPORT: ${sportType.replace(/_/g, ' ').toUpperCase()}\n`;
-  response += `⏱️ Typical Duration: ${sportConfig.typicalDuration} min | Intensity: ${sportConfig.intensity}\n\n`;
+  // Verdict
+  response += `=== VERDICT ===\n`;
+  verdict.forEach(v => response += `  ${v}\n`);
+  response += `\n`;
   
-  if (verdict.length > 0) {
-    response += `📋 VERDICT:\n`;
-    verdict.forEach(v => response += `${v}\n`);
-    response += '\n';
-  }
+  // Conditions
+  response += `=== CURRENT CONDITIONS ===\n`;
+  response += `  Temperature: ${Math.round(temp)}°C (feels like ${Math.round(effectiveTemp)}°C)\n`;
+  response += `  Daily range: ${Math.round(tempMin)}°C to ${Math.round(tempMax)}°C\n`;
+  if (heatIndex > temp + 3) response += `  Heat Index: ${Math.round(heatIndex)}°C\n`;
+  if (windChill < temp - 3) response += `  Wind Chill: ${Math.round(windChill)}°C\n`;
+  response += `  WBGT: ${wbgt.toFixed(1)}°C (${wbgtCategory.flag} FLAG)\n`;
+  response += `  Humidity: ${Math.round(humidity)}%\n`;
+  response += `  Wind: ${Math.round(wind)} km/h (gusts to ${Math.round(windGust || wind + 5)} km/h)\n`;
+  response += `  UV Index: ${uvIndex} (${uvLevel}) - burn time ~${burnMin} minutes\n`;
+  response += `  Air Quality: AQI ${aqi} (${aqiLevel})\n`;
+  if (precipitation > 0) response += `  Precipitation: ${Math.round(precipitation)}mm\n`;
+  response += `\n`;
   
-  response += `🚩 HEAT STRESS FLAG: ${wbgtCategory.flag} (WBGT ${wbgt.toFixed(1)}°C)\n`;
-  response += `Risk: ${wbgtCategory.risk}\n`;
-  response += `Action: ${wbgtCategory.action}\n\n`;
+  // WBGT Flag details
+  response += `=== HEAT STRESS FLAG ===\n`;
+  response += `  Flag: ${wbgtCategory.flag}\n`;
+  response += `  Risk: ${wbgtCategory.risk}\n`;
+  response += `  Action: ${wbgtCategory.action}\n`;
+  response += `  Breaks: ${wbgtCategory.breaks}\n`;
+  response += `  Hydration: ${wbgtCategory.hydration}\n`;
+  response += `  Equipment: ${wbgtCategory.equipment}\n`;
+  if (wbgtCategory.youth) response += `  Youth: ${wbgtCategory.youth}\n`;
+  if (wbgtCategory.special) response += `  Special: ${wbgtCategory.special}\n`;
+  response += `\n`;
   
-  response += `📊 PERFORMANCE IMPACT: ${performance.performanceLevel}\n`;
-  if (performance.factors.length > 0) {
-    performance.factors.forEach(f => response += `  ${f}\n`);
-  }
-  response += '\n';
+  // Performance impact
+  response += `=== PERFORMANCE IMPACT ===\n`;
+  response += `  Level: ${performance.performanceLevel}\n`;
+  response += `  Max performance: ${performance.maxPerformance}%\n`;
+  performance.factors.forEach(f => response += `  • ${f}\n`);
+  response += `\n`;
   
+  // Safety protocols
   if (safety.length > 0 && !cancellationReason) {
-    response += `🦺 SAFETY PROTOCOLS:\n`;
-    safety.filter(s => !s.startsWith('⛈️')).forEach(s => response += `• ${s}\n`);
-    response += '\n';
+    response += `=== SAFETY PROTOCOLS ===\n`;
+    safety.slice(0, 10).forEach(s => response += `  ${s}\n`);
+    if (safety.length > 10) response += `  ... and ${safety.length - 10} more items\n`;
+    response += `\n`;
   }
   
+  // Lightning protocol (if applicable)
   if (isStorm || condition === 'thunderstorm') {
+    response += `=== LIGHTNING PROTOCOL ===\n`;
     getLightningProtocol().forEach(line => response += `${line}\n`);
-    response += '\n';
+    response += `\n`;
   }
   
-  if (equipmentAdvice.length > 0) {
-    response += `🎽 EQUIPMENT:\n`;
-    equipmentAdvice.forEach(e => response += `• ${e}\n`);
-    response += '\n';
-  }
-  
-  if (performanceAdvice.length > 0) {
-    response += `💪 PERFORMANCE NOTES:\n`;
-    performanceAdvice.forEach(p => response += `• ${p}\n`);
-    response += '\n';
-  }
-  
-  if (timingAdvice.length > 0) {
-    response += `⏰ TIMING:\n`;
-    timingAdvice.forEach(t => response += `• ${t}\n`);
-    response += '\n';
-  }
-  
+  // Hydration plan
   if (hydration.length > 0 && !cancellationReason) {
-    response += `💧 HYDRATION PLAN:\n`;
+    response += `=== HYDRATION PLAN ===\n`;
     hydration.forEach(h => response += `${h}\n`);
-    response += '\n';
+    response += `\n`;
   }
   
+  // Equipment advice
+  if (equipmentAdvice.length > 0) {
+    response += `=== EQUIPMENT ===\n`;
+    equipmentAdvice.forEach(e => response += `  • ${e}\n`);
+    response += `\n`;
+  }
+  
+  // Performance advice
+  if (performanceAdvice.length > 0) {
+    response += `=== PERFORMANCE ADVICE ===\n`;
+    performanceAdvice.forEach(p => response += `  • ${p}\n`);
+    response += `\n`;
+  }
+  
+  // Timing advice
+  if (timingAdvice.length > 0) {
+    response += `=== TIMING ===\n`;
+    timingAdvice.forEach(t => response += `  • ${t}\n`);
+    response += `\n`;
+  }
+  
+  // Sport-specific advice
+  response += `=== ${sportType.replace(/_/g, ' ').toUpperCase()} SPECIFIC ===\n`;
+  sportConfig.special.slice(0, 6).forEach(s => response += `  • ${s}\n`);
+  if (sportConfig.special.length > 6) {
+    response += `  ... and ${sportConfig.special.length - 6} more notes\n`;
+  }
+  response += `\n`;
+  
+  // Special populations
   if (specialPopulationAdvice.length > 0) {
+    response += `=== SPECIAL POPULATIONS ===\n`;
     specialPopulationAdvice.forEach(s => response += `${s}\n`);
-    response += '\n';
+    response += `\n`;
   }
   
-  response += `🎯 ${sportType.replace(/_/g, ' ').toUpperCase()} SPECIFIC:\n`;
-  sportConfig.special.forEach(s => response += `• ${s}\n`);
-  response += '\n';
-  
+  // Warnings
   if (warnings.length > 0) {
-    response += `⚠️ WARNINGS:\n`;
-    warnings.forEach(w => response += `• ${w}\n`);
-    response += '\n';
+    response += `=== WARNINGS ===\n`;
+    warnings.forEach(w => response += `  ${w}\n`);
+    response += `\n`;
   }
   
-  response += `🌡️ CONDITIONS:\n`;
-  response += `• Temp: ${temp}°C (feels like ${effectiveTemp.toFixed(0)}°C)\n`;
-  if (heatIndex > temp + 3) response += `• Heat Index: ${heatIndex.toFixed(0)}°C\n`;
-  if (windChill < temp - 3) response += `• Wind Chill: ${windChill.toFixed(0)}°C\n`;
-  response += `• Humidity: ${humidity}%\n`;
-  response += `• Wind: ${wind}km/h\n`;
-  response += `• UV Index: ${uvIndex} (Burn time: ~${burnMin} min)\n`;
-  response += `• AQI: ${aqi} (${aqiLevel})\n`;
-  if (precipitation > 0) response += `• Precipitation: ${precipitation}mm\n`;
-  response += '\n';
-  
-  response += `💡 BOTTOM LINE:\n`;
+  // Bottom line
+  response += `=== BOTTOM LINE ===\n`;
   if (cancellationReason) {
-    response += `${cancellationReason}. Cancel or move indoors. No exceptions.\n`;
-    response += `Athlete safety > game/training. Make the right call.\n`;
+    response += `  ${cancellationReason}. Cancel or move indoors. No exceptions.\n`;
+    response += `  Athlete safety is more important than any game or training.\n`;
+    response += `  Make the right call. You are responsible for their safety.\n`;
   } else if (wbgtCategory.flag === 'RED' || wbgtCategory.flag === 'BLACK') {
-    response += `Extremely dangerous conditions. Strongly recommend cancellation.\n`;
-    response += `If proceeding: full medical staff, cold immersion tub, reduced activity.\n`;
+    response += `  Extremely dangerous conditions. Strongly recommend cancellation.\n`;
+    response += `  If proceeding: full medical staff, cold immersion tub, reduced activity.\n`;
   } else if (wbgtCategory.flag === 'ORANGE') {
-    response += `High risk conditions. Modify activity significantly.\n`;
-    response += `Increase breaks, reduce equipment, monitor all athletes.\n`;
+    response += `  High risk conditions. Modify activity significantly.\n`;
+    response += `  Increase breaks, reduce equipment, monitor all athletes.\n`;
   } else if (wbgtCategory.flag === 'YELLOW') {
-    response += `Moderate risk. Proceed with caution and increased monitoring.\n`;
+    response += `  Moderate risk. Proceed with caution and increased monitoring.\n`;
   } else {
-    response += `Favorable conditions. Normal activity with standard precautions.\n`;
+    response += `  Favorable conditions. Normal activity with standard precautions.\n`;
   }
   
   const coachTips = [
     "When in doubt, sit them out. No game is worth a life.",
     "Hydration starts 24 hours before, not on game day.",
-    "Athletes will push through pain. It's YOUR job to protect them.",
-    "If you wouldn't want YOUR child playing in this, cancel it.",
-    "Weather doesn't care about championships. Respect it.",
-    "The best coaches know when NOT to play."
+    "Athletes will push through pain. It is YOUR job to protect them.",
+    "If you would not want YOUR child playing in this, cancel it.",
+    "Weather does not care about championships. Respect it.",
+    "The best coaches know when NOT to play.",
+    "Safety is not a suggestion. It is a requirement."
   ];
-  response += `\n📢 ${random(coachTips)}`;
-
+  response += `\n--- COACH TIP ---\n${random(coachTips)}`;
+  
   return response;
 };
+
+// ============================================================================
+// EXPORT HELPER FUNCTIONS
+// ============================================================================
 
 export { 
   getHydrationPlan, 
   getLightningProtocol, 
   getWBGTCategory, 
-  getColdRiskCategory 
+  getColdRiskCategory,
+  calculatePerformanceImpact,
+  getYouthSportsAdvice,
+  getElderlyExerciseAdvice,
+  getPregnancyExerciseAdvice
 };
 
 export default getSportsAdvice;
