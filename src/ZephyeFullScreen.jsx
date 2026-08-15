@@ -81,13 +81,6 @@ const MoreIcon = () => (
   </svg>
 )
 
-const CloseIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/>
-    <line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-)
-
 const GlobeIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/>
@@ -374,7 +367,51 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
   return data
 }
 
-// ─── INTENT MAP ───────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SAMPLE QUESTIONS FROM ALL FILES ──────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+import { sampleQuestions as weatherQuestions } from './data/BasicWeatherAdvice.js'
+import { sampleQuestions as clothingQuestions } from './data/ClothingAdvice.js'
+import { sampleQuestions as lifestyleQuestions } from './data/Lifestyle.js'
+import { sampleQuestions as skinHairQuestions } from './data/SkinHair.js'
+import { sampleQuestions as drivingQuestions } from './data/Driving.js'
+import { sampleQuestions as travelingQuestions } from './data/Traveling.js'
+import { sampleQuestions as farmingQuestions } from './data/Farming.js'
+import { sampleQuestions as stargazingQuestions } from './data/Stargazing.js'
+import { sampleQuestions as photographyQuestions } from './data/Photography.js'
+import { sampleQuestions as eventsQuestions } from './data/Events.js'
+import { sampleQuestions as sportsQuestions } from './data/Sports.js'
+import { sampleQuestions as healthQuestions } from './data/Health.js'
+import { sampleQuestions as diyQuestions } from './data/DIYconstruction.js'
+import { sampleQuestions as petsQuestions } from './data/Pets.js'
+import { sampleQuestions as energyQuestions } from './data/EnergyHome.js'
+import { sampleQuestions as trafficQuestions } from './data/TrafficAdvice.js'
+import { sampleQuestions as routeQuestions } from './data/RouteAdvice.js'
+
+const ALL_SAMPLE_QUESTIONS = [
+  ...weatherQuestions,
+  ...clothingQuestions,
+  ...lifestyleQuestions,
+  ...skinHairQuestions,
+  ...drivingQuestions,
+  ...travelingQuestions,
+  ...farmingQuestions,
+  ...stargazingQuestions,
+  ...photographyQuestions,
+  ...eventsQuestions,
+  ...sportsQuestions,
+  ...healthQuestions,
+  ...diyQuestions,
+  ...petsQuestions,
+  ...energyQuestions,
+  ...trafficQuestions,
+  ...routeQuestions
+]
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── INTENT MAP ──────────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const INTENT_MAP = [
   {
@@ -737,51 +774,7 @@ const mergeResponses = (responses, intents, question) => {
   return merged
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── SUGGESTIONS FROM SAMPLE QUESTIONS ──────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-import { sampleQuestions as weatherQuestions } from './data/BasicWeatherAdvice.js'
-import { sampleQuestions as clothingQuestions } from './data/ClothingAdvice.js'
-import { sampleQuestions as lifestyleQuestions } from './data/Lifestyle.js'
-import { sampleQuestions as skinHairQuestions } from './data/SkinHair.js'
-import { sampleQuestions as drivingQuestions } from './data/Driving.js'
-import { sampleQuestions as travelingQuestions } from './data/Traveling.js'
-import { sampleQuestions as farmingQuestions } from './data/Farming.js'
-import { sampleQuestions as stargazingQuestions } from './data/Stargazing.js'
-import { sampleQuestions as photographyQuestions } from './data/Photography.js'
-import { sampleQuestions as eventsQuestions } from './data/Events.js'
-import { sampleQuestions as sportsQuestions } from './data/Sports.js'
-import { sampleQuestions as healthQuestions } from './data/Health.js'
-import { sampleQuestions as diyQuestions } from './data/DIYconstruction.js'
-import { sampleQuestions as petsQuestions } from './data/Pets.js'
-import { sampleQuestions as energyQuestions } from './data/EnergyHome.js'
-import { sampleQuestions as trafficQuestions } from './data/TrafficAdvice.js'
-import { sampleQuestions as routeQuestions } from './data/RouteAdvice.js'
-
-const ALL_SAMPLE_QUESTIONS = [
-  ...weatherQuestions,
-  ...clothingQuestions,
-  ...lifestyleQuestions,
-  ...skinHairQuestions,
-  ...drivingQuestions,
-  ...travelingQuestions,
-  ...farmingQuestions,
-  ...stargazingQuestions,
-  ...photographyQuestions,
-  ...eventsQuestions,
-  ...sportsQuestions,
-  ...healthQuestions,
-  ...diyQuestions,
-  ...petsQuestions,
-  ...energyQuestions,
-  ...trafficQuestions,
-  ...routeQuestions
-]
-
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── SMART VERDICT GENERATOR ──────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const generateVerdict = (question, data, intent) => {
   const q = question.toLowerCase()
@@ -1256,11 +1249,9 @@ export default function ZephyeFullScreen({
 
   // ─── Rotate suggestions every 10 seconds ──────────────────────────────
   useEffect(() => {
-    if (messages.length === 0) {
-      // Get 4 random questions from ALL sample questions
+    if (messages.length === 1) {
       const getRandomSuggestions = () => {
         const shuffled = [...ALL_SAMPLE_QUESTIONS]
-        // Shuffle array
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
@@ -1271,7 +1262,6 @@ export default function ZephyeFullScreen({
       setSuggestions(getRandomSuggestions())
       setShowSuggestions(true)
       
-      // Rotate every 10 seconds
       suggestionIntervalRef.current = setInterval(() => {
         setSuggestions(getRandomSuggestions())
       }, CONFIG.SUGGESTION_ROTATION_INTERVAL)
@@ -1444,7 +1434,9 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
-  // ─── ENHANCED ROUTE QUESTION ──────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── ROUTE QUESTION ──────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const routeQuestion = useCallback(async (question) => {
     const q = question.toLowerCase()
@@ -1891,184 +1883,199 @@ export default function ZephyeFullScreen({
   const cityName = location?.name?.split(',')[0] || 'City'
   const temp = weatherData.temp
   const aqiLabel = aqiLevel.label
+  const condition = weatherData.condition
+
+  // ─── Time of day helper ──────────────────────────────────────────────
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'morning'
+    if (hour < 17) return 'afternoon'
+    return 'evening'
+  }
 
   return (
     <div className="ai-fullscreen">
-      {/* HEADER - NEW DESIGN */}
-<div className="ai-header" style={{ 
-  display: 'flex', 
-  alignItems: 'center', 
-  justifyContent: 'space-between',
-  padding: '12px 16px',
-  borderBottom: '1px solid rgba(255,255,255,0.06)',
-  flexShrink: 0,
-  minHeight: '56px'
-}}>
-  {/* Left: Back + Brand */}
-  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-    <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 6px' }}>
-      <BackIcon />
-    </button>
-    <div>
-      <div style={{ fontWeight: '700', fontSize: '15px', letterSpacing: '-0.3px', lineHeight: '1.2' }}>
-        ZEPHYE
-      </div>
-      <div style={{ 
-        fontSize: '11px', 
-        color: 'var(--text-muted)', 
-        fontWeight: '400',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px'
+      {/* ─── HEADER ──────────────────────────────────────────────────────── */}
+      <div className="ai-header" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        padding: '16px 20px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        flexShrink: 0,
+        minHeight: '64px'
       }}>
-        <span>Weather</span>
-        <span style={{ opacity: 0.3 }}>·</span>
-        <span>{cityName}</span>
-        <span style={{ opacity: 0.3 }}>·</span>
-        <span>{temp}°C</span>
-      </div>
-    </div>
-  </div>
-
-  {/* Right: Intelligence + AQI + Menu */}
-  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '6px',
-      fontSize: '11px',
-      color: 'var(--text-muted)'
-    }}>
-      <span>Intelligence</span>
-      <span style={{ opacity: 0.3 }}>·</span>
-      <span className="aqi-badge" style={{ color: aqiLevel.color }}>
-        AQI {aqiLabel}
-      </span>
-    </div>
-
-    {/* Menu Dropdown (3 dots) */}
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        style={{
-          padding: '4px 6px',
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--text-muted)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center'
-        }}
-      >
-        <MoreIcon />
-      </button>
-
-      {isMenuOpen && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 8px)',
-          right: 0,
-          minWidth: '180px',
-          background: 'rgba(15,23,42,0.96)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '12px',
-          padding: '8px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '2px'
-        }}>
-          {/* Voice Gender */}
-          <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Voice
+        {/* Left: Back + Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 6px' }}>
+            <BackIcon />
+          </button>
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '16px', letterSpacing: '-0.3px', lineHeight: '1.3' }}>
+              ZEPHYE
+            </div>
+            <div style={{ 
+              fontSize: '11px', 
+              color: 'var(--text-muted)', 
+              fontWeight: '400',
+              letterSpacing: '0.2px'
+            }}>
+              Weather Intelligence
+            </div>
           </div>
-          <button
-            onClick={() => { setGenderPref('female'); setIsMenuOpen(false) }}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              background: genderPref === 'female' ? 'rgba(56,189,248,0.15)' : 'transparent',
-              border: 'none',
-              color: genderPref === 'female' ? 'var(--accent)' : 'var(--text)',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.2s'
-            }}
-          >
-            Female
-          </button>
-          <button
-            onClick={() => { setGenderPref('male'); setIsMenuOpen(false) }}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              background: genderPref === 'male' ? 'rgba(56,189,248,0.15)' : 'transparent',
-              border: 'none',
-              color: genderPref === 'male' ? 'var(--accent)' : 'var(--text)',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.2s'
-            }}
-          >
-            Male
-          </button>
+        </div>
 
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+        {/* Right: Location + Temp + AQI + Menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '1px'
+          }}>
+            <div style={{ 
+              fontSize: '13px', 
+              fontWeight: '500',
+              color: 'var(--text)'
+            }}>
+              {cityName} · {temp}°C
+            </div>
+            <div style={{ 
+              fontSize: '11px', 
+              color: 'var(--text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <span>AQI</span>
+              <span style={{ color: aqiLevel.color, fontWeight: '500' }}>{aqiLabel}</span>
+            </div>
+          </div>
 
-          {/* Language */}
-          {detectedLanguage !== 'en' && (
-            <>
-              <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Language
-              </div>
-              <div style={{ padding: '6px 12px', fontSize: '13px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <GlobeIcon />
-                {LANGUAGE_NAMES[detectedLanguage] || detectedLanguage}
-                {isTranslating && ' ⌛'}
-              </div>
-            </>
-          )}
-
-          {/* Show Original */}
-          {detectedLanguage !== 'en' && (
+          {/* Menu Dropdown (3 dots) */}
+          <div style={{ position: 'relative' }}>
             <button
-              onClick={() => { setShowOriginal(!showOriginal); setIsMenuOpen(false) }}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                background: showOriginal ? 'rgba(56,189,248,0.15)' : 'transparent',
+                padding: '4px 6px',
+                background: 'transparent',
                 border: 'none',
-                color: showOriginal ? 'var(--accent)' : 'var(--text)',
+                color: 'var(--text-muted)',
                 cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.2s'
+                display: 'flex',
+                alignItems: 'center'
               }}
             >
-              {showOriginal ? 'Hide Original' : 'Show Original'}
+              <MoreIcon />
             </button>
-          )}
+
+            {isMenuOpen && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                minWidth: '180px',
+                background: 'rgba(15,23,42,0.96)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '12px',
+                padding: '8px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                zIndex: 100,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}>
+                {/* Voice Gender */}
+                <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Voice
+                </div>
+                <button
+                  onClick={() => { setGenderPref('female'); setIsMenuOpen(false) }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: genderPref === 'female' ? 'rgba(56,189,248,0.15)' : 'transparent',
+                    border: 'none',
+                    color: genderPref === 'female' ? 'var(--accent)' : 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Female
+                </button>
+                <button
+                  onClick={() => { setGenderPref('male'); setIsMenuOpen(false) }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: genderPref === 'male' ? 'rgba(56,189,248,0.15)' : 'transparent',
+                    border: 'none',
+                    color: genderPref === 'male' ? 'var(--accent)' : 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Male
+                </button>
+
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+
+                {/* Language */}
+                {detectedLanguage !== 'en' && (
+                  <>
+                    <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Language
+                    </div>
+                    <div style={{ padding: '6px 12px', fontSize: '13px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <GlobeIcon />
+                      {LANGUAGE_NAMES[detectedLanguage] || detectedLanguage}
+                      {isTranslating && ' ⌛'}
+                    </div>
+                  </>
+                )}
+
+                {/* Show Original */}
+                {detectedLanguage !== 'en' && (
+                  <button
+                    onClick={() => { setShowOriginal(!showOriginal); setIsMenuOpen(false) }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      background: showOriginal ? 'rgba(56,189,248,0.15)' : 'transparent',
+                      border: 'none',
+                      color: showOriginal ? 'var(--accent)' : 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {showOriginal ? 'Hide Original' : 'Show Original'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  </div>
-</div>
-      {/* BODY - SCROLLABLE */}
+      </div>
+
+      {/* ─── BODY ────────────────────────────────────────────────────────── */}
       <div className="ai-body" style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '16px',
+        padding: '20px 16px',
         display: 'flex',
         flexDirection: 'column'
       }}>
         <div style={{ maxWidth: '768px', margin: '0 auto', width: '100%' }}>
           
           {/* ─── WELCOME STATE ────────────────────────────────────────────── */}
-          {messages.length === 0 ? (
+          {messages.length === 1 ? (
             <div style={{ 
               display: 'flex', 
               flexDirection: 'column', 
@@ -2079,11 +2086,32 @@ export default function ZephyeFullScreen({
               textAlign: 'center',
               padding: '20px'
             }}>
-              <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '4px' }}>
-                Hey, {userName || 'there'} 👋
+              {/* Location + Weather */}
+              <div style={{ 
+                fontSize: '13px', 
+                color: 'var(--text-muted)', 
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                flexWrap: 'wrap',
+                justifyContent: 'center'
+              }}>
+                <span>{cityName}, NG</span>
+                <span style={{ opacity: 0.3 }}>·</span>
+                <span>{temp}°C</span>
+                <span style={{ opacity: 0.3 }}>·</span>
+                <span>{condition}</span>
+                <span style={{ opacity: 0.3 }}>·</span>
+                <span style={{ color: aqiLevel.color }}>AQI {aqiLabel}</span>
+              </div>
+
+              {/* Greeting */}
+              <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '6px' }}>
+                Good {getTimeOfDay()}, {userName || 'there'}
               </h2>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-                What can I help you with today?
+              <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                How can I help you today?
               </p>
 
               {/* 4 Dynamic Suggestions */}
@@ -2124,59 +2152,59 @@ export default function ZephyeFullScreen({
                   </button>
                 ))}
               </div>
-
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '16px', opacity: 0.5 }}>
-                Suggestions rotate every 10 seconds
-              </p>
             </div>
           ) : (
-            /* ─── CONVERSATION ────────────────────────────────────────────── */
+            {/* ─── CONVERSATION ────────────────────────────────────────────── */}
             <>
-              {messages.map((msg, i) => (
-                <div key={i} style={{ 
-                  display: 'flex', 
-                  marginBottom: 12, 
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
-                }}>
-                  <div className={`chat-bubble ${msg.role}`}>
-                    {msg.role === 'assistant' && (
-                      <div className="msg-actions-top">
-                        <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
-                          {isSpeaking ? <StopIcon /> : <SpeakIcon />}
-                        </button>
-                        <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
-                          <CopyIcon />
-                        </button>
-                      </div>
-                    )}
-                    
-                    {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: 'var(--text-muted)', 
-                        marginBottom: '8px',
-                        paddingBottom: '8px',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)'
-                      }}>
-                        {msg.originalEnglish}
-                      </div>
-                    )}
-                    
-                    <div className="msg-content">{msg.content}</div>
-                    
-                    {msg.originalLang && msg.originalLang !== 'en' && (
-                      <div style={{ 
-                        fontSize: '10px', 
-                        color: 'var(--text-muted)', 
-                        marginTop: '6px',
-                        opacity: 0.5
-                      }}>
-                        {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
-                      </div>
-                    )}
+              {messages.map((msg, i) => {
+                // Skip the first welcome message if you want to hide it
+                // Or show it as part of the conversation
+                return (
+                  <div key={i} style={{ 
+                    display: 'flex', 
+                    marginBottom: 12, 
+                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
+                  }}>
+                    <div className={`chat-bubble ${msg.role}`}>
+                      {msg.role === 'assistant' && (
+                        <div className="msg-actions-top">
+                          <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
+                            {isSpeaking ? <StopIcon /> : <SpeakIcon />}
+                          </button>
+                          <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
+                            <CopyIcon />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: 'var(--text-muted)', 
+                          marginBottom: '8px',
+                          paddingBottom: '8px',
+                          borderBottom: '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                          {msg.originalEnglish}
+                        </div>
+                      )}
+                      
+                      <div className="msg-content">{msg.content}</div>
+                      
+                      {msg.originalLang && msg.originalLang !== 'en' && (
+                        <div style={{ 
+                          fontSize: '10px', 
+                          color: 'var(--text-muted)', 
+                          marginTop: '6px',
+                          opacity: 0.5
+                        }}>
+                          {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
 
               {streamingText && (
                 <div style={{ display: 'flex', marginBottom: 12 }}>
@@ -2196,7 +2224,7 @@ export default function ZephyeFullScreen({
         </div>
       </div>
 
-      {/* INPUT - FIXED */}
+      {/* ─── INPUT ────────────────────────────────────────────────────────── */}
       <div className="ai-input-wrap" style={{
         borderTop: '1px solid rgba(255,255,255,0.06)',
         padding: '12px 16px',
