@@ -29,10 +29,11 @@ import {
 } from './calculations'
 
 // ============================================================================
-// SAMPLE QUESTIONS
+// SAMPLE QUESTIONS - EXPANDED
 // ============================================================================
 
 export const sampleQuestions = [
+  // GENERAL
   "Can I see stars tonight?",
   "Is it good for stargazing?",
   "Will the moon ruin stargazing?",
@@ -40,147 +41,160 @@ export const sampleQuestions = [
   "Is it clear enough for a telescope?",
   "Best time to stargaze tonight?",
   "Will clouds block the stars?",
-  "Can I see planets tonight?",
-  "Is it good for meteor watching?",
-  "Can I see the ISS tonight?",
-  "Is Jupiter visible?",
-  "Can I see Saturn's rings?",
-  "Will fog be an issue?",
-  "Is the seeing good for astrophotography?",
-  "Can I see the Northern Lights?",
   "Is it worth setting up my telescope?",
   "Will humidity fog my lens?",
-  "Can I see Venus tonight?",
-  "Is Mars visible?",
-  "Can I see the Orion Nebula?",
   "Is it dark enough for deep sky?",
   "Will the moon be up during viewing?",
-  "Can I see the Andromeda Galaxy?",
   "Is it good for a star party?",
   "Will dew be a problem?",
-  "Can I see the Pleiades?",
   "Is the transparency good?",
-  "Can I see the zodiacal light?",
-  "Will there be aurora activity?",
-  "Is tonight good for comet watching?",
-  "Can I see shooting stars?",
   "Will light pollution ruin viewing?",
   "Is the atmosphere stable?",
   "Can I photograph the Milky Way?",
   "Will moonlight wash out photos?",
   "Is it worth driving to dark sky site?",
-  "Can I see any galaxies tonight?",
-  "Will the seeing support high magnification?",
-  "Is it good for planetary imaging?",
-  "Can I see Mercury?",
   "Will twilight affect viewing?",
   "Is the sky transparency good tonight?",
-  "Can I see Neptune or Uranus?",
-  "Will there be any eclipses?",
-  "Is it good for solar observing tomorrow?",
-  "Can I see the summer triangle?",
   "Will wildfire smoke affect viewing?",
   "Is the jet stream affecting seeing?",
-  "Can I see the gegenschein?",
   "Should I use a dew heater?",
   "Is it good for binocular astronomy?",
-  "Can I see the Beehive Cluster?",
-  "Will there be satellite flares?",
-  "Is tonight good for a Messier marathon?",
-  "Can I see Omega Centauri?",
   "Will clouds clear after midnight?",
   "Is it worth staying up late?",
-  "Can I see the Lagoon Nebula?",
   "Will fog roll in from the coast?",
   "Is it clear at higher elevation?",
-  "Can I see the Hercules Cluster?",
   "Will Starlink trains be visible?",
   "Is it good for radio astronomy?",
-  "Can I see the Ring Nebula?",
-  "Will the aurora be visible this far south?",
-  "Is tonight good for citizen science?",
-  "Can I see the Dumbbell Nebula?",
   "Should I acclimate my telescope?",
   "Is the moon too bright for DSOs?",
-  "Can I see the Whirlpool Galaxy?",
   "Will there be iridium flares?",
   "Is it good for spectroscopy?",
-  "Can I see the Leo Triplet?",
   "Will temperature inversion affect seeing?",
   "Is tonight good for a star trail photo?",
-  "Can I see the Veil Nebula?",
   "Will the monsoon moisture clear?",
   "Is it transparent enough for faint fuzzies?",
-  "Can I see the Double Cluster?",
   "Will Sahara dust affect viewing?",
   "Is it good for lunar photography?",
-  "Can I see the Sculptor Galaxy?",
   "Will marine layer be an issue?",
   "Is tonight good for the Perseids?",
   "Can I see the Geminids?",
   "Will there be noctilucent clouds?",
   "Is it good for solar system observing?",
-  "Can I see the Bode's Galaxy?",
-  "Will volcanic aerosols affect sunset/sunrise colors?",
+  "Will volcanic aerosols affect sunset and sunrise colors?",
   "Is tonight transparent enough for UHC filter?",
-  "Can I see the Crab Nebula?",
   "Should I bring my Ethos eyepiece?",
-  "Will my SCT need extra cool-down time?"
+  "Will my SCT need extra cool-down time?",
+  
+  // PLANETS
+  "Can I see planets tonight?",
+  "Is Jupiter visible?",
+  "Can I see Saturn's rings?",
+  "Can I see Venus tonight?",
+  "Is Mars visible?",
+  "Can I see Mercury?",
+  "Can I see Neptune or Uranus?",
+  
+  // DEEP SKY
+  "Can I see the Orion Nebula?",
+  "Can I see the Andromeda Galaxy?",
+  "Can I see the Pleiades?",
+  "Can I see any galaxies tonight?",
+  "Can I see the summer triangle?",
+  "Can I see the Beehive Cluster?",
+  "Can I see Omega Centauri?",
+  "Can I see the Lagoon Nebula?",
+  "Can I see the Hercules Cluster?",
+  "Can I see the Ring Nebula?",
+  "Can I see the Dumbbell Nebula?",
+  "Can I see the Whirlpool Galaxy?",
+  "Can I see the Leo Triplet?",
+  "Can I see the Veil Nebula?",
+  "Can I see the Double Cluster?",
+  "Can I see the Sculptor Galaxy?",
+  "Can I see the Bode's Galaxy?",
+  "Can I see the Crab Nebula?",
+  
+  // METEORS & AURORA
+  "Is it good for meteor watching?",
+  "Can I see shooting stars?",
+  "Will there be aurora activity?",
+  "Can I see the Northern Lights?",
+  "Will the aurora be visible this far south?",
+  
+  // ISS & SATELLITES
+  "Can I see the ISS tonight?",
+  "Will there be satellite flares?",
+  
+  // ZODIACAL & SPECIAL
+  "Can I see the zodiacal light?",
+  "Can I see the gegenschein?",
+  "Is tonight good for comet watching?",
+  "Will there be any eclipses?",
+  "Is it good for solar observing tomorrow?",
+  "Is tonight good for a Messier marathon?",
+  "Is tonight good for citizen science?"
 ]
 
 // ============================================================================
-// ASTRONOMICAL SEEING SCALE (Pickering Scale)
+// ENHANCED ASTRONOMICAL SEEING SCALE (Pickering Scale)
 // ============================================================================
 
 const PICKERING_SCALE = {
   1: {
     description: 'Perfect seeing',
-    starAppearance: 'Star image motionless, diffraction rings complete',
+    starAppearance: 'Star image motionless, diffraction rings complete and steady',
     magnification: '40x per inch of aperture or more',
-    rating: 'Exceptional - rare',
-    suitability: 'Planetary detail, double stars, high-resolution imaging'
+    rating: 'Exceptional - rare conditions',
+    suitability: 'Planetary detail, double stars, high-resolution imaging',
+    planetaryDetail: 'Cloud bands and features sharp, color vivid'
   },
   2: {
     description: 'Slightly imperfect',
     starAppearance: 'Slight undulations, moments of calm lasting several seconds',
     magnification: '32-40x per inch',
     rating: 'Excellent',
-    suitability: 'Lunar/planetary, deep sky, photography'
+    suitability: 'Lunar and planetary, deep sky, photography',
+    planetaryDetail: 'Good detail on Jupiter and Saturn'
   },
   3: {
     description: 'Good seeing',
     starAppearance: 'Moderate undulations, diffraction rings visible but in motion',
     magnification: '24-32x per inch',
     rating: 'Good',
-    suitability: 'Most observing, medium-high power acceptable'
+    suitability: 'Most observing, medium-high power acceptable',
+    planetaryDetail: 'Moderate detail visible'
   },
   4: {
     description: 'Fair seeing',
     starAppearance: 'Diffraction rings often blurred, central disk visible',
     magnification: '16-24x per inch',
     rating: 'Average',
-    suitability: 'Deep sky objects, low-medium power'
+    suitability: 'Deep sky objects, low-medium power',
+    planetaryDetail: 'Limited detail on planets'
   },
   5: {
     description: 'Poor seeing',
     starAppearance: 'Diffraction rings barely visible, star image boiling',
     magnification: '12-16x per inch',
     rating: 'Below average',
-    suitability: 'Low power wide field, not for planets'
+    suitability: 'Low power wide field, not for planets',
+    planetaryDetail: 'Planets appear as blurry disks'
   },
   6: {
     description: 'Very poor seeing',
     starAppearance: 'Star image a blurry blob, no diffraction features',
     magnification: '8-12x per inch',
     rating: 'Poor',
-    suitability: 'Very low power, casual observing only'
+    suitability: 'Very low power, casual observing only',
+    planetaryDetail: 'No planetary detail visible'
   },
   7: {
     description: 'Extremely poor',
-    starAppearance: 'Stars 2-3x normal size, constant rapid motion',
+    starAppearance: 'Stars 2-3 times normal size, constant rapid motion',
     magnification: 'Under 8x per inch',
     rating: 'Very poor',
-    suitability: 'Binoculars only, not worth telescope setup'
+    suitability: 'Binoculars only, not worth telescope setup',
+    planetaryDetail: 'Planets unobservable'
   },
   8: {
     description: 'Worthless for astronomy',
@@ -192,13 +206,13 @@ const PICKERING_SCALE = {
   9: {
     description: 'Impossible',
     starAppearance: 'Stars twinkling so badly you feel dizzy',
-    magnification: 'Don\'t bother',
+    magnification: 'Do not bother',
     rating: 'Worst',
-    suitability: 'Netflix and planetarium apps'
+    suitability: 'Netflix and planetarium apps only'
   },
   10: {
     description: 'Completely unusable',
-    starAppearance: 'Stars look like they\'re having a rave',
+    starAppearance: 'Stars look like they are having a rave',
     magnification: 'Forget it',
     rating: 'Why are you outside?',
     suitability: 'Indoor activities only'
@@ -206,7 +220,7 @@ const PICKERING_SCALE = {
 }
 
 // ============================================================================
-// BORTLE DARK SKY SCALE
+// ENHANCED BORTLE DARK SKY SCALE
 // ============================================================================
 
 const BORTLE_SCALE = {
@@ -215,37 +229,40 @@ const BORTLE_SCALE = {
     description: 'Zodiacal light visible, gegenschein visible, Milky Way casts shadows',
     limiting: '7.6-8.0',
     color: '#000000',
-    milkyWay: 'Casts obvious shadows',
-    zodiacalLight: 'Visible, colorful',
-    airglow: 'Visible along horizon',
-    clouds: 'Black holes in the sky'
+    milkyWay: 'Casts obvious shadows on ground',
+    zodiacalLight: 'Visible and colorful, extends 60+ degrees',
+    airglow: 'Visible along entire horizon',
+    clouds: 'Black holes in the sky, completely invisible',
+    m33: 'Naked eye visible',
+    gegenschein: 'Visible to naked eye'
   },
   2: {
     name: 'Typical Truly Dark Site',
     description: 'Milky Way highly structured, zodiacal light visible',
     limiting: '7.1-7.5',
     color: '#0a0a0a',
-    milkyWay: 'Highly structured, summer Milky Way shows detail',
-    zodiacalLight: 'Still bright enough to cast shadows at dusk/dawn',
-    airglow: 'Weakly visible near horizon'
+    milkyWay: 'Highly structured, summer Milky Way shows detailed star clouds',
+    zodiacalLight: 'Still bright enough to cast shadows at dusk and dawn',
+    airglow: 'Weakly visible near horizon',
+    m33: 'Naked eye with averted vision'
   },
   3: {
     name: 'Rural Sky',
     description: 'Some light pollution at horizon, Milky Way still detailed',
     limiting: '6.6-7.0',
     color: '#1a1a2e',
-    milkyWay: 'Still shows complex structure',
-    zodiacalLight: 'Visible in spring/autumn',
-    lightPollution: 'Visible on horizon'
+    milkyWay: 'Still shows complex structure and dark nebulae',
+    zodiacalLight: 'Visible in spring and autumn',
+    lightPollution: 'Visible on horizon in 1-2 directions'
   },
   4: {
-    name: 'Rural/Suburban Transition',
+    name: 'Rural to Suburban Transition',
     description: 'Light pollution domes visible in several directions',
     limiting: '6.1-6.5',
     color: '#16213e',
     milkyWay: 'Visible but less detailed, washed out near horizon',
     zodiacalLight: 'Visible but extends less than 45 degrees',
-    lightDomes: 'Visible over population centers'
+    lightDomes: 'Visible over population centers in 3-4 directions'
   },
   5: {
     name: 'Suburban Sky',
@@ -253,7 +270,7 @@ const BORTLE_SCALE = {
     limiting: '5.6-6.0',
     color: '#1a1a3e',
     milkyWay: 'Visible only overhead, washed out',
-    zodiacalLight: 'Rarely visible',
+    zodiacalLight: 'Rarely visible, only in best conditions',
     lightDomes: 'Obvious in several directions'
   },
   6: {
@@ -263,16 +280,16 @@ const BORTLE_SCALE = {
     color: '#2d2d44',
     milkyWay: 'Only visible near zenith',
     m33: 'Difficult with averted vision',
-    clouds: 'Brightly lit'
+    clouds: 'Brightly lit from below'
   },
   7: {
-    name: 'Suburban/Urban Transition',
+    name: 'Suburban to Urban Transition',
     description: 'Milky Way invisible, M31 barely detectable',
     limiting: '4.6-5.0',
     color: '#4a4a5a',
     milkyWay: 'Invisible',
     m31: 'Barely visible with averted vision',
-    clouds: 'Brightly lit, some stars visible'
+    clouds: 'Brightly lit, some stars visible through gaps'
   },
   8: {
     name: 'City Sky',
@@ -295,94 +312,106 @@ const BORTLE_SCALE = {
 }
 
 // ============================================================================
-// PLANET VISIBILITY CALCULATOR
+// ENHANCED PLANET VISIBILITY CALCULATOR
 // ============================================================================
 
 function getDetailedPlanetVisibility(data) {
-  const { cloudPercent, moonPhase } = data
+  const { cloudPercent, moonPhase, lat } = data
   const planets = []
   const currentMonth = new Date().getMonth()
+  const currentDate = new Date()
+  const currentHour = currentDate.getHours()
   
-  if (currentMonth === 2 || currentMonth === 3 || currentMonth === 8 || currentMonth === 9) {
+  // Mercury - visible near greatest elongation
+  const mercuryElongation = [2, 3, 8, 9] // months of greatest elongation
+  if (mercuryElongation.includes(currentMonth)) {
     planets.push({
       name: 'Mercury',
       visible: true,
-      when: 'Just after sunset or before sunrise (elongation period)',
+      when: currentHour < 6 ? 'Before sunrise (morning elongation)' : 'After sunset (evening elongation)',
       where: 'Low on horizon, West (evening) or East (morning)',
       brightness: '-0.5 to +5.0',
-      telescope: 'Phase visible (like tiny moon). Low power best.',
-      difficulty: 'Challenging - never far from sun',
-      special: 'Only visible during greatest elongation (check exact dates)'
+      telescope: 'Phase visible like a tiny moon. Low power best. Need clear horizon.',
+      difficulty: 'Challenging - never far from sun. Requires unobstructed horizon.',
+      special: 'Only visible during greatest elongation. Check exact dates for best viewing.'
     })
   }
   
+  // Venus - always visible when not near conjunction
+  const venusConjunction = [5, 6] // months when Venus is near conjunction
   planets.push({
     name: 'Venus',
-    visible: currentMonth !== 5 && currentMonth !== 6,
+    visible: !venusConjunction.includes(currentMonth),
     when: currentMonth < 6 ? 'Evening star (after sunset)' : 'Morning star (before sunrise)',
-    where: 'Brightest object after sun/moon. Cannot miss it.',
+    where: 'Brightest object after sun and moon. Cannot miss it.',
     brightness: '-4.9 to -3.8',
     telescope: 'Phase clearly visible. Cloud tops featureless but beautiful crescent.',
-    difficulty: 'Impossible to miss',
+    difficulty: 'Impossible to miss - brightest planet',
     special: 'Can cast shadows in dark locations. Visible in daylight if you know where to look.'
   })
   
+  // Mars - visible most of the year
+  const marsOpposition = [5, 6, 7, 8] // months of best viewing
   planets.push({
     name: 'Mars',
     visible: true,
     when: 'Varies by opposition (every 26 months)',
-    where: 'Red/orange color distinctive. Brightens dramatically near opposition.',
+    where: 'Red and orange color distinctive. Brightens dramatically near opposition.',
     brightness: '-2.9 to +1.8',
     telescope: 'Polar caps, dark markings visible near opposition. Detail requires good seeing.',
-    difficulty: 'Easy to find when bright',
-    special: 'Opposition every 26 months = best viewing. Dust storms can obscure surface.'
+    difficulty: 'Easy to find when bright, harder when dim',
+    special: `Opposition every 26 months = best viewing. ${marsOpposition.includes(currentMonth) ? 'Near opposition currently - excellent viewing!' : 'Not at opposition. Still visible but smaller.'}`
   })
   
+  // Jupiter - always visible when not near conjunction
   planets.push({
     name: 'Jupiter',
     visible: true,
     when: 'Most of year except when near conjunction with sun',
-    where: 'Bright, steady, cream-colored. Follows ecliptic.',
+    where: 'Bright, steady, cream-colored. Follows the ecliptic.',
     brightness: '-2.9 to -1.6',
-    telescope: 'Cloud bands, Great Red Spot, 4 Galilean moons. Transit/shadow events.',
+    telescope: 'Cloud bands, Great Red Spot, 4 Galilean moons. Transit and shadow events visible.',
     difficulty: 'Easy - second brightest planet',
     special: 'Moons visible in binoculars. GRS visible with 6 inch+ scope in good seeing.'
   })
   
+  // Saturn - visible most of the year
   planets.push({
     name: 'Saturn',
     visible: true,
     when: 'Evening or morning depending on season',
     where: 'Golden color. Follows ecliptic near Jupiter.',
     brightness: '-0.5 to +1.2',
-    telescope: 'Rings! Cassini Division, Titan moon. Multiple moons visible.',
-    difficulty: 'Easy to identify',
-    special: 'Ring tilt varies. Edge-on every 15 years. Currently good tilt for viewing.'
+    telescope: 'Rings visible in any telescope. Cassini Division visible in 6 inch+ scope. Titan visible.',
+    difficulty: 'Easy to identify by golden color',
+    special: 'Ring tilt varies. Edge-on every 15 years. Currently favorable tilt for viewing.'
   })
   
+  // Uranus - visible with dark skies
   if (cloudPercent < 40) {
     planets.push({
       name: 'Uranus',
       visible: true,
       when: 'Best when at opposition',
-      where: 'Requires finder chart. Blue-green disk.',
+      where: 'Requires finder chart. Blue-green disk with steady light.',
       brightness: '+5.7 to +5.9',
-      telescope: 'Tiny blue-green disk. Moons with large scope.',
+      telescope: 'Tiny blue-green disk. Moons visible with large aperture.',
       difficulty: 'Challenging - needs dark skies and knowing where to look',
-      special: 'Barely naked eye in perfect conditions. Binoculars show it easily.'
+      special: 'Barely naked eye in perfect conditions. Binoculars show it easily in dark skies.'
     })
   }
   
-  if (cloudPercent < 20) {
+  // Neptune - requires telescope
+  if (cloudPercent < 20 && lat) {
     planets.push({
       name: 'Neptune',
       visible: true,
       when: 'Requires telescope and finder chart',
-      where: 'Finder chart essential. Tiny blue disk.',
+      where: 'Finder chart essential. Tiny blue disk, steady light.',
       brightness: '+7.8 to +8.0',
-      telescope: 'Tiny blue disk. Triton moon with 12 inch+ scope.',
+      telescope: 'Tiny blue disk. Triton moon visible with 12 inch+ scope.',
       difficulty: 'Very challenging - requires dark sky and telescope',
-      special: 'Only planet discovered mathematically before visually.'
+      special: 'Only planet discovered mathematically before visually. Requires averted vision.'
     })
   }
   
@@ -390,55 +419,65 @@ function getDetailedPlanetVisibility(data) {
 }
 
 // ============================================================================
-// DEEP SKY OBJECT VISIBILITY
+// ENHANCED DEEP SKY OBJECT VISIBILITY
 // ============================================================================
 
 function getDeepSkyObjectVisibility(data) {
-  const { cloudPercent, moonPhase, bortleScale, season } = data
+  const { cloudPercent, moonPhase, bortleScale, season, lat } = data
   const objects = []
   const moonIllumination = getMoonIllumination(
     typeof moonPhase === 'string' ? 0 : moonPhase
   )
   
   if (cloudPercent > 40 || moonIllumination > 70) {
-    return [{ category: 'Limited', objects: 'Bright clusters and double stars only. Wait for darker conditions.' }]
+    return [{ category: 'Limited viewing', objects: 'Bright clusters and double stars only. Wait for darker conditions.' }]
   }
   
+  // Winter objects (Northern Hemisphere)
   if (season === 'winter') {
     objects.push({
       name: 'Orion Nebula (M42)',
       type: 'Emission Nebula',
       magnitude: 4.0,
-      visibility: 'Naked eye visible. Spectacular in any scope.',
-      bestWith: 'Any telescope or binoculars. UHC filter enhances.',
-      special: 'Trapezium cluster at center. Best in winter.'
+      visibility: 'Naked eye visible. Spectacular in any telescope. Brightest nebula in the sky.',
+      bestWith: 'Any telescope or binoculars. UHC filter enhances detail significantly.',
+      special: 'Trapezium cluster at center. Best viewed in winter. Star formation region.'
     })
     objects.push({
       name: 'Pleiades (M45)',
       type: 'Open Cluster',
       magnitude: 1.6,
-      visibility: 'Naked eye obvious. Best in binoculars.',
-      bestWith: 'Binoculars or wide-field refractor.',
-      special: 'Subaru in Japanese. Contains reflection nebulosity.'
+      visibility: 'Naked eye obvious. Best in binoculars. 6-7 stars visible naked eye.',
+      bestWith: 'Binoculars or wide-field refractor. Low power essential.',
+      special: 'Subaru in Japanese. Contains reflection nebulosity. Over 1000 stars in cluster.'
     })
     objects.push({
       name: 'Andromeda Galaxy (M31)',
       type: 'Spiral Galaxy',
       magnitude: 3.4,
-      visibility: 'Naked eye in dark skies. 6x larger than full moon!',
+      visibility: 'Naked eye in dark skies. 6 times larger than full moon in apparent size.',
       bestWith: 'Binoculars or wide-field scope. Low power essential.',
-      special: 'Closest major galaxy. Satellite galaxies M32, M110 visible nearby.'
+      special: 'Closest major galaxy. Satellite galaxies M32 and M110 visible nearby. 2.5 million light years away.'
+    })
+    objects.push({
+      name: 'Double Cluster (NGC 869 and NGC 884)',
+      type: 'Open Clusters',
+      magnitude: 4.3,
+      visibility: 'Naked eye visible in dark skies. Stunning in binoculars or wide-field scope.',
+      bestWith: 'Binoculars or low-power, wide-field eyepiece.',
+      special: 'Two clusters side by side. Each contains hundreds of stars. 7,500 light years away.'
     })
   }
   
+  // Spring objects
   if (season === 'spring') {
     objects.push({
       name: 'Whirlpool Galaxy (M51)',
       type: 'Spiral Galaxy',
       magnitude: 8.4,
-      visibility: 'Requires telescope. Spiral arms visible with 8 inch+ scope.',
-      bestWith: '8 inch+ telescope, dark skies.',
-      special: 'First galaxy where spiral structure was observed (Lord Rosse, 1845).'
+      visibility: 'Requires telescope. Spiral arms visible with 8 inch+ scope in dark skies.',
+      bestWith: '8 inch+ telescope, dark skies, good transparency.',
+      special: 'First galaxy where spiral structure was observed. Interacting with companion galaxy.'
     })
     objects.push({
       name: 'Leo Triplet (M65, M66, NGC 3628)',
@@ -446,45 +485,43 @@ function getDeepSkyObjectVisibility(data) {
       magnitude: 9.3,
       visibility: 'Three galaxies in one field. 8 inch+ scope recommended.',
       bestWith: 'Medium-high power, dark skies.',
-      special: 'All three visible in same low-power field.'
+      special: 'All three visible in same low-power field. 30-40 million light years away.'
+    })
+    objects.push({
+      name: 'Sombrero Galaxy (M104)',
+      type: 'Spiral Galaxy',
+      magnitude: 8.0,
+      visibility: 'Famous dust lane. 6 inch+ scope shows the hat shape.',
+      bestWith: '6 inch+ telescope. Dark skies help.',
+      special: 'Dust lane visible in moderate apertures. 30 million light years away.'
     })
   }
   
+  // Summer objects
   if (season === 'summer') {
     objects.push({
       name: 'Ring Nebula (M57)',
       type: 'Planetary Nebula',
       magnitude: 8.8,
-      visibility: 'Smoke ring appearance. Visible in 4 inch+ scope.',
-      bestWith: 'Medium-high power. OIII filter enhances.',
-      special: 'Central star magnitude 15 - very challenging.'
+      visibility: 'Smoke ring appearance. Visible in 4 inch+ scope. Looks like a smoke ring.',
+      bestWith: 'Medium-high power. OIII filter enhances visibility.',
+      special: 'Central star magnitude 15 - very challenging. 2,300 light years away.'
     })
     objects.push({
       name: 'Hercules Cluster (M13)',
       type: 'Globular Cluster',
       magnitude: 5.8,
-      visibility: 'Naked eye in dark skies. Spectacular in any scope.',
+      visibility: 'Naked eye in dark skies. Spectacular in any telescope.',
       bestWith: 'Medium power. Resolves into individual stars in 6 inch+ scope.',
-      special: 'Over 300,000 stars. 25,000 light years away.'
+      special: 'Over 300,000 stars. 25,000 light years away. One of the best globular clusters.'
     })
     objects.push({
       name: 'Lagoon Nebula (M8)',
       type: 'Emission Nebula',
       magnitude: 6.0,
-      visibility: 'Naked eye in dark skies. Cluster + nebulosity.',
-      bestWith: 'Any telescope or binoculars. UHC filter.',
-      special: 'Contains open cluster NGC 6530.'
-    })
-  }
-  
-  if (season === 'fall') {
-    objects.push({
-      name: 'Double Cluster (NGC 869/884)',
-      type: 'Open Clusters',
-      magnitude: 4.3,
-      visibility: 'Naked eye visible. Stunning in binoculars or wide-field scope.',
-      bestWith: 'Binoculars or low-power, wide-field eyepiece.',
-      special: 'Two clusters side by side. Each contains hundreds of stars.'
+      visibility: 'Naked eye in dark skies. Cluster plus nebulosity visible.',
+      bestWith: 'Any telescope or binoculars. UHC filter brings out detail.',
+      special: 'Contains open cluster NGC 6530. Star formation region. 4,100 light years away.'
     })
     objects.push({
       name: 'Dumbbell Nebula (M27)',
@@ -492,7 +529,47 @@ function getDeepSkyObjectVisibility(data) {
       magnitude: 7.5,
       visibility: 'Apple-core shape. Visible in 4 inch+ scope.',
       bestWith: 'Medium power. OIII filter reveals detail.',
-      special: 'First planetary nebula discovered (Messier, 1764).'
+      special: 'First planetary nebula discovered. 1,200 light years away.'
+    })
+  }
+  
+  // Fall objects
+  if (season === 'fall') {
+    objects.push({
+      name: 'Andromeda Galaxy (M31)',
+      type: 'Spiral Galaxy',
+      magnitude: 3.4,
+      visibility: 'Best viewed in fall. Naked eye in dark skies.',
+      bestWith: 'Binoculars or wide-field scope.',
+      special: 'Best galaxy viewing season. Also look for M33 in Triangulum.'
+    })
+    objects.push({
+      name: 'Pleiades (M45)',
+      type: 'Open Cluster',
+      magnitude: 1.6,
+      visibility: 'Rising in late evening. Beautiful in binoculars.',
+      bestWith: 'Binoculars or wide-field refractor.',
+      special: 'Sign of approaching winter. Also known as the Seven Sisters.'
+    })
+  }
+  
+  // Southern hemisphere objects
+  if (lat && lat < -20) {
+    objects.push({
+      name: 'Omega Centauri (NGC 5139)',
+      type: 'Globular Cluster',
+      magnitude: 3.9,
+      visibility: 'Naked eye visible. Largest and brightest globular cluster.',
+      bestWith: 'Any telescope. Resolves into thousands of stars.',
+      special: 'Contains millions of stars. 16,000 light years away. Southern hemisphere gem.'
+    })
+    objects.push({
+      name: 'Large Magellanic Cloud',
+      type: 'Dwarf Galaxy',
+      magnitude: 0.9,
+      visibility: 'Naked eye obvious. Satellite galaxy of Milky Way.',
+      bestWith: 'Binoculars or wide-field telescope.',
+      special: 'Contains the Tarantula Nebula (largest known nebula). Southern hemisphere only.'
     })
   }
   
@@ -500,7 +577,7 @@ function getDeepSkyObjectVisibility(data) {
 }
 
 // ============================================================================
-// ASTRONOMICAL TWILIGHT CALCULATOR
+// ENHANCED ASTRONOMICAL TWILIGHT CALCULATOR
 // ============================================================================
 
 function getTwilightPeriods(data) {
@@ -510,6 +587,7 @@ function getTwilightPeriods(data) {
   const sunsetTime = new Date(sunset)
   const sunriseTime = new Date(sunrise)
   const periods = []
+  const now = new Date()
   
   const civilEnd = new Date(sunsetTime.getTime() + 30 * 60000)
   const civilStart = new Date(sunriseTime.getTime() - 30 * 60000)
@@ -520,25 +598,33 @@ function getTwilightPeriods(data) {
   
   const format = (d) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
   
+  // Determine current phase
+  let currentPhase = 'Daytime'
+  const nowMs = now.getTime()
+  if (nowMs > sunsetTime.getTime() && nowMs < civilEnd.getTime()) currentPhase = 'Civil Twilight'
+  else if (nowMs > civilEnd.getTime() && nowMs < nauticalEnd.getTime()) currentPhase = 'Nautical Twilight'
+  else if (nowMs > nauticalEnd.getTime() && nowMs < astroEnd.getTime()) currentPhase = 'Astronomical Twilight'
+  else if (nowMs > astroEnd.getTime() && nowMs < astroStart.getTime()) currentPhase = 'True Night'
+  
   periods.push({
     phase: 'Sunset',
     time: format(sunsetTime),
-    description: 'Sun at horizon. Brightest planets/stars appear.',
+    description: 'Sun at horizon. Brightest planets and stars begin to appear.',
     darkness: 'Daylight to civil twilight'
   })
   
   periods.push({
     phase: 'Civil Twilight',
     time: `${format(sunsetTime)} - ${format(civilEnd)}`,
-    description: 'Brightest stars visible. Planets clear.',
-    darkness: 'Too bright for deep sky',
+    description: 'Brightest stars visible. Planets clear. Landscape still visible.',
+    darkness: 'Too bright for deep sky observing',
     photography: 'Landscape astrophotography possible'
   })
   
   periods.push({
     phase: 'Nautical Twilight',
     time: `${format(civilEnd)} - ${format(nauticalEnd)}`,
-    description: 'Milky Way becoming visible. Most stars out.',
+    description: 'Milky Way becoming visible. Most stars are out. Horizon visible.',
     darkness: 'Deep sky becoming possible',
     photography: 'Milky Way photography begins'
   })
@@ -546,7 +632,7 @@ function getTwilightPeriods(data) {
   periods.push({
     phase: 'Astronomical Twilight',
     time: `${format(nauticalEnd)} - ${format(astroEnd)}`,
-    description: 'Sky fully dark to naked eye. Faint objects visible.',
+    description: 'Sky fully dark to naked eye. Faint objects visible. No more sky glow from sun.',
     darkness: 'Best deep sky observing',
     photography: 'Deep sky astrophotography optimal'
   })
@@ -558,193 +644,248 @@ function getTwilightPeriods(data) {
     periods.push({
       phase: 'True Night',
       time: `${format(trueNightStart)} - ${format(trueNightEnd)}`,
-      description: 'DARKEST PERIOD. All astronomical objects visible.',
-      darkness: 'Maximum darkness for location',
+      description: 'DARKEST PERIOD of the night. All astronomical objects visible.',
+      darkness: 'Maximum darkness for your location',
       photography: 'Best for narrowband and faint object imaging'
     })
   } else {
     periods.push({
       phase: 'Astronomical Twilight',
       time: `${format(astroEnd)} - ${format(astroStart)}`,
-      description: 'Night sky never reaches full darkness (summer months)',
+      description: 'Night sky never reaches full darkness (summer months at high latitude)',
       darkness: 'Limited darkness',
       photography: 'Narrowband imaging still possible'
     })
   }
   
+  // Add current phase indicator
+  periods.forEach(p => {
+    if (p.phase === currentPhase) {
+      p.current = true
+    }
+  })
+  
   return periods
 }
 
 // ============================================================================
-// DEW & EQUIPMENT MANAGEMENT
+// ENHANCED DEW & EQUIPMENT MANAGEMENT
 // ============================================================================
 
 function getDewAdvice(data) {
-  const { temp, humidity, dewPoint } = data
+  const { temp, humidity, dewPoint, wind, cloudPercent } = data
   const advice = []
   const dewSpread = temp - (dewPoint || temp - 5)
   
   if (dewSpread <= 1) {
-    advice.push("CRITICAL DEW RISK: Temperature within 1C of dew point.")
-    advice.push("Dew will form rapidly on all exposed optics.")
+    advice.push("CRITICAL DEW RISK: Temperature within 1°C of dew point.")
+    advice.push("Dew will form rapidly on all exposed optical surfaces.")
     advice.push("DEW HEATERS MANDATORY for all optical surfaces.")
-    advice.push("- Telrad/Rigel finder will fog first (large exposed surface)")
-    advice.push("- Eyepieces will fog from body heat/breath")
-    advice.push("- Corrector plate/lens will dew over in minutes")
-    advice.push("Equipment: Dew heater strips + controller for main scope")
-    advice.push("Equipment: Dew heater for eyepiece/finder")
-    advice.push("Equipment: Dew shield extends dew-free time ~2x")
-    advice.push("Portable: 12V hair dryer for emergency defogging")
-    advice.push("Tactic: Keep eyepieces in pocket (body heat) when not in use")
-    advice.push("Tactic: Point scope down when not observing")
+    advice.push("  - Telrad and Rigel finder will fog first (large exposed surface)")
+    advice.push("  - Eyepieces will fog from body heat and breath")
+    advice.push("  - Corrector plate and lens will dew over in minutes")
+    advice.push("Equipment needed:")
+    advice.push("  - Dew heater strips plus controller for main scope")
+    advice.push("  - Dew heater for eyepiece and finder")
+    advice.push("  - Dew shield extends dew-free time by approximately 2x")
+    advice.push("  - 12V hair dryer for emergency defogging")
+    advice.push("Tactics:")
+    advice.push("  - Keep eyepieces in pocket with body heat when not in use")
+    advice.push("  - Point scope down when not observing")
+    advice.push("  - Consider bringing backup eyepieces in case of fogging")
   } else if (dewSpread <= 3) {
     advice.push("MODERATE DEW RISK: Dew likely by midnight.")
-    advice.push("Dew heaters recommended. Dew shield minimum.")
-    advice.push("Expect to need defogging 2-3 times during session.")
+    advice.push("Dew heaters recommended. Dew shield is minimum requirement.")
+    advice.push("Expect to need defogging 2-3 times during observing session.")
   } else if (dewSpread <= 5) {
-    advice.push("Low dew risk. Dew shield should suffice.")
-    advice.push("May see some dew after 2-3 hours observing.")
+    advice.push("LOW DEW RISK: Dew shield should suffice.")
+    advice.push("May see some dew after 2-3 hours of observing.")
   } else {
-    advice.push("Minimal dew risk tonight. Optics should stay clear.")
+    advice.push("MINIMAL DEW RISK tonight. Optics should stay clear.")
   }
   
   if (humidity > 80) {
-    advice.push("High humidity: paper star charts will become damp. Use laminated charts or tablet.")
+    advice.push("HIGH HUMIDITY: Paper star charts will become damp. Use laminated charts or tablet.")
     advice.push("Electronics: consider silica gel packets in accessory case.")
+    advice.push("Refractor corrector plates and SCT correctors most vulnerable.")
+  }
+  
+  if (wind > 15) {
+    advice.push("WINDY: Wind increases evaporative cooling. May actually reduce dew.")
+    advice.push("But: wind will shake telescope. Use windbreaks or lower magnification.")
+  }
+  
+  if (cloudPercent < 10 && temp < 5) {
+    advice.push("COLD AND CLEAR: Perfect for observing but dew/frost risk high.")
+    advice.push("Frost may form on optics. Use dew heaters on higher setting.")
   }
   
   return advice
 }
 
 // ============================================================================
-// EQUIPMENT RECOMMENDATIONS
+// ENHANCED EQUIPMENT RECOMMENDATIONS
 // ============================================================================
 
 function getEquipmentRecommendations(data) {
-  const { cloudPercent, moonPhase, seeing, transparency, bortleScale, temp } = data
+  const { cloudPercent, moonPhase, seeing, transparency, bortleScale, temp, wind } = data
   const recommendations = []
   const moonIllumination = getMoonIllumination(
     typeof moonPhase === 'string' ? 0 : moonPhase
   )
   
-  if (cloudPercent < 20 && seeing < 3 && bortleScale < 4) {
+  if (cloudPercent < 20 && seeing < 3 && bortleScale < 4 && transparency > 6) {
     recommendations.push("PRIME CONDITIONS: Any telescope will perform well tonight.")
-    recommendations.push("- Large Dobsonian (12 inch+): Galaxies, nebulae, globulars")
-    recommendations.push("- APO Refractor (4-6 inch): Wide field, planetary, astrophotography")
-    recommendations.push("- SCT/Maksutov (8-14 inch): Planetary detail, double stars")
+    recommendations.push("  - Large Dobsonian (12 inch+): Galaxies, nebulae, globulars")
+    recommendations.push("  - APO Refractor (4-6 inch): Wide field, planetary, astrophotography")
+    recommendations.push("  - SCT or Maksutov (8-14 inch): Planetary detail, double stars")
+  } else if (cloudPercent < 30 && seeing < 4 && bortleScale < 5) {
+    recommendations.push("GOOD CONDITIONS: Most telescopes will perform well.")
+    recommendations.push("Expect good results with any quality telescope.")
   }
   
   if (moonIllumination > 60) {
-    recommendations.push("Bright moon: Focus on lunar, planetary, double stars.")
-    recommendations.push("- Moon filter essential (reduces glare, increases contrast)")
-    recommendations.push("- High magnification for lunar detail")
-    recommendations.push("- Color filters for planetary detail enhancement")
-    recommendations.push("- Skip deep sky - moonlight will wash out faint objects")
-  } else if (moonIllumination < 20) {
-    recommendations.push("Dark sky window: Deep sky objects will be at their best.")
-    recommendations.push("- UHC/OIII filters for emission nebulae")
-    recommendations.push("- Lowest power widest field eyepiece for Milky Way sweeping")
-    recommendations.push("- Consider dark adaptation (no white light for 30+ minutes)")
+    recommendations.push("BRIGHT MOON: Focus on lunar, planetary, and double stars.")
+    recommendations.push("  - Moon filter is essential (reduces glare, increases contrast)")
+    recommendations.push("  - High magnification for lunar detail (200-300x)")
+    recommendations.push("  - Color filters for planetary detail enhancement")
+    recommendations.push("  - Skip deep sky - moonlight will wash out faint objects")
+  } else if (moonIllumination < 20 && bortleScale < 5) {
+    recommendations.push("DARK SKY WINDOW: Deep sky objects will be at their best.")
+    recommendations.push("  - UHC and OIII filters for emission nebulae")
+    recommendations.push("  - Lowest power, widest field eyepiece for Milky Way sweeping")
+    recommendations.push("  - Consider dark adaptation (no white light for 30+ minutes)")
   }
   
   if (seeing <= 2) {
-    recommendations.push("Excellent seeing: Crank up the magnification!")
-    recommendations.push("- Planetary eyepieces (200-300x depending on aperture)")
-    recommendations.push("- Try for difficult double star splits")
-    recommendations.push("- Lucky imaging technique for planetary photography")
+    recommendations.push("EXCELLENT SEEING: Crank up the magnification!")
+    recommendations.push("  - Planetary eyepieces (200-300x depending on aperture)")
+    recommendations.push("  - Try for difficult double star splits")
+    recommendations.push("  - Lucky imaging technique for planetary photography")
   } else if (seeing >= 5) {
-    recommendations.push("Poor seeing: Lower your expectations on magnification.")
-    recommendations.push("- Limit magnification to 150x or less")
-    recommendations.push("- Focus on wide-field, low-power observing")
-    recommendations.push("- Binocular observing may be more rewarding than telescope")
+    recommendations.push("POOR SEEING: Lower your expectations on magnification.")
+    recommendations.push("  - Limit magnification to 150x or less")
+    recommendations.push("  - Focus on wide-field, low-power observing")
+    recommendations.push("  - Binocular observing may be more rewarding than telescope")
   }
   
   if (Math.abs(temp - 20) > 15) {
-    recommendations.push(`Temperature ${temp}C: Allow telescope to acclimate.`)
+    recommendations.push(`TEMPERATURE ${Math.round(temp)}°C: Allow telescope to acclimate.`)
     if (temp < 5) {
-      recommendations.push("- Cold: Allow 60-90 minutes for optics to reach thermal equilibrium")
-      recommendations.push("- Cold: Battery life reduced - bring spares for dew heaters/mount")
-      recommendations.push("- Cold: Lubricants stiffen - mounts may be sluggish")
+      recommendations.push("  - COLD: Allow 60-90 minutes for optics to reach thermal equilibrium")
+      recommendations.push("  - COLD: Battery life reduced significantly - bring spares")
+      recommendations.push("  - COLD: Lubricants stiffen - mounts may be sluggish")
+      recommendations.push("  - COLD: Consider a heated eyepiece case")
     } else if (temp > 30) {
-      recommendations.push("- Hot: Tube currents will degrade images until scope cools")
-      recommendations.push("- Hot: Allow 45-60 minutes cooldown (fans help)")
+      recommendations.push("  - HOT: Tube currents will degrade images until scope cools")
+      recommendations.push("  - HOT: Allow 45-60 minutes cooldown (fans help)")
+      recommendations.push("  - HOT: Thermal expansion can affect focus")
     }
   }
   
   if (bortleScale >= 7) {
-    recommendations.push("Light polluted skies: Work with what you can see.")
-    recommendations.push("- Moon, planets, double stars are your best targets")
-    recommendations.push("- Light pollution reduction (LPR) filter helps slightly")
-    recommendations.push("- Consider Electronically Assisted Astronomy (EAA)")
-    recommendations.push("- Live stacking with camera can reveal objects invisible visually")
+    recommendations.push("LIGHT POLLUTED SKIES: Work with what you can see.")
+    recommendations.push("  - Moon, planets, and double stars are your best targets")
+    recommendations.push("  - Light pollution reduction (LPR) filter helps slightly")
+    recommendations.push("  - Consider Electronically Assisted Astronomy (EAA)")
+    recommendations.push("  - Live stacking with camera reveals objects invisible visually")
+  }
+  
+  if (wind > 15) {
+    recommendations.push(`WIND ${Math.round(wind)}km/h: Telescope stability affected.`)
+    recommendations.push("  - Lower magnification to reduce wind impact")
+    recommendations.push("  - Use windbreak or observe from sheltered location")
+    recommendations.push("  - Heavier mounts are more stable in wind")
   }
   
   return recommendations
 }
 
 // ============================================================================
-// ASTROPHOTOGRAPHY CONDITIONS
+// ENHANCED ASTROPHOTOGRAPHY CONDITIONS
 // ============================================================================
 
 function getAstrophotographyAdvice(data) {
-  const { cloudPercent, seeing, transparency, moonPhase, wind, humidity } = data
+  const { cloudPercent, seeing, transparency, moonPhase, wind, humidity, temp, aqi } = data
   const advice = []
   const moonIllumination = getMoonIllumination(
     typeof moonPhase === 'string' ? 0 : moonPhase
   )
   
   if (cloudPercent > 20) {
-    advice.push("Clouds: Astrophotography requires clear skies. Wait for better conditions.")
-    advice.push(`${cloudPercent}% cloud cover will ruin long exposures.`)
+    advice.push("CLOUDS: Astrophotography requires clear skies. Wait for better conditions.")
+    advice.push(`  ${Math.round(cloudPercent)}% cloud cover will ruin long exposures.`)
+  } else if (cloudPercent > 5) {
+    advice.push("MINOR CLOUDS: Some thin clouds may pass. Consider narrowband imaging.")
+  } else {
+    advice.push("CLEAR SKIES: Excellent conditions for astrophotography.")
   }
   
   if (seeing > 3) {
-    advice.push("Poor seeing: Not suitable for high-resolution planetary/lunar imaging.")
-    advice.push("Consider wide-field shots instead of high-magnification work.")
+    advice.push("POOR SEEING: Not suitable for high-resolution planetary or lunar imaging.")
+    advice.push("  Consider wide-field shots instead of high-magnification work.")
+    advice.push("  Lucky imaging technique may help planetary images.")
   }
   
   if (transparency < 5) {
-    advice.push("Poor transparency: Faint objects will be significantly dimmed.")
-    advice.push("Expect to need 30-50% longer exposures for same signal.")
+    advice.push("POOR TRANSPARENCY: Faint objects will be significantly dimmed.")
+    advice.push(`  Expect to need 30-50% longer exposures for same signal.`)
+    advice.push("  Focus on brighter targets tonight.")
+  } else if (transparency > 8) {
+    advice.push("EXCELLENT TRANSPARENCY: Faint objects will be at their best.")
+    advice.push("  Great night for deep sky imaging.")
   }
   
   if (wind > 15) {
-    advice.push(`Wind ${wind}km/h: Telescope shake will blur images.`)
-    advice.push("- Wind protection/shelter needed for long exposures")
-    advice.push("- Autoguiding may struggle to correct")
-    advice.push("- Consider shorter exposures and stack more frames")
+    advice.push(`WIND ${Math.round(wind)}km/h: Telescope shake will blur images.`)
+    advice.push("  - Wind protection and shelter needed for long exposures")
+    advice.push("  - Autoguiding may struggle to correct")
+    advice.push("  - Consider shorter exposures and stack more frames")
   }
   
   if (moonIllumination > 50) {
-    advice.push("Moonlight: Broadband imaging will be compromised.")
-    advice.push("- Narrowband imaging (Ha, OIII, SII) still possible")
-    advice.push("- Lunar/planetary imaging ideal")
-    advice.push("- Wait for moon to set before imaging faint targets")
+    advice.push("MOONLIGHT: Broadband imaging will be compromised.")
+    advice.push("  - Narrowband imaging (Ha, OIII, SII) still possible")
+    advice.push("  - Lunar and planetary imaging are ideal tonight")
+    advice.push("  - Wait for moon to set before imaging faint targets")
   } else if (moonIllumination < 10) {
     advice.push("PERFECT: Dark skies for broadband deep sky imaging.")
-    advice.push("- RGB, LRGB, or OSC imaging will work well")
-    advice.push("- Shoot your faintest targets tonight")
+    advice.push("  - RGB, LRGB, or OSC imaging will work well")
+    advice.push("  - Shoot your faintest targets tonight")
   }
   
   if (humidity > 80) {
-    advice.push("High humidity: Dew will form on lens/corrector plate.")
-    advice.push("- Dew heaters absolutely essential")
-    advice.push("- Camera sensor may fog if not sealed")
-    advice.push("- Flat frames may show changing dust patterns")
+    advice.push("HIGH HUMIDITY: Dew will form on lens and corrector plate.")
+    advice.push("  - Dew heaters are absolutely essential")
+    advice.push("  - Camera sensor may fog if not sealed")
+    advice.push("  - Flat frames may show changing dust patterns")
+  }
+  
+  if (aqi > 100) {
+    advice.push("POOR AIR QUALITY: Particles in air scatter light.")
+    advice.push("  - Transparency reduced by particulate matter")
+    advice.push("  - Calibration frames may be affected")
+  }
+  
+  if (temp < 0) {
+    advice.push("FREEZING: Equipment considerations.")
+    advice.push("  - Batteries drain faster in cold")
+    advice.push("  - USB cables stiffen, may disconnect")
+    advice.push("  - Keep spare batteries warm")
+    advice.push("  - Consider dew heater on guide scope")
   }
   
   return advice
 }
 
 // ============================================================================
-// MAIN STARGAZING ADVICE FUNCTION
+// ENHANCED MAIN STARGAZING ADVICE FUNCTION
 // ============================================================================
 
 export const getStargazingAdvice = async (data, question = '') => {
   if (!data) return "Loading weather data..."
 
-  // --- USE TIME-SHIFTED DATA ---
-  // If _hourIndex is provided, use hourly data directly
+  // Use time-shifted data
   let cloudPercent = data.cloudCover !== undefined ? data.cloudCover : 0
   let temp = data.temp || 0
   let humidity = data.humidity || 0
@@ -753,7 +894,7 @@ export const getStargazingAdvice = async (data, question = '') => {
   let conditionCode = data.conditionCode || 0
   let precipitationProb = data.precipitationProb || 0
   
-  // If hourly data is available in the data object, use it
+  // If hourly data is available
   if (data._hourIndex !== undefined && data.hourly) {
     const idx = data._hourIndex
     if (data.hourly.cloud_cover?.[idx] !== undefined) {
@@ -777,7 +918,7 @@ export const getStargazingAdvice = async (data, question = '') => {
     }
   }
   
-  // If daily data is available for day offset
+  // If daily data is available
   if (data._dayOffset !== undefined && data.daily) {
     const dayIdx = data._dayOffset > 0 ? data._dayOffset : 0
     if (data.daily.weather_code?.[dayIdx] !== undefined) {
@@ -797,10 +938,10 @@ export const getStargazingAdvice = async (data, question = '') => {
 
   const { 
     sunset, sunrise, city, lat, lon, moonPhase: passedMoonPhase,
-    visibility, dewPoint, pressure, tempMin, tempMax
+    visibility, dewPoint, pressure, tempMin, tempMax, aqi
   } = data
   
-  // Use passed moon phase or calculate it
+  // Get moon phase
   let moonPhase = passedMoonPhase !== undefined ? passedMoonPhase : 0
   let moonPhaseName = 'Unknown'
   
@@ -819,20 +960,21 @@ export const getStargazingAdvice = async (data, question = '') => {
   const moonIllumination = getMoonIllumination(moonPhase)
   const moonRiseSet = getMoonRiseSet(data)
   const seeing = getSeeingConditions({ ...data, temp, humidity, wind })
-  const transparency = getTransparency({ ...data, humidity, wind, cloudPercent })
+  const transparency = getTransparency({ ...data, humidity, wind, cloudPercent, aqi })
   const bortleScale = getDarkSkyRating({ ...data, cloudPercent, moonPhase })
   const bortle = BORTLE_SCALE[bortleScale] || BORTLE_SCALE[5]
-  const planetVis = getDetailedPlanetVisibility({ ...data, cloudPercent, moonPhase })
-  const milkyWayVis = getMilkyWayVisibility({ ...data, cloudPercent, moonPhase })
+  const planetVis = getDetailedPlanetVisibility({ ...data, cloudPercent, moonPhase, lat })
+  const milkyWayVis = getMilkyWayVisibility({ ...data, cloudPercent, moonPhase, bortleScale })
   const isssPasses = getISSFlyoverTimes(data)
   const auroraForecast = getAuroraForecast({ ...data, cloudPercent })
   const twilightPeriods = getTwilightPeriods(data)
   const meteorShowers = getMeteorShowerCalendar(new Date())
-  const deepSkyObjects = getDeepSkyObjectVisibility({...data, cloudPercent, moonPhase, bortleScale})
-  const dewAdvice = getDewAdvice({ ...data, temp, humidity, dewPoint })
-  const equipmentRecs = getEquipmentRecommendations({...data, cloudPercent, moonPhase, seeing, transparency, bortleScale, temp})
-  const photoAdvice = getAstrophotographyAdvice({...data, cloudPercent, moonPhase, seeing, transparency, temp, humidity, wind})
+  const deepSkyObjects = getDeepSkyObjectVisibility({...data, cloudPercent, moonPhase, bortleScale, lat})
+  const dewAdvice = getDewAdvice({ ...data, temp, humidity, dewPoint, wind, cloudPercent })
+  const equipmentRecs = getEquipmentRecommendations({...data, cloudPercent, moonPhase, seeing, transparency, bortleScale, temp, wind})
+  const photoAdvice = getAstrophotographyAdvice({...data, cloudPercent, moonPhase, seeing, transparency, temp, humidity, wind, aqi})
   
+  // Calculate night duration
   let nightDuration = 'N/A'
   if (sunrise && sunset) {
     const rise = new Date(sunrise)
@@ -848,6 +990,7 @@ export const getStargazingAdvice = async (data, question = '') => {
   
   const pickeringRating = PICKERING_SCALE[seeing] || PICKERING_SCALE[5]
   
+  // Build response sections
   let verdict = []
   let viewing = []
   let timing = []
@@ -856,12 +999,12 @@ export const getStargazingAdvice = async (data, question = '') => {
   let equipment = []
   let comfort = []
 
-  // --- Check for rain/snow based on CONDITION, not just conditionCode ---
+  // Check for rain and snow
   const isRainy = condition === 'rain' || condition === 'thunderstorm' || condition === 'drizzle' || condition === 'snow'
   
   if (isRainy) {
     verdict.push("ASTRONOMY CANCELLED: Active precipitation. No observing possible.")
-    warnings.push("Telescopes and electronics + water = expensive disaster.")
+    warnings.push("Telescopes and electronics plus water equals expensive disaster.")
     warnings.push("Check forecast for tomorrow night.")
     viewing.push("Tonight: Read about the objects you will observe tomorrow.")
     viewing.push("Great night for: collimation practice, equipment maintenance.")
@@ -896,6 +1039,7 @@ export const getStargazingAdvice = async (data, question = '') => {
     }
   }
 
+  // Moon impact
   if (moonIllumination > 90) {
     warnings.push(`${moonPhaseName}: ${Math.round(moonIllumination)}% illuminated. Sky brightly lit.`)
     warnings.push("Deep sky observing severely compromised. Only brightest DSOs visible.")
@@ -913,7 +1057,7 @@ export const getStargazingAdvice = async (data, question = '') => {
     }
   } else if (moonIllumination > 30) {
     viewing.push(`${moonPhaseName}: Moderate moonlight. Good compromise conditions.`)
-    objects.push("Lunar terminator: Best detail at first/last quarter.")
+    objects.push("Lunar terminator: Best detail at first and last quarter.")
     if (moonRiseSet && moonRiseSet.set) {
       timing.push(`Moon sets at ${moonRiseSet.set}. Deep sky window opens after.`)
     }
@@ -927,6 +1071,7 @@ export const getStargazingAdvice = async (data, question = '') => {
     warnings.push("No moonlight means you NEED red flashlight. White light destroys night vision.")
   }
 
+  // Seeing conditions
   viewing.push(`SEEING: ${pickeringRating.description} (Pickering ${seeing}/10)`)
   viewing.push(`Magnification limit: ${pickeringRating.magnification}`)
   
@@ -939,6 +1084,7 @@ export const getStargazingAdvice = async (data, question = '') => {
     warnings.push("Poor seeing will make planets look like boiling blobs.")
   }
 
+  // Transparency
   if (transparency >= 8) {
     viewing.push("EXCELLENT transparency: Faint objects at their best.")
   } else if (transparency < 5) {
@@ -946,56 +1092,63 @@ export const getStargazingAdvice = async (data, question = '') => {
     warnings.push("Significant dimming of all objects. Deep sky work impossible.")
   }
 
+  // Bortle scale
   viewing.push(`SKY DARKNESS: Bortle ${bortleScale} - ${bortle.name}`)
   viewing.push(`Naked eye limiting magnitude: ~${bortle.limiting}`)
   
   if (bortleScale >= 7) {
     warnings.push("SEVERE light pollution. Only moon, planets, and brightest stars visible.")
-    viewing.push("Drive to darker skies for Milky Way/galaxies.")
+    viewing.push("Drive to darker skies for Milky Way and galaxies.")
   } else if (bortleScale <= 3) {
     viewing.push("DARK SKIES: Milky Way casts shadows. Galaxies accessible.")
   }
 
+  // Planets
   if (planetVis.length > 0) {
     objects.push("PLANETS VISIBLE TONIGHT:")
     planetVis.forEach(planet => {
       if (planet.visible) {
-        objects.push(`${planet.name}: ${planet.where}`)
-        objects.push(`  Brightness: ${planet.brightness} | Best: ${planet.telescope}`)
-        if (planet.special) objects.push(`  ${planet.special}`)
+        objects.push(`  ${planet.name}: ${planet.where}`)
+        objects.push(`    Brightness: ${planet.brightness} | Best: ${planet.telescope}`)
+        if (planet.special) objects.push(`    ${planet.special}`)
+        objects.push(`    Difficulty: ${planet.difficulty}`)
       }
     })
   }
 
+  // Deep sky objects
   if (deepSkyObjects.length > 0 && cloudPercent < 50 && moonIllumination < 60) {
     objects.push("DEEP SKY OBJECTS VISIBLE:")
     deepSkyObjects.forEach(obj => {
       if (obj.name) {
-        objects.push(`${obj.name} (${obj.type})`)
-        objects.push(`  Magnitude ${obj.magnitude} | ${obj.visibility}`)
-        if (obj.special) objects.push(`  ${obj.special}`)
+        objects.push(`  ${obj.name} (${obj.type})`)
+        objects.push(`    Magnitude ${obj.magnitude} | ${obj.visibility}`)
+        if (obj.special) objects.push(`    ${obj.special}`)
       } else {
-        objects.push(obj.objects || obj.category)
+        objects.push(`  ${obj.objects || obj.category}`)
       }
     })
   }
 
+  // Meteor showers
   if (meteorShowers && meteorShowers.active) {
     objects.push("ACTIVE METEOR SHOWER:")
-    objects.push(`${meteorShowers.name}: Peak ${meteorShowers.peak}, Rate ${meteorShowers.rate}/hr`)
-    objects.push(`Radiant: ${meteorShowers.constellation} | ${meteorShowers.notes}`)
+    objects.push(`  ${meteorShowers.name}: Peak ${meteorShowers.peak}, Rate ${meteorShowers.rate}/hour`)
+    objects.push(`  Radiant: ${meteorShowers.constellation} | ${meteorShowers.notes}`)
     if (moonIllumination > 50) {
-      warnings.push("Moonlight will reduce visible meteors by 50-70%.")
+      warnings.push("Moonlight will reduce visible meteors by 50-70 percent.")
     }
   }
   
+  // ISS flyovers
   if (isssPasses && isssPasses.length > 0) {
     objects.push("ISS FLYOVERS TONIGHT:")
     isssPasses.forEach(pass => {
-      objects.push(`${pass.time} - ${pass.direction || 'NW→SE'} - Magnitude ${pass.magnitude || -3.5}`)
+      objects.push(`  ${pass.time} - ${pass.direction || 'NW to SE'} - Magnitude ${pass.magnitude || -3.5}`)
     })
   }
   
+  // Aurora forecast
   if (auroraForecast && auroraForecast.kp >= 5) {
     objects.push(`AURORA FORECAST: Kp ${auroraForecast.kp} - Possible aurora activity!`)
     if (auroraForecast.kp >= 7) {
@@ -1003,15 +1156,18 @@ export const getStargazingAdvice = async (data, question = '') => {
     }
   }
 
+  // Twilight schedule
   if (twilightPeriods.length > 0) {
     timing.push("TWILIGHT SCHEDULE:")
     twilightPeriods.forEach(period => {
-      timing.push(`${period.phase}: ${period.time}`)
-      timing.push(`  ${period.description}`)
-      if (period.photography) timing.push(`  ${period.photography}`)
+      const current = period.current ? ' (CURRENTLY)' : ''
+      timing.push(`  ${period.phase}${current}: ${period.time}`)
+      timing.push(`    ${period.description}`)
+      if (period.photography) timing.push(`    ${period.photography}`)
     })
   }
   
+  // Moon rise and set
   if (moonRiseSet) {
     if (moonRiseSet.rise) timing.push(`Moon rises: ${moonRiseSet.rise}`)
     if (moonRiseSet.set) timing.push(`Moon sets: ${moonRiseSet.set}`)
@@ -1019,132 +1175,169 @@ export const getStargazingAdvice = async (data, question = '') => {
   
   timing.push(`Total darkness window: ${nightDuration}`)
 
+  // Equipment recommendations
   equipment = equipmentRecs
   
+  // Dew advice
   if (dewAdvice.length > 0) {
     equipment.push("DEW MANAGEMENT:")
-    dewAdvice.forEach(d => equipment.push(d))
+    dewAdvice.forEach(d => equipment.push(`  ${d}`))
   }
-  
+
+  // Observer comfort
   if (temp < 5) {
-    comfort.push(`Cold ${temp}C: Dress in layers. Insulated boots, hand warmers essential.`)
+    comfort.push(`COLD ${Math.round(temp)}°C: Dress in layers. Insulated boots, hand warmers essential.`)
     comfort.push("Battery life reduced: bring spares for everything.")
+    comfort.push("Keep telescope warm-up time in mind.")
   } else if (temp < 15) {
-    comfort.push(`Cool ${temp}C: Jacket and warm shoes recommended.`)
+    comfort.push(`COOL ${Math.round(temp)}°C: Jacket and warm shoes recommended.`)
+    comfort.push("Temperature will drop after midnight - bring extra layer.")
   } else if (temp > 25) {
-    comfort.push(`Warm ${temp}C: Insect repellent if near water/woods.`)
+    comfort.push(`WARM ${Math.round(temp)}°C: Insect repellent if near water or woods.`)
+    comfort.push("Stay hydrated. Bring water, not just coffee.")
   }
   
+  if (wind > 15) {
+    comfort.push(`WINDY ${Math.round(wind)}km/h: Wind chill will make it feel colder. Dress accordingly.`)
+  }
+
+  // Astrophotography
   if (photoAdvice.length > 0 && !verdict[0]?.includes('CANCELLED')) {
     equipment.push("ASTROPHOTOGRAPHY CONDITIONS:")
-    photoAdvice.forEach(p => equipment.push(p))
+    photoAdvice.forEach(p => equipment.push(`  ${p}`))
   }
 
+  // ========================================================================
+  // ASSEMBLE FINAL RESPONSE
+  // ========================================================================
+  
   const intros = [
-    "Sky report:",
-    "Stargazing forecast:",
-    "Night sky conditions:",
-    "Astronomy check:",
-    "Zephye sky advisory:",
-    "Observatory report:",
-    "Celestial conditions:"
+    "ASTRONOMY SKY CONDITIONS REPORT",
+    "STARGAZING WEATHER ASSESSMENT",
+    "NIGHT SKY OBSERVING ADVISORY",
+    "ASTRONOMY CONDITIONS ANALYSIS",
+    "OBSERVATORY WEATHER EVALUATION"
   ]
 
-  let response = `${random(intros)} ${city || 'Your location'}\n\n`
+  let response = `${random(intros)}\n`
+  if (city) response += `Location: ${city}\n`
+  if (data._timeLabel) response += `Time: ${data._timeLabel}\n`
+  response += `\n`
   
-  // Show the time context if available
-  if (data._timeLabel) {
-    response += `📅 **Time:** ${data._timeLabel}\n\n`
-  }
+  // Overall verdict
+  response += `=== OVERALL VERDICT ===\n`
+  verdict.forEach(v => response += `  ${v}\n`)
+  response += `\n`
   
-  response += `OVERALL: ${verdict.join(' ')}\n\n`
+  // Sky quality
+  response += `=== SKY QUALITY ===\n`
+  response += `  Cloud Cover: ${Math.round(cloudPercent)}%\n`
+  response += `  Seeing (Pickering): ${seeing}/10 - ${pickeringRating.description}\n`
+  response += `  Transparency: ${transparency}/10\n`
+  response += `  Bortle Class: ${bortleScale} - ${bortle.name}\n`
+  response += `  Limiting Magnitude: ~${bortle.limiting}\n`
+  response += `\n`
   
-  response += `SKY QUALITY:\n`
-  response += `- Cloud Cover: ${cloudPercent}%\n`
-  response += `- Seeing (Pickering): ${seeing}/10 - ${pickeringRating.description}\n`
-  response += `- Transparency: ${transparency}/10\n`
-  response += `- Bortle Class: ${bortleScale} - ${bortle.name}\n`
-  response += `- Limiting Magnitude: ~${bortle.limiting}\n\n`
-  
-  response += `MOON:\n`
-  response += `- Phase: ${moonPhaseName} (${Math.round(moonIllumination)}% illuminated)\n`
+  // Moon
+  response += `=== MOON ===\n`
+  response += `  Phase: ${moonPhaseName}\n`
+  response += `  Illumination: ${Math.round(moonIllumination)}%\n`
   if (moonRiseSet) {
-    if (moonRiseSet.rise) response += `- Rises: ${moonRiseSet.rise}\n`
-    if (moonRiseSet.set) response += `- Sets: ${moonRiseSet.set}\n`
+    if (moonRiseSet.rise) response += `  Rises: ${moonRiseSet.rise}\n`
+    if (moonRiseSet.set) response += `  Sets: ${moonRiseSet.set}\n`
   }
-  response += '\n'
+  response += `\n`
   
+  // Viewing conditions
   if (viewing.length > 0) {
-    viewing.forEach(v => response += `${v}\n`)
-    response += '\n'
+    response += `=== VIEWING CONDITIONS ===\n`
+    viewing.forEach(v => response += `  ${v}\n`)
+    response += `\n`
   }
   
+  // Observing targets
   if (objects.length > 0) {
-    response += `OBSERVING TARGETS:\n`
+    response += `=== OBSERVING TARGETS ===\n`
     objects.forEach(o => response += `${o}\n`)
-    response += '\n'
+    response += `\n`
   }
   
+  // Timing
   if (timing.length > 0) {
-    response += `TIMING:\n`
-    timing.forEach(t => response += `${t}\n`)
-    response += '\n'
+    response += `=== TIMING ===\n`
+    timing.forEach(t => response += `  ${t}\n`)
+    response += `\n`
   }
   
+  // Equipment
   if (equipment.length > 0 && !verdict[0]?.includes('CANCELLED')) {
-    response += `EQUIPMENT:\n`
+    response += `=== EQUIPMENT ===\n`
     equipment.forEach(e => response += `${e}\n`)
-    response += '\n'
+    response += `\n`
   }
   
+  // Observer comfort
   if (comfort.length > 0) {
-    response += `OBSERVER COMFORT:\n`
-    comfort.forEach(c => response += `${c}\n`)
-    response += '\n'
+    response += `=== OBSERVER COMFORT ===\n`
+    comfort.forEach(c => response += `  ${c}\n`)
+    response += `\n`
   }
   
+  // Warnings
   if (warnings.length > 0) {
-    response += `⚠️ **Warnings:**\n`
-    warnings.forEach(w => response += `${w}\n`)
-    response += '\n'
+    response += `=== WARNINGS ===\n`
+    warnings.forEach(w => response += `  ${w}\n`)
+    response += `\n`
   }
   
-  response += `CONDITIONS:\n`
-  response += `- Temperature: ${temp}C (${tempMin || temp - 2}C to ${tempMax || temp + 2}C)\n`
-  response += `- Humidity: ${humidity}%\n`
-  response += `- Wind: ${wind}km/h\n`
-  response += `- Visibility: ${visibility || 10}km\n`
-  if (dewPoint) response += `- Dew Point: ${dewPoint}C (Spread: ${(temp - dewPoint).toFixed(1)}C)\n`
-  response += '\n'
+  // Conditions summary
+  response += `=== CONDITIONS ===\n`
+  response += `  Temperature: ${Math.round(temp)}°C (${Math.round(tempMin || temp - 2)}°C to ${Math.round(tempMax || temp + 2)}°C)\n`
+  response += `  Humidity: ${Math.round(humidity)}%\n`
+  response += `  Wind: ${Math.round(wind)} km/h\n`
+  response += `  Visibility: ${visibility || 10} km\n`
+  if (dewPoint) response += `  Dew Point: ${Math.round(dewPoint)}°C (Spread: ${(temp - dewPoint).toFixed(1)}°C)\n`
+  if (aqi) response += `  AQI: ${aqi}\n`
+  if (precipitationProb > 0) response += `  Rain chance: ${Math.round(precipitationProb)}%\n`
+  response += `\n`
   
-  response += `💡 **Bottom Line:**\n`
+  // Bottom line
+  response += `=== BOTTOM LINE ===\n`
   if (cloudPercent > 80 || isRainy) {
-    response += `Keep telescope inside tonight. Use time for astronomy reading/planning.\n`
+    response += `  Keep telescope inside tonight. Use time for astronomy reading and planning.\n`
   } else if (cloudPercent > 40) {
-    response += `Risky conditions. Quick setup for bright objects only.\n`
+    response += `  Risky conditions. Quick setup for bright objects only.\n`
   } else if (seeing <= 3 && transparency >= 6 && moonIllumination < 30) {
-    response += `EXCEPTIONAL CONDITIONS. Drop everything and get outside.\n`
+    response += `  EXCEPTIONAL CONDITIONS. Drop everything and get outside.\n`
   } else if (moonIllumination > 80) {
-    response += `Good night for lunar and planetary. Skip the faint stuff.\n`
+    response += `  Good night for lunar and planetary. Skip the faint stuff.\n`
   } else {
-    response += `Worth setting up. Good astronomy conditions await.\n`
+    response += `  Worth setting up. Good astronomy conditions await.\n`
   }
   
   const wisdom = [
     "The universe is under no obligation to make sense to you. - Neil deGrasse Tyson",
     "Somewhere, something incredible is waiting to be known. - Carl Sagan",
     "Keep looking up... that is the secret of life. - Snoopy",
-    "Every star may be a sun to someone. - Carl Sagan"
+    "Every star may be a sun to someone. - Carl Sagan",
+    "We are a way for the cosmos to know itself. - Carl Sagan",
+    "The night sky is the only place where the past, present, and future all exist at once."
   ]
-  response += `\n${random(wisdom)}`
-
+  response += `\n--- WISDOM ---\n${random(wisdom)}`
+  
   return response
 }
+
+// ============================================================================
+// EXPORT HELPER FUNCTIONS
+// ============================================================================
 
 export const getMeteorShowerInfo = getMeteorShowerCalendar
 export const getPlanetVisibilityDetailed = getDetailedPlanetVisibility
 export const getDeepSkyObjects = getDeepSkyObjectVisibility
 export const getAstrophotographyConditions = getAstrophotographyAdvice
 export const getDewManagement = getDewAdvice
+export const getEquipmentRecommendationsExport = getEquipmentRecommendations
+export const getTwilightPeriodsExport = getTwilightPeriods
 
 export default getStargazingAdvice
