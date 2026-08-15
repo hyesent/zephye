@@ -21,69 +21,54 @@ import {
 // ============================================================================
 
 export const sampleQuestions = [
+  // DOGS
   "Is it safe to walk my dog?",
-  "Should I take my cat outside?",
-  "Can my pet get heat stroke?",
-  "Is the pavement too hot?",
-  "Should I leave my dog in the car?",
-  "Is it too cold for my pet?",
   "Can my dog play outside?",
-  "Will my pet get sunburn?",
-  "Is air quality bad for pets?",
-  "Can I take my dog hiking today?",
-  "Should I bring my dog to the beach?",
-  "Is it safe for my puppy outside?",
-  "Can my senior dog go for a walk?",
-  "Should my cat stay indoors today?",
-  "Is it too hot for my rabbit?",
-  "Can my bird go outside in this weather?",
-  "Is it safe for my horse to be ridden?",
-  "Should I blanket my horse tonight?",
-  "Can my guinea pig go in outdoor run?",
-  "Is my chicken coop weather-safe?",
-  "Should I bring my turtle inside?",
-  "Can I take my ferret for a walk?",
-  "Is it too humid for my chinchilla?",
-  "Should I worry about my fish pond freezing?",
-  "Is my livestock safe in this storm?",
-  "Can I leave my dog in the yard today?",
-  "Should I worry about ticks today?",
-  "Is it flea weather?",
-  "Will my dog get hay fever?",
-  "Should I use dog sunscreen?",
-  "Is it too windy for a small dog?",
-  "Can my dog swim today?",
-  "Is the water too cold for my dog?",
-  "Should I worry about blue-green algae?",
-  "Is it snake weather?",
-  "Should I worry about coyotes today?",
-  "Will fireworks weather affect my pet?",
-  "Is it good weather for dog park?",
-  "Should I take my reactive dog out?",
-  "Is it too crowded at the park (weather-wise)?",
   "Can I jog with my dog?",
   "Should I bike with my dog?",
   "Is it safe for dog agility outside?",
   "Can I do nose work outdoors?",
   "Is it good weather for herding practice?",
   "Should I cancel my dog's grooming appointment?",
-  "Will my dog's arthritis act up?",
+  "Can I take my dog to the beach?",
+  "Is it safe for my puppy outside?",
+  "Can my senior dog go for a walk?",
+  "Is it too hot for my dog?",
+  "Is it too cold for my dog?",
   "Should I give my dog extra water today?",
-  "Is my cat's asthma worse today?",
-  "Will my pet's allergies flare?",
-  "Should I use pet-safe ice melt?",
-  "Is antifreeze a risk today?",
-  "Will mushrooms be growing (toxic to pets)?",
-  "Should I worry about toads/frogs?",
-  "Is it good weather for pet photos?",
-  "Can I have a dog birthday party outside?",
-  "Should I take my dog to the outdoor market?",
-  "Is it safe for pet-sitting outdoor?",
-  "Can my dog sleep outside tonight?",
-  "Should I leave the dog door open?",
+  "Will my dog's arthritis act up?",
+  "Is it good weather for dog park?",
+  "Should I take my reactive dog out?",
+  "Is it too crowded at the park weather-wise?",
+  
+  // CATS
+  "Should I take my cat outside?",
+  "Should my cat stay indoors today?",
   "Is my outdoor cat safe tonight?",
   "Should I bring barn cats inside?",
-  "Is the barn safe in this weather?",
+  "Is my cat's asthma worse today?",
+  
+  // SMALL PETS
+  "Is it too hot for my rabbit?",
+  "Can my guinea pig go in outdoor run?",
+  "Should I bring my turtle inside?",
+  "Can I take my ferret for a walk?",
+  "Is it too humid for my chinchilla?",
+  
+  // BIRDS
+  "Can my bird go outside in this weather?",
+  "Is my aviary weatherproof?",
+  "Can I release my rehabbed wildlife?",
+  "Will migrating birds stop through?",
+  "Should I put out extra bird feed?",
+  "Is my bird bath frozen?",
+  "Should I bring hummingbird feeders in?",
+  
+  // HORSES & LIVESTOCK
+  "Is it safe for my horse to be ridden?",
+  "Should I blanket my horse tonight?",
+  "Is my chicken coop weather-safe?",
+  "Is my livestock safe in this storm?",
   "Can I turn out my horses?",
   "Should I stall my horses?",
   "Is it good hay-making weather?",
@@ -97,102 +82,119 @@ export const sampleQuestions = [
   "Will predators be more active?",
   "Should I bring my goats in?",
   "Is it good shearing weather?",
-  "Can I move my beehive today?",
-  "Will my bees be aggressive?",
-  "Should I open the hive?",
+  
+  // PONDS & FISH
+  "Should I worry about my fish pond freezing?",
   "Is my pond oxygen level OK?",
   "Should I run the pond aerator?",
   "Will my koi be OK in this heat?",
   "Should I cover my pond?",
-  "Is my aviary weatherproof?",
-  "Can I release my rehabbed wildlife?",
-  "Will migrating birds stop through?",
-  "Should I put out extra bird feed?",
-  "Is my bird bath frozen?",
-  "Should I bring hummingbird feeders in?"
+  
+  // HAZARDS
+  "Should I worry about ticks today?",
+  "Is it flea weather?",
+  "Will my dog get hay fever?",
+  "Should I use dog sunscreen?",
+  "Is it too windy for a small dog?",
+  "Can my dog swim today?",
+  "Is the water too cold for my dog?",
+  "Should I worry about blue-green algae?",
+  "Is it snake weather?",
+  "Should I worry about coyotes today?",
+  "Will fireworks weather affect my pet?",
+  "Is antifreeze a risk today?",
+  "Will mushrooms be growing toxic to pets?",
+  "Should I worry about toads and frogs?",
+  
+  // BEES
+  "Can I move my beehive today?",
+  "Will my bees be aggressive?",
+  "Should I open the hive?"
 ];
 
 // ============================================================================
-// PET SPECIES DATABASE
+// ENHANCED PET SPECIES DATABASE
 // ============================================================================
 
 const PET_SPECIES = {
   dog: {
     heatRisk: {
-      threshold: 24,           // °C where heat stress begins
-      highRisk: 30,           // Dangerous without precautions
-      emergency: 35,           // Life-threatening
+      threshold: 24,
+      highRisk: 30,
+      emergency: 35,
       factors: [
-        'Dogs cool primarily through panting (no sweating except paw pads)',
-        'Body temperature > 41°C = organ damage begins',
-        'Heat stroke mortality rate: 50% even with treatment',
-        'Recovery: dogs that survive may have permanent organ damage'
+        'Dogs cool primarily through panting, no sweating except paw pads',
+        'Body temperature above 41°C means organ damage begins',
+        'Heat stroke mortality rate is 50 percent even with treatment',
+        'Recovery: dogs that survive may have permanent organ damage',
+        'Flat-faced breeds cannot pant effectively and are at highest risk'
       ]
     },
     coldRisk: {
-      threshold: 4,            // Start needing coat for short-haired
-      highRisk: -7,           // Dangerous for small/short-haired
-      emergency: -15,          // Life-threatening for most
+      threshold: 4,
+      highRisk: -7,
+      emergency: -15,
       factors: [
-        'Frostbite: ears, tail, paws most vulnerable',
-        'Hypothermia: shivering → lethargy → collapse',
-        'Small dogs lose heat faster (higher surface area to volume ratio)',
-        'Wet fur = 5x faster heat loss'
+        'Frostbite affects ears, tail, and paws most',
+        'Hypothermia: shivering leads to lethargy then collapse',
+        'Small dogs lose heat faster due to higher surface area to volume ratio',
+        'Wet fur means 5x faster heat loss',
+        'Short-haired breeds need coats below 10°C'
       ]
     },
     breedSpecific: {
       brachycephalic: {
-        breeds: ['Pug', 'Bulldog', 'Boxer', 'Boston Terrier', 'Shih Tzu', 'Pekingese'],
-        heatRisk: 'EXTREME - Cannot pant effectively. Heat stroke in 15 min above 30°C.',
+        breeds: ['Pug', 'Bulldog', 'Boxer', 'Boston Terrier', 'Shih Tzu', 'Pekingese', 'French Bulldog'],
+        heatRisk: 'EXTREME - Cannot pant effectively. Heat stroke in 15 minutes above 30°C.',
         coldRisk: 'Moderate - Short coat, but respiratory issues in cold dry air.',
-        special: 'NEVER exercise in heat. Air conditioning essential above 28°C.'
+        special: 'Never exercise in heat. Air conditioning essential above 28°C.'
       },
       doubleCoated: {
-        breeds: ['Husky', 'Malamute', 'Samoyed', 'Akita', 'Chow Chow', 'Pomeranian'],
+        breeds: ['Husky', 'Malamute', 'Samoyed', 'Akita', 'Chow Chow', 'Pomeranian', 'Shepherd'],
         heatRisk: 'HIGH - Coat insulates both ways but designed for cold. Overheat above 24°C.',
         coldRisk: 'LOW - Built for cold. Can tolerate well below freezing.',
-        special: 'DO NOT SHAVE. Coat protects from heat AND cold. Damaged undercoat won\'t regrow properly.'
+        special: 'Do not shave. Coat protects from heat AND cold. Damaged undercoat will not regrow properly.'
       },
       smallBreed: {
-        breeds: ['Chihuahua', 'Toy Poodle', 'Yorkie', 'Maltese', 'Papillon'],
+        breeds: ['Chihuahua', 'Toy Poodle', 'Yorkie', 'Maltese', 'Papillon', 'Shih Tzu'],
         heatRisk: 'Moderate - Small body, but can overheat if overexerted.',
         coldRisk: 'HIGH - Lose heat rapidly. Sweater needed below 10°C, coat below 4°C.',
         special: 'Wind chill affects small dogs disproportionately.'
       },
       largeBreed: {
-        breeds: ['Great Dane', 'Mastiff', 'St. Bernard', 'Newfoundland'],
+        breeds: ['Great Dane', 'Mastiff', 'St. Bernard', 'Newfoundland', 'Rottweiler'],
         heatRisk: 'HIGH - Large body mass retains heat. Overheat quickly with exercise.',
         coldRisk: 'LOW to Moderate - Large body retains heat. Cold tolerant.',
-        special: 'Bloat risk: no exercise 1 hour before/2 hours after eating. Heat increases risk.'
+        special: 'Bloat risk: no exercise 1 hour before or 2 hours after eating. Heat increases risk.'
       },
       sighthound: {
-        breeds: ['Greyhound', 'Whippet', 'Italian Greyhound', 'Saluki'],
-        heatRisk: 'Moderate - Lean body, but thin coat = sunburn risk.',
+        breeds: ['Greyhound', 'Whippet', 'Italian Greyhound', 'Saluki', 'Borzoi'],
+        heatRisk: 'Moderate - Lean body, but thin coat means sunburn risk.',
         coldRisk: 'HIGH - No body fat, thin coat. Sweater essential below 15°C.',
-        special: 'Thin skin tears easily. Sunburn on nose, ears, belly.'
+        special: 'Thin skin tears easily. Sunburn on nose, ears, and belly.'
       },
       senior: {
-        age: '7+ years (varies by breed)',
-        heatRisk: 'HIGH - Reduced thermoregulation. Arthritis worsens in cold/damp.',
+        age: '7+ years varies by breed',
+        heatRisk: 'HIGH - Reduced thermoregulation. Arthritis worsens in cold and damp.',
         coldRisk: 'HIGH - Less muscle mass, slower metabolism. Orthopedic pain increases.',
-        special: 'Shorter, slower walks. Multiple brief outings > one long walk.'
+        special: 'Shorter, slower walks. Multiple brief outings are better than one long walk.'
       },
       puppy: {
         age: 'Under 1 year',
-        heatRisk: 'HIGH - Can\'t regulate temperature well. Overheat and dehydrate faster.',
+        heatRisk: 'HIGH - Cannot regulate temperature well. Overheat and dehydrate faster.',
         coldRisk: 'HIGH - Little body fat. Short outdoor time only.',
-        special: 'No forced exercise on hard surfaces (growing joints). No long walks.'
+        special: 'No forced exercise on hard surfaces due to growing joints. No long walks.'
       }
     },
     pavementSafety: {
-      air25: { pavement: 52, risk: 'Burns in 60 seconds', action: 'NO WALK on pavement' },
-      air30: { pavement: 57, risk: 'Burns in 30 seconds', action: 'GRASS ONLY, booties recommended' },
-      air35: { pavement: 62, risk: 'Burns in 5 seconds', action: 'DO NOT GO OUTSIDE' }
+      air25: { pavement: 52, risk: 'Burns in 60 seconds', action: 'No walk on pavement' },
+      air30: { pavement: 57, risk: 'Burns in 30 seconds', action: 'Grass only, booties recommended' },
+      air35: { pavement: 62, risk: 'Burns in 5 seconds', action: 'Do not go outside' }
     },
     walkSchedule: {
       hot: 'Before 8am or after 8pm. 5-10 minute potty breaks midday.',
-      cold: 'Midday warmest hours (11am-2pm). Shorter walks, multiple outings.',
-      normal: 'Normal schedule. Still bring water on walks > 30 min.'
+      cold: 'Midday warmest hours 11am-2pm. Shorter walks, multiple outings.',
+      normal: 'Normal schedule. Still bring water on walks over 30 minutes.'
     }
   },
   cat: {
@@ -202,9 +204,10 @@ const PET_SPECIES = {
       emergency: 38,
       factors: [
         'Cats sweat through paw pads only',
-        'Cats hide illness - watch for: panting (NOT normal in cats!), lethargy, vomiting',
-        'Outdoor cats: provide shaded hiding spots, multiple water sources',
-        'Indoor cats: AC, fans, cooling mats, ice cubes in water'
+        'Cats hide illness - watch for panting which is NOT normal in cats',
+        'Also watch for lethargy and vomiting',
+        'Outdoor cats need shaded hiding spots and multiple water sources',
+        'Indoor cats need AC, fans, cooling mats, and ice cubes in water'
       ]
     },
     coldRisk: {
@@ -212,17 +215,17 @@ const PET_SPECIES = {
       highRisk: -7,
       emergency: -15,
       factors: [
-        'Outdoor cats: need insulated shelter (straw, not hay/blankets which hold moisture)',
-        'Frostbite: ear tips and paw pads first',
-        'Antifreeze: sweet taste, 1 teaspoon fatal. Kidney failure in 24-72 hours.',
-        'Car engines: cats crawl into warm engines. Honk/bang hood before starting car.'
+        'Outdoor cats need insulated shelter with straw, not hay or blankets which hold moisture',
+        'Frostbite affects ear tips and paw pads first',
+        'Antifreeze has sweet taste, 1 teaspoon is fatal. Kidney failure in 24-72 hours.',
+        'Car engines: cats crawl into warm engines. Honk or bang hood before starting car.'
       ]
     },
     outdoorSafety: [
       'Keep cats indoors during extreme weather',
-      'Thunderstorms: cats hide, may get trapped. Bring inside before storm.',
-      'Snow: cats can get lost (scent markers covered). Keep indoors.',
-      'Heat: outdoor cats need shade + water. Check hiding spots aren\'t hot (sheds, cars).'
+      'Thunderstorms: cats hide and may get trapped. Bring inside before storm.',
+      'Snow: cats can get lost as scent markers are covered. Keep indoors.',
+      'Heat: outdoor cats need shade and water. Check hiding spots are not hot like sheds or cars.'
     ]
   },
   rabbit: {
@@ -231,11 +234,11 @@ const PET_SPECIES = {
       highRisk: 28,
       emergency: 32,
       factors: [
-        'Rabbits CANNOT sweat or pant effectively',
-        'Heat stroke is #1 cause of sudden rabbit death in summer',
+        'Rabbits cannot sweat or pant effectively',
+        'Heat stroke is the number one cause of sudden rabbit death in summer',
         'Ears are radiators: check ear temperature',
-        'Cool: frozen water bottles in enclosure, ceramic tiles to lie on',
-        'NEVER put rabbit in cold water (shock)'
+        'Cooling methods: frozen water bottles in enclosure, ceramic tiles to lie on',
+        'Never put rabbit in cold water as it causes shock'
       ]
     },
     coldRisk: {
@@ -243,10 +246,10 @@ const PET_SPECIES = {
       highRisk: -5,
       emergency: -15,
       factors: [
-        'Rabbits handle cold better than heat IF dry and draft-free',
-        'Wet + cold = deadly. Hutch must be waterproof.',
-        'Provide extra hay for burrowing. Cover hutch with blanket/tarp.',
-        'Check water bottle hasn\'t frozen multiple times daily'
+        'Rabbits handle cold better than heat if dry and draft-free',
+        'Wet plus cold is deadly. Hutch must be waterproof.',
+        'Provide extra hay for burrowing. Cover hutch with blanket or tarp.',
+        'Check water bottle has not frozen multiple times daily'
       ]
     }
   },
@@ -256,11 +259,11 @@ const PET_SPECIES = {
       highRisk: 32,
       emergency: 38,
       factors: [
-        'Birds overheat VERY quickly (high metabolism)',
+        'Birds overheat very quickly due to high metabolism',
         'Signs: wings held away from body, panting, lethargy',
-        'Mist with room temp water (not cold). Feet in cool water.',
-        'Move cage away from windows (greenhouse effect)',
-        'Outdoor aviaries: shade cloth, misters, multiple water sources'
+        'Mist with room temperature water not cold. Feet in cool water.',
+        'Move cage away from windows to avoid greenhouse effect',
+        'Outdoor aviaries need shade cloth, misters, and multiple water sources'
       ]
     },
     coldRisk: {
@@ -268,17 +271,17 @@ const PET_SPECIES = {
       highRisk: 0,
       emergency: -10,
       factors: [
-        'Tropical birds (parrots): cannot tolerate cold. Bring indoors below 15°C.',
-        'Drafts deadly. Cover cage at night.',
-        'Heated perch or panel heater (not lamps - fire risk)',
-        'Increased calorie needs in cold'
+        'Tropical birds like parrots cannot tolerate cold. Bring indoors below 15°C.',
+        'Drafts are deadly. Cover cage at night.',
+        'Heated perch or panel heater recommended, not lamps which are fire risk',
+        'Increased calorie needs in cold weather'
       ]
     },
     airQuality: [
-      'Birds EXTREMELY sensitive to air quality (canaries in coal mines)',
-      'Teflon/PTFE: fumes from overheated non-stick pans = DEADLY',
-      'Scented candles, air fresheners, cleaning products = respiratory distress',
-      'AQI > 100: bring outdoor birds inside. Close windows.',
+      'Birds are EXTREMELY sensitive to air quality, like canaries in coal mines',
+      'Teflon and PTFE: fumes from overheated non-stick pans are DEADLY',
+      'Scented candles, air fresheners, and cleaning products cause respiratory distress',
+      'AQI over 100: bring outdoor birds inside. Close windows.',
       'Wildfire smoke: birds show symptoms first. Bring inside with air purifier.'
     ]
   },
@@ -288,11 +291,11 @@ const PET_SPECIES = {
       highRisk: 30,
       emergency: 35,
       factors: [
-        'Horses cool primarily through sweating (can lose 15L/hour)',
-        'Heat + humidity > 150 (temp + humidity) = cooling impaired',
-        'Signs: respiratory rate > 40/min, rectal temp > 39.5°C, lethargy',
-        'Cool: hose with cold water (myth: cold water does NOT cause tying up)',
-        'Anhidrosis: some horses stop sweating in heat = EMERGENCY'
+        'Horses cool primarily through sweating, can lose 15L per hour',
+        'Heat plus humidity over 150 (temp plus humidity) means cooling is impaired',
+        'Signs: respiratory rate over 40 per minute, rectal temp over 39.5°C, lethargy',
+        'Cooling: hose with cold water. Cold water does NOT cause tying up',
+        'Anhidrosis: some horses stop sweating in heat. This is EMERGENCY.'
       ]
     },
     coldRisk: {
@@ -300,23 +303,23 @@ const PET_SPECIES = {
       highRisk: -10,
       emergency: -20,
       factors: [
-        'Horses tolerate cold well IF dry and out of wind',
-        'Blanketing: varies by coat, body condition, shelter',
-        'Clipped horses: blanket below 10°C',
-        'Hairy/unclipped: may not need blanket even in snow if shelter available',
-        'Check water: horses drink 30-50L/day. Frozen water = impaction colic.',
-        'Snow is NOT a water source (body heat to melt = too much energy)'
+        'Horses tolerate cold well if dry and out of wind',
+        'Blanketing: varies by coat, body condition, and shelter',
+        'Clipped horses need blanket below 10°C',
+        'Hairy or unclipped may not need blanket even in snow if shelter is available',
+        'Check water: horses drink 30-50L per day. Frozen water means impaction colic.',
+        'Snow is NOT a water source as body heat to melt uses too much energy'
       ]
     },
     colicRisk: [
-      'Weather changes: rapid temp drops increase colic risk',
+      'Weather changes: rapid temperature drops increase colic risk',
       'Barometric pressure drops: impaction colic more common',
-      'Ensure constant access to water (heated buckets in winter)',
-      'Don\'t feed on sand/dirt (sand colic)'
+      'Ensure constant access to water using heated buckets in winter',
+      'Do not feed on sand or dirt to avoid sand colic'
     ],
     riding: [
       'Heat: ride early morning only. Cool down thoroughly.',
-      'Cold: warm up slowly. Cooler/walker to dry sweat before turnout.',
+      'Cold: warm up slowly. Cooler or walker to dry sweat before turnout.',
       'Wet: slippery footing. No galloping on wet grass.',
       'Wind: spooky behavior. Be prepared for reactivity.'
     ]
@@ -327,11 +330,11 @@ const PET_SPECIES = {
       highRisk: 32,
       emergency: 38,
       factors: [
-        'Chickens can\'t sweat. Pant and hold wings away from body.',
-        'Above 38°C: hens stop laying, can die within hours',
-        'Cool: misters (not soaking), frozen water bottles in coop, electrolytes in water',
-        'Shade ESSENTIAL. Coop ventilation critical.',
-        'Pale combs/wattles = heat stress. Dark purple = emergency.'
+        'Chickens cannot sweat. They pant and hold wings away from body.',
+        'Above 38°C: hens stop laying and can die within hours',
+        'Cooling methods: misters not soaking, frozen water bottles in coop, electrolytes in water',
+        'Shade is ESSENTIAL. Coop ventilation is critical.',
+        'Pale combs and wattles mean heat stress. Dark purple means emergency.'
       ]
     },
     coldRisk: {
@@ -340,10 +343,10 @@ const PET_SPECIES = {
       emergency: -25,
       factors: [
         'Chickens handle cold better than heat',
-        'Frostbite: combs and wattles. Apply petroleum jelly for protection.',
-        'Coop: draft-free but VENTILATED (moisture buildup = frostbite + respiratory disease)',
-        'Heated water base essential',
-        'Deep litter method: generates heat through composting'
+        'Frostbite affects combs and wattles. Apply petroleum jelly for protection.',
+        'Coop: draft-free but VENTILATED. Moisture buildup causes frostbite and respiratory disease.',
+        'Heated water base is essential',
+        'Deep litter method generates heat through composting'
       ]
     }
   },
@@ -354,10 +357,10 @@ const PET_SPECIES = {
       emergency: 35,
       factors: [
         'Warm water holds less oxygen',
-        'Fish gasping at surface = oxygen depletion',
-        'Add aerator/fountain. Add shade plants or shade cloth.',
-        'Partial water change with cooler water (slowly!)',
-        'Feed less (metabolism increases but oxygen is low)'
+        'Fish gasping at surface means oxygen depletion',
+        'Add aerator or fountain. Add shade plants or shade cloth.',
+        'Partial water change with cooler water slowly',
+        'Feed less as metabolism increases but oxygen is low'
       ]
     },
     coldRisk: {
@@ -365,175 +368,211 @@ const PET_SPECIES = {
       highRisk: 0,
       emergency: -5,
       factors: [
-        'Pond must be deep enough not to freeze solid (90cm+ for koi)',
-        'Keep hole in ice for gas exchange (de-icer or floating heater)',
-        'NEVER smash ice (shock waves kill fish)',
-        'Stop feeding below 10°C (metabolism too slow to digest)'
+        'Pond must be deep enough not to freeze solid, 90cm+ for koi',
+        'Keep hole in ice for gas exchange using de-icer or floating heater',
+        'Never smash ice as shock waves kill fish',
+        'Stop feeding below 10°C as metabolism is too slow to digest'
       ]
     }
   }
 };
 
 // ============================================================================
-// TOXIC PLANTS & ENVIRONMENTAL HAZARDS
+// ENHANCED TOXIC PLANTS & ENVIRONMENTAL HAZARDS
 // ============================================================================
 
 const SEASONAL_HAZARDS = {
   spring: [
     'Lilies: FATAL to cats. All parts, even pollen, even vase water.',
-    'Tulips/daffodils: bulbs toxic to dogs that dig.',
-    'Fertilizers/herbicides: keep pets off treated lawns 24-48 hours.',
+    'Tulips and daffodils: bulbs toxic to dogs that dig.',
+    'Fertilizers and herbicides: keep pets off treated lawns for 24-48 hours.',
     'Cocoa mulch: smells like chocolate, toxic to dogs.',
-    'Baby rabbits/wildlife: dogs may find nests. Supervise.',
-    'Snakes: emerging from hibernation. Snake avoidance training.'
+    'Baby rabbits and wildlife: dogs may find nests. Supervise.',
+    'Snakes: emerging from hibernation. Snake avoidance training recommended.'
   ],
   summer: [
-    'Blue-green algae: DEADLY. Don\'t let dogs swim in scummy water.',
-    'Toads/frogs: some species toxic. Foaming at mouth = rinse immediately.',
-    'Snake bites: rattlesnakes, copperheads active. Know nearest emergency vet.',
-    'Foxtails/grass awns: burrow into skin, ears, nose. Check after walks.',
-    'BBQ hazards: corn cobs (intestinal blockage), bones (splinter), onions/garlic (toxic).',
+    'Blue-green algae: DEADLY. Do not let dogs swim in scummy water.',
+    'Toads and frogs: some species are toxic. Foaming at mouth means rinse immediately.',
+    'Snake bites: rattlesnakes and copperheads active. Know nearest emergency vet.',
+    'Foxtails and grass awns: burrow into skin, ears, and nose. Check after walks.',
+    'BBQ hazards: corn cobs cause intestinal blockage, bones splinter, onions and garlic are toxic.',
     'Hot asphalt: severe paw burns. Test with back of hand.',
-    'Fireworks: July/August. Many pets panic. Create safe space indoors.'
+    'Fireworks: July and August. Many pets panic. Create safe space indoors.'
   ],
   fall: [
     'Mushrooms: many toxic varieties emerge. Remove from yard.',
-    'Acorns/oak leaves: toxic to dogs in quantity (kidney damage).',
+    'Acorns and oak leaves: toxic to dogs in quantity causing kidney damage.',
     'Rodenticides: people put out rat poison in fall. DEADLY. Know signs.',
-    'Antifreeze: people winterize cars. Sweet taste. 1 tsp fatal to cats.',
-    'Leaf piles: can hide wildlife (snakes), sharp objects, mold.',
-    'Compost: keep covered. Moldy food = tremorgenic mycotoxins (seizures).'
+    'Antifreeze: people winterize cars. Sweet taste. 1 teaspoon fatal to cats.',
+    'Leaf piles: can hide wildlife like snakes, sharp objects, and mold.',
+    'Compost: keep covered. Moldy food causes tremorgenic mycotoxins and seizures.'
   ],
   winter: [
-    'Ice melt/salt: chemical burns on paws. Wipe feet after walks.',
+    'Ice melt and salt: chemical burns on paws. Wipe feet after walks.',
     'Antifreeze: peak danger. Clean all spills. Store securely.',
     'Frozen water: dogs can fall through ice. Keep leashed near ponds.',
-    'Hypothermia: wet fur in cold = dangerous. Dry thoroughly after walks.',
-    'Space heaters: fire risk. Pets knock them over.',
-    'Holiday plants: poinsettia (irritant), mistletoe (toxic), holly (toxic).'
+    'Hypothermia: wet fur in cold is dangerous. Dry thoroughly after walks.',
+    'Space heaters: fire risk. Pets can knock them over.',
+    'Holiday plants: poinsettia is irritant, mistletoe is toxic, holly is toxic.'
   ]
 };
 
 // ============================================================================
-// PARASITE ACTIVITY PREDICTOR
+// ENHANCED PARASITE ACTIVITY PREDICTOR
 // ============================================================================
 
 function getParasiteRisk(data) {
   const { temp, humidity, season, precipitation } = data;
   const risks = [];
+  const warnings = [];
   
   // Fleas
   if (temp > 13 && humidity > 50) {
-    risks.push("FLEAS: ACTIVE. Ideal breeding conditions.");
-    risks.push("• Fleas thrive 21-30°C with 70%+ humidity");
-    risks.push("• One flea can lay 50 eggs/day. Infestation in 3 weeks.");
-    risks.push("• Year-round prevention recommended even in winter (indoor heating)");
+    risks.push(`FLEAS: ACTIVE. Ideal breeding conditions at ${Math.round(temp)}°C.`);
+    risks.push('  - Fleas thrive at 21-30°C with 70%+ humidity');
+    risks.push('  - One flea can lay 50 eggs per day. Infestation in 3 weeks.');
+    risks.push('  - Year-round prevention recommended even in winter due to indoor heating');
+    warnings.push('Flea prevention is essential. Check pets regularly.');
   } else if (temp < 5) {
-    risks.push("Fleas: Outdoor activity LOW. But indoor fleas persist year-round.");
+    risks.push('Fleas: Outdoor activity LOW. But indoor fleas persist year-round.');
   }
   
   // Ticks
   if (temp > 4 && humidity > 40) {
-    risks.push("TICKS: ACTIVE. Ticks quest whenever above 4°C.");
-    risks.push("• Peak activity: spring and fall");
-    risks.push("• Check dogs thoroughly after walks (ears, between toes, groin)");
-    risks.push("• Tick-borne diseases: Lyme, Ehrlichia, Anaplasma. Preventative essential.");
-    risks.push("• Save removed ticks for vet identification if illness develops.");
+    risks.push(`TICKS: ACTIVE. Ticks quest whenever above 4°C.`);
+    risks.push('  - Peak activity: spring and fall');
+    risks.push('  - Check dogs thoroughly after walks, especially ears, between toes, and groin');
+    risks.push('  - Tick-borne diseases: Lyme, Ehrlichia, Anaplasma. Preventative essential.');
+    risks.push('  - Save removed ticks for vet identification if illness develops.');
+    warnings.push('Daily tick checks are essential. Use tick prevention year-round.');
   } else if (temp < 0) {
-    risks.push("Ticks: Low activity. But can activate on warm winter days.");
+    risks.push('Ticks: Low activity. But can activate on warm winter days.');
   }
   
   // Mosquitoes / Heartworm
-  if (temp > 15 && humidity > 50 && precipitation > 0) {
-    risks.push("MOSQUITOES: ACTIVE. Heartworm transmission risk.");
-    risks.push("• Standing water = breeding. Dump any containers in yard.");
-    risks.push("• Heartworm: transmitted by single mosquito bite. Fatal if untreated.");
-    risks.push("• Monthly preventative year-round recommended (even indoor pets).");
+  if (temp > 15 && humidity > 50 && (precipitation || 0) > 0) {
+    risks.push(`MOSQUITOES: ACTIVE. Heartworm transmission risk.`);
+    risks.push('  - Standing water means breeding. Dump any containers in yard.');
+    risks.push('  - Heartworm: transmitted by single mosquito bite. Fatal if untreated.');
+    risks.push('  - Monthly preventative year-round recommended even for indoor pets.');
+    warnings.push('Heartworm prevention is critical. One bite can transmit the disease.');
   }
   
   // Intestinal parasites
-  if (temp > 10 && precipitation > 0) {
-    risks.push("INTESTINAL PARASITES: Ideal transmission conditions.");
-    risks.push("• Giardia, coccidia: spread in wet conditions");
-    risks.push("• Don't let pets drink from puddles, ponds, streams");
-    risks.push("• Pick up feces promptly. Eggs become infective in 24-48 hours.");
+  if (temp > 10 && (precipitation || 0) > 0) {
+    risks.push('INTESTINAL PARASITES: Ideal transmission conditions.');
+    risks.push('  - Giardia and coccidia spread in wet conditions');
+    risks.push('  - Do not let pets drink from puddles, ponds, or streams');
+    risks.push('  - Pick up feces promptly. Eggs become infective in 24-48 hours.');
   }
   
-  return risks;
+  return { risks, warnings };
 }
 
 // ============================================================================
-// PAVEMENT SAFETY CALCULATOR
+// ENHANCED PAVEMENT SAFETY CALCULATOR
 // ============================================================================
 
 function getPavementSafety(data) {
   const { temp, sunPosition, condition } = data;
   const advice = [];
+  const warnings = [];
+  let riskLevel = 'low';
   
-  // Multiple studies show pavement can be 20-30°C hotter than air
   const pavementTemp = getPavementTemp(temp, condition);
   const inSun = condition === 'clear' && (sunPosition === 'midday' || sunPosition === 'afternoon');
   
-  advice.push(`🛣️ PAVEMENT TEMPERATURE: ~${pavementTemp}°C`);
+  advice.push(`PAVEMENT TEMPERATURE: approximately ${pavementTemp}°C`);
   
-  if (pavementTemp > 52) {
-    advice.push("🚨 EXTREME DANGER: Pavement burns paws in SECONDS.");
-    advice.push("• DO NOT walk on asphalt, concrete, brick, or sand");
-    advice.push("• GRASS ONLY. Even then, check grass temperature (can be hot too)");
-    advice.push("• Booties may not help (heat transfers through, paws sweat)");
-    advice.push("• Walk before sunrise or after sunset when pavement has cooled");
-    advice.push("• 7-second rule: back of hand on pavement. If too hot for 7 sec = too hot for paws");
-  } else if (pavementTemp > 42) {
-    advice.push("⚠️ DANGER: Pavement can burn paws in 1-5 minutes.");
-    advice.push("• Walk on grass or use high-quality booties");
-    advice.push("• Check paws every 5 minutes: redness, blisters, limping = go home immediately");
-    advice.push("• Walk early morning (before 8am) or evening (after 7pm)");
-    advice.push("• Asphalt hottest, concrete slightly cooler, grass coolest");
-  } else if (pavementTemp > 35) {
-    advice.push("CAUTION: Pavement is warm. Comfortable for calloused paws but check sensitive dogs.");
-    advice.push("• Puppies, senior dogs, dogs with paw injuries: use booties or stay on grass");
-    advice.push("• Dark asphalt significantly hotter than light concrete");
+  if (pavementTemp > 55) {
+    riskLevel = 'extreme';
+    warnings.push('EXTREME DANGER: Pavement burns paws in SECONDS');
+    advice.push('  - Do NOT walk on asphalt, concrete, brick, or sand');
+    advice.push('  - GRASS ONLY. Even then, check grass temperature as it can be hot too');
+    advice.push('  - Booties may not help as heat transfers through and paws sweat');
+    advice.push('  - Walk before sunrise or after sunset when pavement has cooled');
+    advice.push('  - 7-second rule: back of hand on pavement. If too hot for 7 seconds, too hot for paws');
+    
+  } else if (pavementTemp > 48) {
+    riskLevel = 'high';
+    warnings.push('DANGER: Pavement can burn paws in 1-5 minutes');
+    advice.push('  - Walk on grass or use high-quality booties');
+    advice.push('  - Check paws every 5 minutes for redness, blisters, or limping');
+    advice.push('  - Walk early morning before 8am or evening after 7pm');
+    advice.push('  - Asphalt is hottest, concrete is slightly cooler, grass is coolest');
+    
+  } else if (pavementTemp > 40) {
+    riskLevel = 'moderate';
+    advice.push('CAUTION: Pavement is warm. Comfortable for calloused paws but check sensitive dogs.');
+    advice.push('  - Puppies, senior dogs, and dogs with paw injuries need booties or grass');
+    advice.push('  - Dark asphalt is significantly hotter than light concrete');
+    
   } else {
-    advice.push("✅ Pavement temperature SAFE for paws.");
+    riskLevel = 'low';
+    advice.push('Pavement temperature is SAFE for paws.');
   }
   
   if (temp > 25 && inSun) {
-    advice.push("☀️ Pavement in direct sun is 10-15°C hotter than shaded pavement.");
+    advice.push('  - Pavement in direct sun is 10-15°C hotter than shaded pavement.');
   }
   
-  return advice;
+  return { advice, warnings, riskLevel, pavementTemp };
 }
 
 // ============================================================================
-// CAR SAFETY CALCULATOR
+// ENHANCED CAR SAFETY CALCULATOR
 // ============================================================================
 
 function getCarSafety(data) {
-  const { temp, sunPosition } = data;
+  const { temp, sunPosition, condition } = data;
   const advice = [];
+  const warnings = [];
   
   if (temp > 15) {
-    advice.push("🚗 CAR SAFETY: NEVER leave pets in parked car.");
-    advice.push(`• Outside ${temp}°C → inside car reaches:`);
-    advice.push(`  • 10 minutes: ${temp + 10}°C`);
-    advice.push(`  • 30 minutes: ${temp + 20}°C`);
-    advice.push(`  • 60 minutes: ${temp + 25}°C`);
-    advice.push("• Cracking windows has MINIMAL effect (reduces temp by 1-2°C)");
-    advice.push("• Dogs die in cars every year. It takes MINUTES.");
-    advice.push("• If you see a dog in a hot car: note make/model/plate, alert store, call police.");
-    advice.push("• Legal: many jurisdictions allow breaking window to rescue animal in distress.");
+    const temp10 = Math.round(temp + 10);
+    const temp30 = Math.round(temp + 20);
+    const temp60 = Math.round(temp + 25);
+    
+    warnings.push('NEVER leave pets in parked car');
+    advice.push(`  Outside ${Math.round(temp)}°C → inside car reaches:`);
+    advice.push(`    - 10 minutes: ${temp10}°C`);
+    advice.push(`    - 30 minutes: ${temp30}°C`);
+    advice.push(`    - 60 minutes: ${temp60}°C`);
+    advice.push('  - Cracking windows has MINIMAL effect, reduces temp by 1-2°C only');
+    advice.push('  - Dogs die in cars every year. It takes MINUTES.');
+    advice.push('  - If you see a dog in a hot car: note make, model, and plate, alert store, call police');
+    advice.push('  - Many jurisdictions allow breaking window to rescue animal in distress');
   }
   
   if (temp < 0) {
-    advice.push("🚗 COLD CAR: Cars become refrigerators in winter.");
-    advice.push("• Hypothermia risk. Don't leave pets in cold cars.");
+    warnings.push('COLD CAR: Cars become refrigerators in winter');
+    advice.push('  - Hypothermia risk. Do not leave pets in cold cars.');
   }
   
-  return advice;
+  return { advice, warnings };
 }
 
 // ============================================================================
-// MAIN PETS ADVICE FUNCTION
+// ENHANCED BREED DETECTION
+// ============================================================================
+
+function detectBreedCategory(question) {
+  const q = question.toLowerCase();
+  
+  for (const [category, data] of Object.entries(PET_SPECIES.dog.breedSpecific)) {
+    if (data.breeds) {
+      for (const breed of data.breeds) {
+        if (q.includes(breed.toLowerCase())) {
+          return category;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// ENHANCED MAIN PETS ADVICE FUNCTION
 // ============================================================================
 
 export const getPetsAdvice = (data, question = '') => {
@@ -541,343 +580,298 @@ export const getPetsAdvice = (data, question = '') => {
 
   const { 
     temp, humidity, wind, uvIndex, aqi, condition, visibility, city,
-    dewPoint, tempMin, tempMax, precipitation, season, sunPosition
+    dewPoint, tempMin, tempMax, precipitation, season, sunPosition,
+    feelsLike, windGust
   } = data;
+  
+  const q = question.toLowerCase();
   
   const heatIndex = calcHeatIndex(temp, humidity);
   const windChill = calcWindChill(temp, wind);
-  const effectiveTemp = temp <= 10 ? windChill : temp >= 27 ? heatIndex : temp;
+  const effectiveTemp = temp <= 10 ? windChill : temp >= 27 ? heatIndex : feelsLike;
   const burnMin = getBurnTime(uvIndex);
   const isRaining = ['rain', 'drizzle', 'thunderstorm'].includes(condition);
   const isStorm = condition === 'thunderstorm';
   const pavementTemp = getPavementTemp(temp, condition);
   const timeOfDay = getTimeOfDay();
+  const seasonName = getSeason();
+  const uvLevel = getUVLevel(uvIndex);
+  const aqiLevel = getAQICategory(aqi);
   
   // Detect pet type
-  const q = question.toLowerCase();
-  let petType = 'dog'; // default
+  let petType = 'dog';
   if (q.includes('cat') || q.includes('kitten')) petType = 'cat';
   if (q.includes('rabbit') || q.includes('bunny')) petType = 'rabbit';
-  if (q.includes('bird') || q.includes('parrot') || q.includes('chicken') || q.includes('aviary')) {
-    petType = q.includes('chicken') ? 'chicken' : 'bird';
-  }
+  if (q.includes('bird') || q.includes('parrot') || q.includes('aviary')) petType = 'bird';
   if (q.includes('horse') || q.includes('pony') || q.includes('equine')) petType = 'horse';
   if (q.includes('fish') || q.includes('pond') || q.includes('koi')) petType = 'fish_pond';
   if (q.includes('chicken') || q.includes('hen') || q.includes('rooster')) petType = 'chicken';
   
-  const speciesConfig = PET_SPECIES[petType] || PET_SPECIES['dog'];
-  const parasiteRisks = getParasiteRisk(data);
-  const pavementAdvice = getPavementSafety(data);
+  // Detect breed category for dogs
+  let breedCategory = null;
+  if (petType === 'dog') {
+    breedCategory = detectBreedCategory(q);
+  }
+  
+  const speciesConfig = PET_SPECIES[petType] || PET_SPECIES.dog;
+  const parasiteData = getParasiteRisk(data);
+  const pavementData = getPavementSafety(data);
   const carSafety = getCarSafety(data);
   
-  let verdict = [];
-  let dogWalking = [];
-  let heatSafety = [];
-  let coldSafety = [];
-  let pawCare = [];
-  let general = [];
-  let warnings = [];
-  let seasonalHazards = [];
-  let breedSpecific = [];
-
   // ========================================================================
-  // CATASTROPHIC CONDITIONS
+  // BUILD RESPONSE
   // ========================================================================
+  
+  let response = "";
+  
+  // Header
+  const intros = [
+    "PET WEATHER SAFETY ASSESSMENT",
+    "ANIMAL WELLNESS ADVISORY",
+    "PET OUTDOOR SAFETY REPORT",
+    "COMPANION ANIMAL WEATHER ANALYSIS",
+    "PET HEALTH WEATHER EVALUATION"
+  ];
+  response += `=== ${random(intros)} ===\n`;
+  if (city) response += `Location: ${city}\n`;
+  response += `Pet type: ${petType.charAt(0).toUpperCase() + petType.slice(1)}\n`;
+  if (breedCategory) {
+    response += `Breed category: ${breedCategory.replace(/_/g, ' ').toUpperCase()}\n`;
+  }
+  response += `\n`;
+  
+  // Current conditions
+  response += `CURRENT CONDITIONS:\n`;
+  response += `  Temperature: ${Math.round(temp)}°C (feels like ${Math.round(effectiveTemp)}°C)\n`;
+  response += `  Daily range: ${Math.round(tempMin)}°C to ${Math.round(tempMax)}°C\n`;
+  if (petType === 'dog') response += `  Pavement temp: ~${Math.round(pavementData.pavementTemp)}°C\n`;
+  response += `  Humidity: ${Math.round(humidity)}%\n`;
+  response += `  Wind: ${Math.round(wind)} km/h (gusts to ${Math.round(windGust || wind + 5)} km/h)\n`;
+  response += `  UV Index: ${uvIndex} (${uvLevel}) - burn time ~${burnMin} minutes\n`;
+  response += `  Air Quality: AQI ${aqi} (${aqiLevel})\n`;
+  response += `  Season: ${seasonName.charAt(0).toUpperCase() + seasonName.slice(1)}\n`;
+  response += `  Time: ${timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1)}\n`;
+  if (precipitation > 0) response += `  Precipitation: ${Math.round(precipitation)}mm\n`;
+  response += `\n`;
+  
+  // Overall verdict
+  response += `=== OVERALL VERDICT ===\n`;
   
   if (isStorm) {
-    verdict.push("⛈️ THUNDERSTORM: Keep ALL pets indoors immediately.");
-    warnings.push("Lightning: outdoor pets at risk. Metal chains/fences conduct.");
-    warnings.push("Panic: many pets bolt during storms. Microchip/collar on.");
-    general.push("Create safe space: interior room, crate covered with blanket, white noise.");
-    general.push("Thundershirt/wrap: gentle pressure reduces anxiety in many dogs.");
-    warnings.push("NEVER tie dog outside during storm. They cannot escape lightning.");
-  }
-  
-  if (aqi > 200) {
-    verdict.push("😷 HAZARDOUS AIR: Keep all pets indoors.");
-    warnings.push("Pets breathe faster than humans = more pollutant intake per body weight.");
-    warnings.push("Birds ESPECIALLY sensitive. Can die within hours of poor air quality.");
-    general.push("HEPA air purifier indoors. Limit potty breaks to 2-3 minutes.");
-  }
-
-  // ========================================================================
-  // HEAT DANGER
-  // ========================================================================
-  
-  if (heatIndex > 35 || effectiveTemp > 35) {
-    verdict.push("🚨 EXTREME HEAT: Life-threatening for all pets.");
-    warnings.push(`Heat index ${heatIndex.toFixed(0)}°C. Heat stroke can kill within 20 minutes.`);
-    heatSafety.push("NO outdoor exercise. Potty breaks only. 2-3 minutes max.");
-    heatSafety.push("Signs of heat stroke:");
-    heatSafety.push("  • Excessive panting, drooling, bright red gums");
-    heatSafety.push("  • Vomiting, diarrhea, lethargy, collapse");
-    heatSafety.push("  • EMERGENCY: Cool with room temp water (NOT ice). Vet IMMEDIATELY.");
-    heatSafety.push("  • Do NOT force water. Do NOT cover with wet towel (traps heat).");
-    general.push("Keep pets in air conditioning. Cooling mats, frozen water bottles, fans.");
-    general.push("Check on outdoor pets hourly. Ensure shade ALL DAY (shade moves).");
-    warnings.push("Elderly, overweight, flat-faced breeds = EXTREME DANGER.");
-  } else if (heatIndex > 30 || effectiveTemp > 30) {
-    verdict.push("⚠️ DANGEROUS HEAT: High risk for pets.");
-    heatSafety.push("Limit outdoor time to 5-10 minutes. No exercise.");
-    heatSafety.push("Walk early morning (before 7am) or late evening (after 9pm).");
-    heatSafety.push("Provide: shade, cool water (add ice cubes), kiddie pool, cooling mat.");
-    general.push("Flat-faced breeds: stay in AC. They cannot pant effectively.");
-  } else if (effectiveTemp > 27) {
-    verdict.push("☀️ HOT: Use caution with pets.");
-    heatSafety.push("Exercise: early morning or evening only. 15-20 minutes max.");
-    heatSafety.push("Always bring water. Take shade breaks every 10 minutes.");
-    general.push("Watch for excessive panting. That's the first warning sign.");
-  }
-
-  // ========================================================================
-  // COLD DANGER
-  // ========================================================================
-  
-  if (windChill < -18) {
-    verdict.push("🚨 EXTREME COLD: Life-threatening for pets.");
-    warnings.push(`Wind chill ${windChill.toFixed(0)}°C. Frostbite in < 30 minutes.`);
-    coldSafety.push("POTTY BREAKS ONLY. 2-3 minutes maximum.");
-    coldSafety.push("Full winter gear: coat, booties, possibly snood/ear protection.");
-    coldSafety.push("Signs of hypothermia: shivering → lethargy → stiff muscles → collapse.");
-    coldSafety.push("Antifreeze warning: 1 teaspoon kills cats, 1 tablespoon kills dogs.");
-    warnings.push("Outdoor pets NEED heated shelter + heated water bowl. Check hourly.");
-  } else if (windChill < -7) {
-    verdict.push("❄️ VERY COLD: Limit outdoor time.");
-    coldSafety.push("Limit walks to 10-15 minutes. Multiple short outings > one long walk.");
-    coldSafety.push("Sweater/coat for short-haired breeds. Booties for small dogs.");
-    coldSafety.push("Wipe paws after walks (ice melt chemicals = toxic if licked).");
-    general.push("Check outdoor pets' water hasn't frozen. Heated bowls essential.");
-  } else if (effectiveTemp < 4) {
-    verdict.push("🥶 COLD: Precautions needed for sensitive pets.");
-    coldSafety.push("Small, short-haired, elderly dogs: sweater/coat recommended.");
-    coldSafety.push("Limit time outside to 20-30 minutes. Keep moving.");
-    general.push("Pets burn more calories keeping warm. Slightly increase food.");
-  }
-
-  // ========================================================================
-  // PAVEMENT SAFETY
-  // ========================================================================
-  
-  pawCare = pavementAdvice;
-
-  // ========================================================================
-  // CAR SAFETY
-  // ========================================================================
-  
-  if (temp > 18 || temp < 0) {
-    warnings.push(...carSafety);
-  }
-
-  // ========================================================================
-  // DOG WALKING ADVICE
-  // ========================================================================
-  
-  if (effectiveTemp >= 10 && effectiveTemp <= 24 && !isRaining) {
-    dogWalking.push(`✅ PERFECT walking weather: ${temp}°C.`);
-    dogWalking.push("Normal walks, dog park, outdoor play all good.");
-    dogWalking.push("Still bring water. Dogs dehydrate even in mild weather.");
-  } else if (isRaining && temp > 15) {
-    dogWalking.push("🌧️ Warm rain: walk OK if dog doesn't mind.");
-    dogWalking.push("Towel dry thoroughly after. Check between toes for moisture.");
-    dogWalking.push("Avoid puddles (leptospirosis, giardia, chemicals).");
-  } else if (isRaining && temp < 15) {
-    dogWalking.push("🌧️ Cold rain: shorten walk. Wet fur = rapid heat loss.");
-    dogWalking.push("Raincoat for dog. Towel dry immediately upon return.");
-    warnings.push("Hypothermia risk if dog is wet and cold.");
-  }
-  
-  if (wind > 30) {
-    dogWalking.push("💨 Very windy: small dogs may refuse to walk. Debris danger.");
-    dogWalking.push("Keep dogs leashed. Fences blow down, scents scattered = dogs get lost.");
-  }
-
-  // ========================================================================
-  // UV / SUN PROTECTION
-  // ========================================================================
-  
-  if (uvIndex >= 6) {
-    general.push(`☀️ HIGH UV ${uvIndex}: Pets get sunburn and skin cancer.`);
-    general.push("• White/pink skin: nose, ears, belly at highest risk");
-    general.push("• Pet-safe sunscreen (NO zinc oxide - toxic to dogs)");
-    general.push("• Apply to: nose, ear tips, belly (for dogs that sunbathe), any thin-furred areas");
-    general.push("• Limit direct sun 10am-4pm");
-    warnings.push("White cats: ear tip cancer common. Keep indoors during peak UV.");
-  }
-
-  // ========================================================================
-  // BREED-SPECIFIC ADVICE
-  // ========================================================================
-  
-  if (petType === 'dog') {
-    if (effectiveTemp > 24) {
-      breedSpecific.push("🐶 BREED ALERTS:");
-      breedSpecific.push("• Flat-faced breeds (Pugs, Bulldogs, Boxers): EXTREME heat risk. Stay in AC.");
-      breedSpecific.push("• Thick-coated breeds (Huskies, Malamutes): overheat above 24°C. No exercise.");
-      breedSpecific.push("• Large breeds (Mastiffs, Danes): retain heat. Overheat quickly with activity.");
-      breedSpecific.push("• Senior dogs, overweight dogs: reduced heat tolerance. Extra caution.");
-    }
-    if (effectiveTemp < 4) {
-      breedSpecific.push("• Small breeds, short hair: sweater/coat needed. Booties below 0°C.");
-      breedSpecific.push("• Sighthounds (Greyhounds, Whippets): no body fat. Sweater below 15°C!");
-      breedSpecific.push("• Senior dogs: arthritis worse in cold. Shorter walks. Orthopedic bed.");
-    }
-  }
-
-  // ========================================================================
-  // AIR QUALITY
-  // ========================================================================
-  
-  if (aqi > 150) {
-    warnings.push(`UNHEALTHY AIR (AQI ${aqi}): Pets breathe more per body weight.`);
-    general.push("• No outdoor exercise. Quick potty breaks only.");
-    general.push("• Birds, rabbits, brachycephalic breeds: HIGHEST risk.");
-    general.push("• Keep windows closed. HEPA air purifier running.");
-  } else if (aqi > 100) {
-    general.push(`Moderate AQI ${aqi}: Reduce prolonged outdoor activity.`);
-    general.push("• Sensitive pets (asthma, heart conditions): limit outdoor time.");
-  }
-
-  // ========================================================================
-  // PARASITE SEASON
-  // ========================================================================
-  
-  if (parasiteRisks.length > 0) {
-    general.push("🦟 PARASITE ALERT:");
-    parasiteRisks.forEach(r => general.push(`• ${r}`));
-  }
-
-  // ========================================================================
-  // SEASONAL HAZARDS
-  // ========================================================================
-  
-  if (SEASONAL_HAZARDS[season]) {
-    seasonalHazards.push(`🍂 ${season.toUpperCase()} HAZARDS:`);
-    SEASONAL_HAZARDS[season].forEach(h => seasonalHazards.push(`• ${h}`));
-  }
-
-  // ========================================================================
-  // HYDRATION
-  // ========================================================================
-  
-  if (effectiveTemp > 24) {
-    general.push("💧 HYDRATION:");
-    general.push("• Dogs need 50-60ml water per kg body weight daily (double in heat)");
-    general.push("• Multiple water bowls. Add ice cubes. Consider pet fountain.");
-    general.push("• Signs of dehydration: dry gums, sunken eyes, skin tenting, lethargy.");
-  }
-
-  // ========================================================================
-  // GENERAL CARE REMINDERS
-  // ========================================================================
-  
-  general.push("🐾 GENERAL:");
-  general.push("• Always bring water + collapsible bowl on walks");
-  general.push("• Microchip + collar with ID tags (weather events = lost pets)");
-  general.push("• Know nearest 24-hour emergency vet");
-  general.push("• Pet first aid kit: vet wrap, antiseptic, tweezers, thermometer");
-
-  // ========================================================================
-  // ASSEMBLE FINAL RESPONSE
-  // ========================================================================
-  
-  const intros = [
-    "🐾 Pet safety check:",
-    "🐕 Dog walking forecast:",
-    "🐈 Pet weather report:",
-    "🐶 Outdoor safety for pets:",
-    "🐱 Zephye's pet advisory:",
-    "🐰 Animal weather conditions:",
-    "🦮 Pet parent weather:"
-  ];
-
-  let response = `${random(intros)} ${city}\n\n`;
-  
-  // Verdict
-  response += `📊 OVERALL: ${verdict.join(' ')}\n\n`;
-  
-  // Current Conditions
-  response += `🌡️ CONDITIONS:\n`;
-  response += `• Temperature: ${temp}°C (feels like ${Math.round(effectiveTemp)}°C)\n`;
-  if (petType === 'dog') response += `• Pavement temp: ~${pavementTemp}°C\n`;
-  response += `• Humidity: ${humidity}%\n`;
-  response += `• Wind: ${wind}km/h\n`;
-  response += `• UV Index: ${uvIndex}\n`;
-  if (aqi > 50) response += `• AQI: ${aqi}\n`;
-  response += '\n';
-  
-  // Pavement
-  if (pawCare.length > 0) {
-    pawCare.forEach(p => response += `${p}\n`);
-    response += '\n';
-  }
-  
-  // Heat Safety
-  if (heatSafety.length > 0) {
-    response += `🔥 HEAT SAFETY:\n`;
-    heatSafety.forEach(h => response += `${h}\n`);
-    response += '\n';
-  }
-  
-  // Cold Safety
-  if (coldSafety.length > 0) {
-    response += `❄️ COLD SAFETY:\n`;
-    coldSafety.forEach(c => response += `${c}\n`);
-    response += '\n';
-  }
-  
-  // Dog Walking
-  if (dogWalking.length > 0) {
-    response += `🦮 WALKING:\n`;
-    dogWalking.forEach(w => response += `${w}\n`);
-    response += '\n';
-  }
-  
-  // Breed Specific
-  if (breedSpecific.length > 0) {
-    breedSpecific.forEach(b => response += `${b}\n`);
-    response += '\n';
-  }
-  
-  // Seasonal Hazards
-  if (seasonalHazards.length > 0) {
-    seasonalHazards.forEach(s => response += `${s}\n`);
-    response += '\n';
-  }
-  
-  // General
-  if (general.length > 0) {
-    general.forEach(g => response += `${g}\n`);
-    response += '\n';
-  }
-  
-  // Warnings
-  if (warnings.length > 0) {
-    response += `⚠️ CRITICAL WARNINGS:\n`;
-    warnings.forEach(w => response += `• ${w}\n`);
-    response += '\n';
-  }
-  
-  // Final
-  response += `💡 BOTTOM LINE:\n`;
-  if (heatIndex > 35 || windChill < -18) {
-    response += `EXTREME weather. Quick potty breaks only. Keep pets inside.\n`;
-  } else if (pavementTemp > 52) {
-    response += `Pavement dangerously hot. Grass only. Walk before sunrise.\n`;
-  } else if (effectiveTemp >= 10 && effectiveTemp <= 24 && !isRaining) {
-    response += `PERFECT pet weather! Enjoy your outdoor time together.\n`;
+    response += `  THUNDERSTORM: Keep ALL pets indoors immediately.\n`;
+    response += `  Lightning risk is severe. Metal chains and fences conduct.\n`;
+  } else if (aqi > 200) {
+    response += `  HAZARDOUS AIR: Keep all pets indoors.\n`;
+    response += `  Pets breathe faster than humans, taking in more pollutants per body weight.\n`;
+  } else if (heatIndex > 38 || effectiveTemp > 38) {
+    response += `  EXTREME HEAT: Life-threatening for all pets.\n`;
+    response += `  Potty breaks only. No outdoor exercise.\n`;
+  } else if (windChill < -18) {
+    response += `  EXTREME COLD: Life-threatening for pets.\n`;
+    response += `  Potty breaks only. Full winter gear required.\n`;
+  } else if (pavementData.riskLevel === 'extreme') {
+    response += `  PAVEMENT DANGER: Paws will burn. Grass only.\n`;
+  } else if (effectiveTemp >= 10 && effectiveTemp <= 24 && aqi < 50 && !isRaining) {
+    response += `  PERFECT PET WEATHER! Enjoy outdoor time together.\n`;
   } else {
-    response += `Take standard precautions. Adjust activity to conditions.\n`;
+    response += `  ACCEPTABLE with precautions. Follow recommendations below.\n`;
+  }
+  response += `\n`;
+  
+  // Heat safety
+  if (speciesConfig.heatRisk) {
+    response += `=== HEAT SAFETY ===\n`;
+    response += `  Heat risk threshold: ${speciesConfig.heatRisk.threshold}°C\n`;
+    
+    if (effectiveTemp > speciesConfig.heatRisk.emergency) {
+      response += `  EMERGENCY: ${Math.round(effectiveTemp)}°C exceeds emergency threshold!\n`;
+      response += `  Heat stroke can kill in 20-30 minutes.\n`;
+    } else if (effectiveTemp > speciesConfig.heatRisk.highRisk) {
+      response += `  HIGH RISK: ${Math.round(effectiveTemp)}°C above high risk threshold.\n`;
+      response += `  Limit outdoor time to 5-10 minutes. No exercise.\n`;
+    } else if (effectiveTemp > speciesConfig.heatRisk.threshold) {
+      response += `  CAUTION: ${Math.round(effectiveTemp)}°C above heat threshold.\n`;
+      response += `  Provide shade, water, and limit activity.\n`;
+    }
+    
+    response += `  Heat safety factors:\n`;
+    speciesConfig.heatRisk.factors.forEach(f => response += `    - ${f}\n`);
+    response += `\n`;
+  }
+  
+  // Cold safety
+  if (speciesConfig.coldRisk) {
+    response += `=== COLD SAFETY ===\n`;
+    response += `  Cold risk threshold: ${speciesConfig.coldRisk.threshold}°C\n`;
+    
+    if (windChill < speciesConfig.coldRisk.emergency) {
+      response += `  EMERGENCY: ${Math.round(windChill)}°C exceeds emergency threshold!\n`;
+      response += `  Frostbite in 10-15 minutes. Hypothermia risk.\n`;
+    } else if (windChill < speciesConfig.coldRisk.highRisk) {
+      response += `  HIGH RISK: ${Math.round(windChill)}°C below high risk threshold.\n`;
+      response += `  Limit outdoor time to 10-15 minutes. Use coat and booties.\n`;
+    } else if (windChill < speciesConfig.coldRisk.threshold) {
+      response += `  CAUTION: ${Math.round(windChill)}°C below cold threshold.\n`;
+      response += `  Sensitive pets need protection. Shorten walks.\n`;
+    }
+    
+    response += `  Cold safety factors:\n`;
+    speciesConfig.coldRisk.factors.forEach(f => response += `    - ${f}\n`);
+    response += `\n`;
+  }
+  
+  // Pavement safety
+  response += `=== PAVEMENT SAFETY ===\n`;
+  pavementData.advice.forEach(a => response += `${a}\n`);
+  pavementData.warnings.forEach(w => response += `  ${w}\n`);
+  response += `\n`;
+  
+  // Breed-specific advice
+  if (petType === 'dog' && breedCategory) {
+    const breedData = speciesConfig.breedSpecific[breedCategory];
+    if (breedData) {
+      response += `=== BREED-SPECIFIC ADVICE ===\n`;
+      response += `  Breeds: ${breedData.breeds.join(', ')}\n`;
+      response += `  Heat risk: ${breedData.heatRisk}\n`;
+      response += `  Cold risk: ${breedData.coldRisk}\n`;
+      response += `  Special: ${breedData.special}\n`;
+      response += `\n`;
+    }
+  }
+  
+  // Car safety
+  if (temp > 15 || temp < 0) {
+    response += `=== CAR SAFETY ===\n`;
+    carSafety.warnings.forEach(w => response += `  ${w}\n`);
+    carSafety.advice.forEach(a => response += `${a}\n`);
+    response += `\n`;
+  }
+  
+  // Parasite risks
+  if (parasiteData.risks.length > 0) {
+    response += `=== PARASITE RISKS ===\n`;
+    parasiteData.risks.forEach(r => response += `${r}\n`);
+    parasiteData.warnings.forEach(w => response += `  ${w}\n`);
+    response += `\n`;
+  }
+  
+  // Seasonal hazards
+  if (SEASONAL_HAZARDS[seasonName] && SEASONAL_HAZARDS[seasonName].length > 0) {
+    response += `=== ${seasonName.toUpperCase()} HAZARDS ===\n`;
+    SEASONAL_HAZARDS[seasonName].forEach(h => response += `  - ${h}\n`);
+    response += `\n`;
+  }
+  
+  // UV / Sun protection
+  if (uvIndex > 5) {
+    response += `=== UV PROTECTION ===\n`;
+    response += `  UV Index ${uvIndex}: Pets can get sunburn and skin cancer.\n`;
+    response += `  - White or pink skin: nose, ears, belly are at highest risk\n`;
+    response += `  - Pet-safe sunscreen required (NO zinc oxide, toxic to dogs)\n`;
+    response += `  - Apply to: nose, ear tips, belly, and any thin-furred areas\n`;
+    response += `  - Limit direct sun from 10am to 4pm\n`;
+    if (uvIndex > 7) {
+      response += `  - White cats: ear tip cancer is common. Keep indoors during peak UV.\n`;
+    }
+    response += `\n`;
+  }
+  
+  // Air quality
+  if (aqi > 100) {
+    response += `=== AIR QUALITY ===\n`;
+    response += `  AQI ${aqi}: Poor air quality affects pets.\n`;
+    if (aqi > 150) {
+      response += `  - No outdoor exercise. Quick potty breaks only.\n`;
+      response += `  - Birds, rabbits, and brachycephalic breeds are at HIGHEST risk.\n`;
+    } else {
+      response += `  - Reduce prolonged outdoor activity.\n`;
+      response += `  - Sensitive pets: limit outdoor time.\n`;
+    }
+    response += `  - Keep windows closed. Use HEPA air purifier.\n`;
+    response += `\n`;
+  }
+  
+  // Hydration
+  if (effectiveTemp > 24) {
+    response += `=== HYDRATION ===\n`;
+    response += `  Dogs need 50-60ml water per kg body weight daily, double in heat.\n`;
+    response += `  - Multiple water bowls. Add ice cubes. Consider pet fountain.\n`;
+    response += `  - Signs of dehydration: dry gums, sunken eyes, skin tenting, lethargy.\n`;
+    response += `\n`;
+  }
+  
+  // Species-specific advice
+  if (speciesConfig.outdoorSafety) {
+    response += `=== ${petType.toUpperCase()} OUTDOOR SAFETY ===\n`;
+    speciesConfig.outdoorSafety.forEach(s => response += `  - ${s}\n`);
+    response += `\n`;
+  }
+  
+  // Walking advice
+  if (petType === 'dog') {
+    response += `=== WALKING ADVICE ===\n`;
+    if (effectiveTemp >= 10 && effectiveTemp <= 24 && !isRaining) {
+      response += `  PERFECT walking weather: ${Math.round(temp)}°C.\n`;
+      response += `  Normal walks, dog park, and outdoor play are all good.\n`;
+      response += `  Still bring water. Dogs dehydrate even in mild weather.\n`;
+    } else if (isRaining && temp > 15) {
+      response += `  Warm rain: walk is OK if dog does not mind.\n`;
+      response += `  Towel dry thoroughly after. Check between toes for moisture.\n`;
+      response += `  Avoid puddles which may contain leptospirosis, giardia, or chemicals.\n`;
+    } else if (isRaining && temp < 15) {
+      response += `  Cold rain: shorten walk. Wet fur means rapid heat loss.\n`;
+      response += `  Use raincoat for dog. Towel dry immediately upon return.\n`;
+    }
+    
+    if (wind > 30) {
+      response += `  Very windy: small dogs may refuse to walk. Debris danger.\n`;
+      response += `  Keep dogs leashed. Fences can blow down, scents are scattered.\n`;
+    }
+    response += `\n`;
+  }
+  
+  // General care reminders
+  response += `=== GENERAL CARE REMINDERS ===\n`;
+  response += `  - Always bring water and collapsible bowl on walks\n`;
+  response += `  - Microchip and collar with ID tags, weather events cause lost pets\n`;
+  response += `  - Know nearest 24-hour emergency vet\n`;
+  response += `  - Pet first aid kit: vet wrap, antiseptic, tweezers, thermometer\n`;
+  response += `\n`;
+  
+  // Critical warnings
+  if (isStorm || aqi > 200 || heatIndex > 38 || windChill < -18 || pavementData.riskLevel === 'extreme') {
+    response += `=== CRITICAL WARNINGS ===\n`;
+    if (isStorm) response += `  - THUNDERSTORM: Keep all pets indoors. Lightning risk.\n`;
+    if (aqi > 200) response += `  - HAZARDOUS AIR: Keep all pets indoors.\n`;
+    if (heatIndex > 38) response += `  - EXTREME HEAT: Life-threatening. Potty breaks only.\n`;
+    if (windChill < -18) response += `  - EXTREME COLD: Life-threatening. Full winter gear.\n`;
+    if (pavementData.riskLevel === 'extreme') response += `  - PAVEMENT DANGER: Paws will burn. Grass only.\n`;
+    response += `\n`;
+  }
+  
+  // Bottom line
+  response += `=== BOTTOM LINE ===\n`;
+  if (isStorm || aqi > 200) {
+    response += `  STAY INDOORS. Conditions unsafe for all pets.\n`;
+  } else if (heatIndex > 38 || windChill < -18) {
+    response += `  EXTREME WEATHER. Quick potty breaks only. Keep pets inside.\n`;
+  } else if (pavementData.riskLevel === 'extreme') {
+    response += `  PAVEMENT DANGEROUS. Grass only. Walk before sunrise.\n`;
+  } else if (effectiveTemp >= 10 && effectiveTemp <= 24 && !isRaining && aqi < 50) {
+    response += `  PERFECT PET WEATHER! Enjoy your outdoor time together.\n`;
+  } else {
+    response += `  Take standard precautions. Adjust activity to conditions.\n`;
   }
   
   const petWisdom = [
-    "Dogs do speak, but only to those who know how to listen. - Orhan Pamuk",
-    "Until one has loved an animal, a part of one's soul remains unawakened. - Anatole France",
-    "The better I get to know men, the more I find myself loving dogs. - Charles de Gaulle",
-    "Animals are such agreeable friends—they ask no questions; they pass no criticisms. - George Eliot",
-    "A dog is the only thing on earth that loves you more than he loves himself. - Josh Billings"
+    "Dogs do speak, but only to those who know how to listen.",
+    "Until one has loved an animal, a part of one's soul remains unawakened.",
+    "The better I get to know men, the more I find myself loving dogs.",
+    "Animals are such agreeable friends—they ask no questions; they pass no criticisms.",
+    "A dog is the only thing on earth that loves you more than he loves himself."
   ];
-  response += `\n🐾 ${random(petWisdom)}`;
-
+  response += `\n--- WISDOM ---\n${random(petWisdom)}`;
+  
   return response;
 };
 
