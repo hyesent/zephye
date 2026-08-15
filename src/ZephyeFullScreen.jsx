@@ -26,7 +26,7 @@ import {
   getVoiceForDetectedLanguage,
   LANGUAGE_NAMES,
   getVoiceForLocation
-} from './zephyeHelpers'
+} from './zephyeHelpers.js'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
@@ -759,32 +759,86 @@ const detectIntents = (question) => {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── MERGE RESPONSES ─────────────────────────────────────────────────
+// ─── SMART RESPONSE MERGER ──────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const mergeResponses = (responses, intents, question) => {
   if (responses.length === 0) return null
   if (responses.length === 1) return responses[0]
 
-  let merged = ''
-  
+  const parsedSections = []
+
   for (let i = 0; i < responses.length; i++) {
     const text = responses[i]
     const intent = intents[i]?.intent
     const isPrimary = intents[i]?.isPrimary || false
     
+    // Handle string responses
     if (typeof text === 'string') {
-      merged += `${intent?.section || 'Advice'}\n`
-      merged += text
-      merged += '\n\n'
-    } else if (text && typeof text === 'object') {
-      merged += `${intent?.section || 'Advice'}\n`
-      merged += text.summary || text.verdict || ''
+      const section = {
+        header: intent?.section || 'Advice',
+        isPrimary,
+        score: intents[i]?.score || 0,
+        content: text,
+        warnings: [],
+        bottomLine: '',
+        raw: text
+      }
+      parsedSections.push(section)
+      continue
+    }
+    
+    // Handle structured responses
+    if (typeof text === 'object' && text !== null) {
+      const section = {
+        header: intent?.section || 'Advice',
+        isPrimary,
+        score: intents[i]?.score || 0,
+        content: text.summary || text.verdict || '',
+        warnings: [],
+        bottomLine: text.note || '',
+        raw: text,
+        structured: true
+      }
+      parsedSections.push(section)
+      continue
+    }
+  }
+
+  parsedSections.sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1
+    if (!a.isPrimary && b.isPrimary) return 1
+    return b.score - a.score
+  })
+
+  let merged = ''
+  const primary = parsedSections.find(s => s.isPrimary) || parsedSections[0]
+  const secondary = parsedSections.filter(s => !s.isPrimary)
+
+  merged += `${primary.header}\n`
+  merged += primary.content
+  
+  if (primary.warnings && primary.warnings.length > 0) {
+    merged += '\n\nWarnings:\n'
+    merged += primary.warnings.join('\n')
+  }
+  
+  if (primary.bottomLine) {
+    merged += '\n\nBottom Line:\n'
+    merged += primary.bottomLine
+  }
+  merged += '\n\n'
+
+  if (secondary.length > 0) {
+    merged += `Also consider:\n\n`
+    for (const sec of secondary) {
+      merged += `${sec.header}\n`
+      merged += sec.content
       merged += '\n\n'
     }
   }
 
-  return merged.trim()
+  return merged
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -808,6 +862,7 @@ const generateVerdict = (question, data, intent) => {
     case 'stargazing': {
       const cloudCover = data.cloudCover || 0
       const moonIllumination = data.moonPhase ? Math.round(getMoonIllumination(data.moonPhase) * 100) : 0
+      const seeing = data.seeing || 5
       
       if (cloudCover > 70) {
         verdict = 'No'
@@ -818,6 +873,9 @@ const generateVerdict = (question, data, intent) => {
       } else if (moonIllumination > 80) {
         verdict = 'Maybe'
         confidence = 65
+      } else if (seeing <= 3 && cloudCover < 20 && moonIllumination < 30) {
+        verdict = 'Yes'
+        confidence = 95
       } else if (cloudCover < 30 && moonIllumination < 50) {
         verdict = 'Yes'
         confidence = 80
@@ -903,6 +961,76 @@ const generateVerdict = (question, data, intent) => {
       break
     }
     
+    case 'driving': {
+      const rainChance = data.precipitationProb || 0
+      const visibility = data.visibility || 10
+      const wind = data.wind || 0
+      const condition = data.condition || ''
+      
+      if (condition === 'thunderstorm' || condition === 'snow') {
+        verdict = 'No'
+        confidence = 95
+      } else if (rainChance > 70 || visibility < 2 || wind > 50) {
+        verdict = 'No'
+        confidence = 85
+      } else if (rainChance > 40 || visibility < 5 || wind > 30) {
+        verdict = 'Maybe'
+        confidence = 60
+      } else {
+        verdict = 'Yes'
+        confidence = 90
+      }
+      break
+    }
+    
+    case 'traffic': {
+      const hour = new Date().getHours()
+      const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 18)
+      const isWeekend = [0, 6].includes(new Date().getDay())
+      
+      if (isRushHour && !isWeekend) {
+        verdict = 'Yes'
+        confidence = 80
+      } else if ((isRushHour && isWeekend) || (hour >= 12 && hour <= 13)) {
+        verdict = 'Maybe'
+        confidence = 55
+      } else {
+        verdict = 'No'
+        confidence = 75
+      }
+      break
+    }
+    
+    case 'clothing': {
+      const temp = data.temp || 0
+      const rainChance = data.precipitationProb || 0
+      
+      if (q.includes('jacket') || q.includes('coat')) {
+        if (temp < 10) {
+          verdict = 'Yes'
+          confidence = 90
+        } else if (temp < 18) {
+          verdict = 'Maybe'
+          confidence = 60
+        } else {
+          verdict = 'No'
+          confidence = 85
+        }
+      } else if (q.includes('umbrella') || q.includes('raincoat')) {
+        if (rainChance > 60) {
+          verdict = 'Yes'
+          confidence = 90
+        } else if (rainChance > 30) {
+          verdict = 'Maybe'
+          confidence = 60
+        } else {
+          verdict = 'No'
+          confidence = 85
+        }
+      }
+      break
+    }
+    
     default: {
       const rainChance = data.precipitationProb || 0
       if (rainChance > 60) {
@@ -920,7 +1048,12 @@ const generateVerdict = (question, data, intent) => {
     confidence = 50
   }
   
-  return verdict
+  let confidenceLabel = ''
+  if (confidence >= 90) confidenceLabel = ' (high confidence)'
+  else if (confidence >= 70) confidenceLabel = ' (moderate confidence)'
+  else if (confidence >= 50) confidenceLabel = ' (low confidence)'
+  
+  return `${verdict}${confidenceLabel}`
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -936,38 +1069,232 @@ const detectComparison = (question) => {
     'weekend', 'weekday', 'monday', 'tuesday', 
     'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
     'this morning', 'this afternoon', 'this evening',
+    '6 PM', '7 PM', '8 PM', '9 PM', '10 PM',
+    '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
     'noon', 'midnight', 'sunrise', 'sunset',
     'rush hour', 'commute time', 'lunch time'
   ]
   
   const savedLocs = getSavedLocations()
   const locationWords = savedLocs.map(l => l.label?.toLowerCase()).filter(Boolean)
+  
   const activityWords = ['run', 'bike', 'drive', 'walk', 'cycle', 'jog', 'hike', 'swim', 'sport', 'gym']
   const compareWords = ['vs', 'versus', 'compare', 'difference', 'or', 'vs.', 'and', 'better', 'best', 'rather']
   
   const hasCompare = compareWords.some(w => q.includes(w))
   
-  if (hasCompare) {
-    const foundTimes = timeWords.filter(w => q.includes(w))
-    const foundLocations = locationWords.filter(w => q.includes(w))
-    const foundActivities = activityWords.filter(w => q.includes(w))
-    
-    if (foundTimes.length >= 2) {
-      return { type: 'time', time1: foundTimes[0], time2: foundTimes[1] }
-    }
-    if (foundLocations.length >= 2) {
-      return { type: 'location', locations: foundLocations }
-    }
-    if (foundActivities.length >= 2) {
-      return { type: 'activity', activities: foundActivities }
+  // Multi-time comparison (3+ times)
+  const foundTimes = timeWords.filter(w => q.includes(w))
+  if (hasCompare && foundTimes.length >= 3) {
+    return {
+      type: 'multi_time',
+      times: foundTimes,
+      count: foundTimes.length
     }
   }
   
+  // Location comparison
+  const foundLocations = locationWords.filter(w => q.includes(w))
+  if (hasCompare && foundLocations.length >= 2) {
+    return {
+      type: 'location',
+      locations: foundLocations,
+      count: foundLocations.length
+    }
+  }
+  
+  // Activity comparison
+  const foundActivities = activityWords.filter(w => q.includes(w))
+  if (hasCompare && foundActivities.length >= 2) {
+    if (q.includes('vs') || q.includes('or') || q.includes('versus') || q.includes('rather')) {
+      return {
+        type: 'activity',
+        activities: foundActivities,
+        count: foundActivities.length
+      }
+    }
+  }
+  
+  // Scenario comparison (drive vs bike to work)
+  const scenarioKeywords = ['drive', 'bike', 'walk', 'cycle', 'run', 'commute', 'travel']
+  const foundScenarios = scenarioKeywords.filter(w => q.includes(w))
+  if (hasCompare && foundScenarios.length >= 2) {
+    if (q.includes('to work') || q.includes('to school') || q.includes('to the') || q.includes('commute')) {
+      return {
+        type: 'scenario',
+        scenarios: foundScenarios,
+        destination: q.match(/to\s+([\w\s]+?)(?:\?|$)/)?.[1]?.trim() || 'destination'
+      }
+    }
+  }
+  
+  // Standard two-time comparison
+  if (hasCompare && foundTimes.length >= 2) {
+    return {
+      type: 'time',
+      time1: foundTimes[0],
+      time2: foundTimes[1]
+    }
+  }
+  
+  // Implicit time comparison
   if (q.includes('today') && q.includes('tomorrow')) {
     return { type: 'time', time1: 'today', time2: 'tomorrow' }
   }
   
+  if (q.includes('now') && q.includes('later')) {
+    return { type: 'time', time1: 'now', time2: 'later' }
+  }
+  
   return null
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── COMPARISON HELPERS ──────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const extractKeyPoints = (response, maxLines = 5) => {
+  const lines = response.split('\n').filter(l => l.trim() && !l.includes('---') && !l.includes('==='))
+  return lines.slice(0, maxLines).join('\n')
+}
+
+const generateComparisonVerdict = (results, comparison, intent) => {
+  let verdict = ''
+  
+  switch (comparison.type) {
+    case 'time':
+    case 'multi_time': {
+      const times = comparison.type === 'multi_time' ? comparison.times : [comparison.time1, comparison.time2]
+      const tempValues = results.map(r => r.temp)
+      const rainValues = results.map(r => r.rain)
+      const cloudValues = results.map(r => r.cloudCover)
+      
+      if (tempValues.some(v => v !== null && v !== undefined)) {
+        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (temps.length > 1) {
+          const max = Math.max(...temps)
+          const min = Math.min(...temps)
+          const diff = max - min
+          if (diff > 3) {
+            const hottest = times[tempValues.indexOf(max)]
+            const coldest = times[tempValues.indexOf(min)]
+            verdict += `${hottest} is hottest at ${max}°C, ${coldest} is coolest at ${min}°C. `
+          } else {
+            verdict += `Temperatures are similar across all times (${Math.round(temps.reduce((a,b) => a + b, 0) / temps.length)}°C avg). `
+          }
+        }
+      }
+      
+      if (rainValues.some(v => v !== null && v !== undefined)) {
+        const rains = rainValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (rains.length > 1) {
+          const max = Math.max(...rains)
+          const min = Math.min(...rains)
+          if (max > 40) {
+            const rainiest = times[rainValues.indexOf(max)]
+            const driest = times[rainValues.indexOf(min)]
+            verdict += `${rainiest} is rainier (${max}%) than ${driest} (${min}%). `
+          } else {
+            verdict += `Low rain chance across all times (${Math.round(rains.reduce((a,b) => a + b, 0) / rains.length)}% avg). `
+          }
+        }
+      }
+      
+      if (cloudValues.some(v => v !== null && v !== undefined)) {
+        const clouds = cloudValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (clouds.length > 1) {
+          const max = Math.max(...clouds)
+          const min = Math.min(...clouds)
+          if (max - min > 30) {
+            const cloudiest = times[cloudValues.indexOf(max)]
+            const clearest = times[cloudValues.indexOf(min)]
+            verdict += `${cloudiest} is cloudiest (${max}%), ${clearest} is clearest (${min}%). `
+          }
+        }
+      }
+      
+      if (!verdict) {
+        const timeList = times.join(', ')
+        verdict = `The conditions across ${timeList} are fairly similar. Check the details above.`
+      }
+      break
+    }
+    
+    case 'location': {
+      const locs = comparison.locations
+      const tempValues = results.map(r => r.temp)
+      
+      if (tempValues.some(v => v !== null && v !== undefined)) {
+        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
+        if (temps.length > 1) {
+          const max = Math.max(...temps)
+          const min = Math.min(...temps)
+          const diff = max - min
+          if (diff > 5) {
+            const hottest = locs[tempValues.indexOf(max)]
+            const coldest = locs[tempValues.indexOf(min)]
+            verdict += `${hottest} is warmer (${max}°C) than ${coldest} (${min}°C). `
+          }
+        }
+      }
+      
+      verdict += `Weather can vary by location. Check details above.`
+      break
+    }
+    
+    case 'activity': {
+      const activities = comparison.activities
+      verdict = `Comparing ${activities.join(' vs ')}. `
+      verdict += `Consider weather impact on each activity. `
+      verdict += `Check the details above for specific recommendations.`
+      break
+    }
+    
+    case 'scenario': {
+      const scenarios = comparison.scenarios
+      const dest = comparison.destination
+      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. `
+      verdict += `Consider time, weather, and traffic for each option.`
+      break
+    }
+    
+    default:
+      verdict = 'Comparison complete. See details above.'
+  }
+  
+  return verdict
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const getDynamicSuggestions = (savedLocations = []) => {
+  const base = [
+    'Ask "stargazing tonight" or "moon phase"',
+    'Try "what should I wear" or "safe to run"',
+    'Ask "will it rain" or "UV burn time"',
+    'Type "paint drying time" or "best photo hour"',
+    'Compare "today vs tomorrow" for anything',
+    'Ask "biking vs running today?"',
+    'Try "drive or bike to work?"'
+  ]
+  
+  const suggestions = [...base]
+  
+  if (savedLocations.length > 0) {
+    const locNames = savedLocations.map(l => l.label || 'Untitled').filter(Boolean)
+    if (locNames.length > 0) {
+      suggestions.push(`Route to ${locNames[0]}?`)
+      suggestions.push(`Traffic to ${locNames[0]}?`)
+    }
+    if (locNames.length > 1) {
+      suggestions.push(`Compare ${locNames[0]} and ${locNames[1]} weather?`)
+      suggestions.push(`Route from ${locNames[0]} to ${locNames[1]}?`)
+    }
+  }
+  
+  return suggestions
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -978,7 +1305,7 @@ function StructuredResponse({ data, isSpeaking, onSpeak, onCopy }) {
   const [showDetails, setShowDetails] = useState(false)
   const [showFull, setShowFull] = useState(false)
 
-  // If data is a string, wrap it
+  // If data is a string
   if (typeof data === 'string') {
     return (
       <div className="structured-response">
@@ -997,7 +1324,7 @@ function StructuredResponse({ data, isSpeaking, onSpeak, onCopy }) {
     )
   }
 
-  // If data is an object with verdict, use structured format
+  // If data is an object with verdict (structured response)
   if (data && typeof data === 'object' && data.verdict) {
     return (
       <div className="structured-response">
@@ -1039,7 +1366,7 @@ function StructuredResponse({ data, isSpeaking, onSpeak, onCopy }) {
     )
   }
 
-  // Fallback: show as string
+  // Fallback
   return <div className="msg-content">{String(data)}</div>
 }
 
@@ -1067,23 +1394,22 @@ export default function ZephyeFullScreen({
   const [ghostText, setGhostText] = useState('')
   const [streamingText, setStreamingText] = useState('')
   const [moonPhase, setMoonPhase] = useState(0)
+  const [activeTab, setActiveTab] = useState('ask')
   const [savedLocations, setSavedLocations] = useState([])
 
-  // Translation & Voice State
+  // ─── Translation & Voice State ────────────────────────────────────────
   const [detectedLanguage, setDetectedLanguage] = useState('en')
   const [isTranslating, setIsTranslating] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [genderPref, setGenderPref] = useState('female')
 
-  // Suggestions State
+  // ─── Suggestions State ────────────────────────────────────────────────
   const [suggestions, setSuggestions] = useState([])
   const suggestionIntervalRef = useRef(null)
 
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
   const ghostIntervalRef = useRef(null)
-
-  // Menu State
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   // ─── Determine which voice to use ──────────────────────────────────────
@@ -1180,7 +1506,7 @@ export default function ZephyeFullScreen({
     if (aqi == null) return { label: 'Unknown', color: '#6b7280' }
     if (aqi <= 50) return { label: 'Good', color: '#22c55e' }
     if (aqi <= 100) return { label: 'Moderate', color: '#eab308' }
-    if (aqi <= 150) return { label: 'Unhealthy for sensitive groups', color: '#f97316' }
+    if (aqi <= 150) return { label: 'Unhealthy', color: '#f97316' }
     if (aqi <= 200) return { label: 'Unhealthy', color: '#ef4444' }
     return { label: 'Hazardous', color: '#dc2626' }
   }, [aqi])
@@ -1205,13 +1531,7 @@ export default function ZephyeFullScreen({
       setMessages([
         {
           role: 'assistant',
-          content: {
-            verdict: `${greeting || 'Hello'}, ${userName || location?.name?.split(',')[0] || 'there'}`,
-            summary: `${location?.name || 'Your location'} • ${weatherData.temp}°C • ${condition} • AQI ${aqiLevel.label}`,
-            note: 'What can I help you with today?',
-            details: [],
-            fullText: ''
-          }
+          content: `${greeting || 'Hello'}, ${userName || location?.name?.split(',')[0] || 'there'}\n${location?.name || 'Your location'}\n${weatherData.temp}°C • ${condition} • AQI ${aqiLevel.label}`
         }
       ])
     }
@@ -1223,31 +1543,50 @@ export default function ZephyeFullScreen({
       return
     }
     
-    const suggestionsList = [
-      'Ask "stargazing tonight"',
-      'Try "what should I wear"',
-      'Ask "will it rain"',
-      'Compare "today vs tomorrow"',
-      'Ask "biking vs running today?"',
-      'Try "drive or bike to work?"'
-    ]
-    
+    const suggestions = getDynamicSuggestions(savedLocations)
     let i = 0
-    setGhostText(suggestionsList[0])
+    setGhostText(suggestions[0])
     
     ghostIntervalRef.current = setInterval(() => {
-      i = (i + 1) % suggestionsList.length
-      setGhostText(suggestionsList[i])
+      i = (i + 1) % suggestions.length
+      setGhostText(suggestions[i])
     }, 3000)
     
     return () => {
       if (ghostIntervalRef.current) clearInterval(ghostIntervalRef.current)
     }
-  }, [input])
+  }, [input, savedLocations])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
+
+  // ─── Quick Actions ────────────────────────────────────────────────────
+
+  const quickActionChips = useMemo(() => {
+    const chips = [
+      'Will it rain tomorrow?',
+      'What should I wear?',
+      'Stargazing tonight?',
+      'Safe to drive?',
+      'Traffic incidents near me?',
+      'Can I go biking?',
+      'Compare today vs tomorrow',
+      'Biking vs running today?'
+    ]
+
+    const locs = savedLocations.slice(0, 2)
+    if (locs.length > 0) {
+      chips.push(`Route to ${locs[0].label || 'saved location'}?`)
+      chips.push(`Traffic to ${locs[0].label || 'saved location'}?`)
+    }
+    if (locs.length > 1) {
+      chips.push(`Compare ${locs[0].label} and ${locs[1].label} weather?`)
+      chips.push(`Route from ${locs[0].label} to ${locs[1].label}?`)
+    }
+
+    return chips
+  }, [savedLocations])
 
   // ─── Speaking ─────────────────────────────────────────────────────────
 
@@ -1256,21 +1595,13 @@ export default function ZephyeFullScreen({
       stopGlobal()
       return
     }
-    
-    let speakableText = text
-    if (typeof text === 'object' && text !== null) {
-      speakableText = `${text.verdict || ''} ${text.summary || ''} ${text.note || ''}`
-    }
-    
-    const cleanText = String(speakableText)
+    const cleanText = text
       .replace(/\*\*/g, '')
       .replace(/#/g, '')
       .replace(/•/g, '')
       .replace(/\n/g, '. ')
       .replace(/\s+/g, ' ')
       .trim()
-    
-    if (!cleanText) return
     
     try {
       const res = await fetch(CONFIG.TTS_API, {
@@ -1288,12 +1619,7 @@ export default function ZephyeFullScreen({
   }, [isSpeaking, stopGlobal, playGlobal, voiceToUse])
 
   const copyText = useCallback((text) => {
-    let copyableText = text
-    if (typeof text === 'object' && text !== null) {
-      copyableText = `${text.verdict || ''}\n${text.summary || ''}\n${text.note || ''}`
-      if (text.fullText) copyableText += `\n\n${text.fullText}`
-    }
-    navigator.clipboard.writeText(String(copyableText))
+    navigator.clipboard.writeText(text)
   }, [])
 
   // ─── Voice Recognition ───────────────────────────────────────────────
@@ -1311,7 +1637,9 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
   // ─── ROUTE QUESTION ──────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const routeQuestion = useCallback(async (question) => {
     const q = question.toLowerCase()
@@ -1324,74 +1652,51 @@ export default function ZephyeFullScreen({
       }
     }
 
-    const comparison = detectComparison(question)
-    
-    if (comparison) {
-      // Simple comparison handling
-      if (comparison.type === 'time') {
-        const time1Data = getTimeShiftedData(data, comparison.time1, question)
-        const time2Data = getTimeShiftedData(data, comparison.time2, question)
-        
-        const response1 = await getWeatherAdvice(time1Data, question)
-        const response2 = await getWeatherAdvice(time2Data, question)
-        
-        return {
-          type: 'comparison',
-          title: `${comparison.time1} vs ${comparison.time2}`,
-          items: [
-            { label: comparison.time1, content: response1 },
-            { label: comparison.time2, content: response2 }
-          ]
-        }
-      }
-      
-      if (comparison.type === 'location') {
-        const locations = comparison.locations
-        const results = []
-        
-        for (const locName of locations) {
-          const savedLoc = findSavedLocation(locName)
-          if (savedLoc) {
-            const freshData = await fetchFullWeather(savedLoc.lat, savedLoc.lon)
-            if (freshData) {
-              freshData.city = savedLoc.label || savedLoc.name
-              const response = await getWeatherAdvice(freshData, question)
-              results.push({ label: savedLoc.label || savedLoc.name, content: response })
-            }
-          }
-        }
-        
-        if (results.length > 0) {
-          return {
-            type: 'comparison',
-            title: 'Location Comparison',
-            items: results
-          }
-        }
-      }
-    }
-
+    // ─── DETECT INTENTS ──────────────────────────────────────────────────
     const detectedIntents = detectIntents(q)
     
-    if (detectedIntents.length === 0) {
-      const response = await getWeatherAdvice(data, question)
+    // ─── If weather is the only intent, return just weather ─────────────
+    if (detectedIntents.length === 1 && detectedIntents[0].intent.id === 'weather') {
+      const intent = detectedIntents[0].intent
+      const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
+      const response = isAsync 
+        ? await intent.fn(data, question)
+        : intent.fn(data, question)
       return response
     }
-
-    // If only one intent, return the response directly (string or structured)
+    
+    // ─── If one intent (not weather) ─────────────────────────────────────
     if (detectedIntents.length === 1) {
       const intent = detectedIntents[0].intent
       const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
       const response = isAsync 
         ? await intent.fn(data, question)
         : intent.fn(data, question)
-      
       return response
     }
 
-    // Multiple intents - merge
+    // ─── NO INTENT DETECTED ──────────────────────────────────────────────
+    if (detectedIntents.length === 0) {
+      const response = await getWeatherAdvice(data, question)
+      return response
+    }
+
+    // ─── MULTIPLE INTENTS ────────────────────────────────────────────────
+    // Only merge if both intents have strong scores
+    const strongIntents = detectedIntents.filter(d => d.score > CONFIG.MIN_SCORE_THRESHOLD * 1.2)
+    
+    if (strongIntents.length <= 1) {
+      const intent = strongIntents[0]?.intent || detectedIntents[0].intent
+      const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
+      const response = isAsync 
+        ? await intent.fn(data, question)
+        : intent.fn(data, question)
+      return response
+    }
+
+    // Merge multiple strong intents
     const results = await Promise.all(
-      detectedIntents.map(async (detected) => {
+      strongIntents.map(async (detected) => {
         try {
           const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(detected.intent.id)
           const response = isAsync 
@@ -1412,36 +1717,19 @@ export default function ZephyeFullScreen({
     }
 
     // Build merged response
-    let mergedSummary = ''
-    const mergedDetails = []
-    
+    let merged = ''
     for (const result of validResults) {
       const content = result.response
-      if (typeof content === 'object' && content.verdict) {
-        mergedSummary += `${result.detected.intent.section}: ${content.verdict}\n`
-        if (content.details) {
-          mergedDetails.push({
-            section: result.detected.intent.section,
-            details: content.details
-          })
-        }
-      } else if (typeof content === 'string') {
-        mergedSummary += `${result.detected.intent.section}: ${content.slice(0, 100)}...\n`
+      if (typeof content === 'string') {
+        merged += `${result.detected.intent.section}\n${content}\n\n`
+      } else if (typeof content === 'object' && content.verdict) {
+        merged += `${result.detected.intent.section}\n${content.summary || content.verdict}\n\n`
+      } else {
+        merged += `${result.detected.intent.section}\n${String(content)}\n\n`
       }
     }
 
-    return {
-      verdict: 'Here\'s what I found',
-      summary: mergedSummary.trim(),
-      note: 'Multiple topics covered.',
-      details: mergedDetails.flatMap(d => d.details || []),
-      fullText: validResults.map(r => {
-        const content = r.response
-        if (typeof content === 'object' && content.fullText) return content.fullText
-        if (typeof content === 'string') return content
-        return JSON.stringify(content)
-      }).join('\n\n---\n\n')
-    }
+    return merged.trim()
   }, [weatherData, savedLocations])
 
   // ─── Handle Ask ──────────────────────────────────────────────────────
@@ -1478,7 +1766,9 @@ export default function ZephyeFullScreen({
       let finalAnswer = answer
       if (needsTranslation) {
         setIsTranslating(true)
-        if (typeof answer === 'object' && answer.verdict) {
+        if (typeof answer === 'string') {
+          finalAnswer = await translateText(answer, detectedLang)
+        } else if (typeof answer === 'object' && answer.verdict) {
           finalAnswer = {
             ...answer,
             verdict: await translateText(answer.verdict, detectedLang),
@@ -1490,27 +1780,24 @@ export default function ZephyeFullScreen({
               value: await translateText(d.value, detectedLang)
             }))) : []
           }
-        } else if (typeof answer === 'string') {
-          finalAnswer = await translateText(answer, detectedLang)
         } else {
           finalAnswer = answer
         }
         setIsTranslating(false)
       }
 
-      // Stream response
-      let streamText = ''
+      let text = ''
       if (typeof finalAnswer === 'string') {
         for (const word of finalAnswer.split(' ')) {
-          streamText += word + ' '
-          setStreamingText(streamText)
+          text += word + ' '
+          setStreamingText(text)
           await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
         }
       } else if (typeof finalAnswer === 'object' && finalAnswer.verdict) {
         const fullText = `${finalAnswer.verdict} ${finalAnswer.summary} ${finalAnswer.note || ''}`
         for (const word of fullText.split(' ')) {
-          streamText += word + ' '
-          setStreamingText(streamText)
+          text += word + ' '
+          setStreamingText(text)
           await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
         }
       }
@@ -1526,7 +1813,6 @@ export default function ZephyeFullScreen({
       if (voiceToUse) speakText(finalAnswer)
 
     } catch (e) {
-      console.error('Error:', e)
       const fallback = `Error getting advice. Current temp is ${weatherData.temp}°C with ${weatherData.condition}.`
       const finalFallback = needsTranslation 
         ? await translateText(fallback, detectedLang)
@@ -1537,9 +1823,7 @@ export default function ZephyeFullScreen({
     }
   }, [routeQuestion, weatherData, voiceToUse, speakText, lang])
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── RENDER ──────────────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── Render ──────────────────────────────────────────────────────────
 
   if (!isOpen) return null
 
@@ -1622,6 +1906,7 @@ export default function ZephyeFullScreen({
             </div>
           </div>
 
+          {/* Menu Dropdown */}
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -1729,6 +2014,46 @@ export default function ZephyeFullScreen({
           </div>
         </div>
       </div>
+
+      {/* ─── QUICK ACTIONS ────────────────────────────────────────────────── */}
+      {messages.length <= 1 && (
+        <div style={{ 
+          display: 'flex', 
+          gap: 8, 
+          padding: '10px 16px', 
+          overflowX: 'auto',
+          flexWrap: 'wrap',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          {quickActionChips.slice(0, 10).map((q, i) => (
+            <button
+              key={i}
+              onClick={() => handleAsk(q)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.12)'
+                e.target.style.borderColor = 'rgba(255,255,255,0.2)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.06)'
+                e.target.style.borderColor = 'rgba(255,255,255,0.1)'
+              }}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ─── BODY ────────────────────────────────────────────────────────── */}
       <div className="ai-body" style={{
@@ -1852,7 +2177,6 @@ export default function ZephyeFullScreen({
                       </div>
                     )}
                     
-                    {/* ─── Handle both structured and string responses ─── */}
                     {isStructured ? (
                       <StructuredResponse 
                         data={msg.content}
@@ -1860,15 +2184,13 @@ export default function ZephyeFullScreen({
                         onSpeak={() => speakText(msg.content)}
                         onCopy={() => copyText(msg.content)}
                       />
-                    ) : typeof msg.content === 'string' ? (
+                    ) : (
                       <StructuredResponse 
                         data={msg.content}
                         isSpeaking={isSpeaking}
                         onSpeak={() => speakText(msg.content)}
                         onCopy={() => copyText(msg.content)}
                       />
-                    ) : (
-                      <div className="msg-content">{String(msg.content)}</div>
                     )}
                     
                     {msg.originalLang && msg.originalLang !== 'en' && (
@@ -2124,13 +2446,12 @@ export default function ZephyeFullScreen({
           font-size: 14px;
           color: var(--text);
           line-height: 1.6;
-          margin-bottom: 8px;
         }
 
         .structured-response .note {
           font-size: 13px;
           color: var(--text-muted);
-          margin-bottom: 12px;
+          margin-top: 8px;
           padding: 8px 12px;
           background: rgba(255,255,255,0.04);
           border-radius: 8px;
@@ -2141,7 +2462,7 @@ export default function ZephyeFullScreen({
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
-          margin-top: 4px;
+          margin-top: 8px;
         }
 
         .structured-response .action-btn {
