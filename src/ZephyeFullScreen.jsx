@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
 import { useAudio } from './AudioContext'
 import { getMoonPhase, mapWeatherCode, getMoonIllumination } from './data/calculations.js'
 
@@ -26,7 +26,7 @@ import {
   getVoiceForDetectedLanguage,
   LANGUAGE_NAMES,
   getVoiceForLocation
-} from './zephyeHelpers'
+} from './zephyeHelpers.js'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ const CONFIG = {
   MAX_SECONDARY_LINES: 4,
   MAX_WARNINGS: 8,
   TTS_API: 'https://hyezen.onrender.com/api/tts',
-  SUGGESTION_ROTATION_INTERVAL: 10000 // 10 seconds
+  SUGGESTION_ROTATION_INTERVAL: 10000
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────
@@ -367,46 +367,189 @@ const getTimeShiftedData = (baseData, timeContext, question = '') => {
   return data
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── SAMPLE QUESTIONS FROM ALL FILES ──────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SAMPLE QUESTIONS ──────────────────────────────────────────────────────
 
-import { sampleQuestions as weatherQuestions } from './data/BasicWeatherAdvice.js'
-import { sampleQuestions as clothingQuestions } from './data/ClothingAdvice.js'
-import { sampleQuestions as lifestyleQuestions } from './data/Lifestyle.js'
-import { sampleQuestions as skinHairQuestions } from './data/SkinHair.js'
-import { sampleQuestions as drivingQuestions } from './data/Driving.js'
-import { sampleQuestions as travelingQuestions } from './data/Traveling.js'
-import { sampleQuestions as farmingQuestions } from './data/Farming.js'
-import { sampleQuestions as stargazingQuestions } from './data/Stargazing.js'
-import { sampleQuestions as photographyQuestions } from './data/Photography.js'
-import { sampleQuestions as eventsQuestions } from './data/Events.js'
-import { sampleQuestions as sportsQuestions } from './data/Sports.js'
-import { sampleQuestions as healthQuestions } from './data/Health.js'
-import { sampleQuestions as diyQuestions } from './data/DIYconstruction.js'
-import { sampleQuestions as petsQuestions } from './data/Pets.js'
-import { sampleQuestions as energyQuestions } from './data/EnergyHome.js'
-import { sampleQuestions as trafficQuestions } from './data/TrafficAdvice.js'
-import { sampleQuestions as routeQuestions } from './data/RouteAdvice.js'
-
-const ALL_SAMPLE_QUESTIONS = [
-  ...weatherQuestions,
-  ...clothingQuestions,
-  ...lifestyleQuestions,
-  ...skinHairQuestions,
-  ...drivingQuestions,
-  ...travelingQuestions,
-  ...farmingQuestions,
-  ...stargazingQuestions,
-  ...photographyQuestions,
-  ...eventsQuestions,
-  ...sportsQuestions,
-  ...healthQuestions,
-  ...diyQuestions,
-  ...petsQuestions,
-  ...energyQuestions,
-  ...trafficQuestions,
-  ...routeQuestions
+const SAMPLE_QUESTIONS = [
+  "Will it rain tomorrow?",
+  "What's the weather like at 2 PM?",
+  "Will it be sunny this weekend?",
+  "Is it going to rain tonight?",
+  "What time will it rain tomorrow?",
+  "Will it be hot tomorrow?",
+  "Is it going to storm on Saturday?",
+  "What's the forecast for Monday morning?",
+  "Will it rain in the afternoon?",
+  "Is it going to be windy tomorrow?",
+  "Will it snow this week?",
+  "What's the temperature going to be tomorrow?",
+  "Will it be clear tonight?",
+  "Is it going to rain on my commute?",
+  "Will the weather be good this weekend?",
+  "What should I wear today?",
+  "Do I need an umbrella?",
+  "Is it cold outside?",
+  "Should I bring a jacket?",
+  "Can I wear shorts?",
+  "Do I need a raincoat?",
+  "Is it hoodie weather?",
+  "Should I wear sandals?",
+  "Will I need sunglasses?",
+  "What layers should I wear?",
+  "Is it sweater weather?",
+  "Do I need gloves?",
+  "What shoes should I wear?",
+  "Is it too hot for jeans?",
+  "Should I wear a hat?",
+  "Do I need sunscreen?",
+  "Can I go jogging today?",
+  "Is it good weather for a walk?",
+  "Should I work out outside?",
+  "Can I go to the park?",
+  "Is it safe to run right now?",
+  "Best time to exercise today?",
+  "Can I walk my dog?",
+  "Should I do outdoor yoga?",
+  "Is it good cycling weather?",
+  "Can I have a picnic today?",
+  "Should I eat lunch outside?",
+  "Is it good for reading in the park?",
+  "Can I see stars tonight?",
+  "Is it good for stargazing?",
+  "Will the moon ruin stargazing?",
+  "Can I see the Milky Way?",
+  "Is it clear enough for a telescope?",
+  "Best time to stargaze tonight?",
+  "Will clouds block the stars?",
+  "Can I see planets tonight?",
+  "Is it good for meteor watching?",
+  "Can I see the ISS tonight?",
+  "Is Jupiter visible?",
+  "Can I see Saturn's rings?",
+  "Will fog be an issue?",
+  "Is it safe to play football today?",
+  "Should I cancel my marathon?",
+  "Good weather for tennis?",
+  "Is it too hot for soccer practice?",
+  "Can kids play outside?",
+  "Should I run in this weather?",
+  "Is the field too wet for sports?",
+  "Will wind affect my golf game?",
+  "Is it safe for outdoor workouts?",
+  "Should I swim outdoors today?",
+  "Can I cycle in this wind?",
+  "Is it safe for hiking?",
+  "Basketball court too hot?",
+  "Is it safe to walk my dog?",
+  "Should I take my cat outside?",
+  "Can my pet get heat stroke?",
+  "Is the pavement too hot?",
+  "Should I leave my dog in the car?",
+  "Is it too cold for my pet?",
+  "Can my dog play outside?",
+  "Will my pet get sunburn?",
+  "Is air quality bad for pets?",
+  "Is it safe to go outside today?",
+  "Will the weather affect my migraines?",
+  "Is it bad for my arthritis?",
+  "Should I worry about heat stroke?",
+  "Will my allergies act up?",
+  "Is it safe for elderly to go out?",
+  "Can I exercise with my heart condition?",
+  "Will humidity affect my breathing?",
+  "Should I stay inside today?",
+  "Is it a high pollution day?",
+  "Will my sinuses be bad today?",
+  "Should I worry about frostbite?",
+  "Can I paint outside today?",
+  "Is it good weather for concrete work?",
+  "Should I stain my deck?",
+  "Can I use power tools outside?",
+  "Is it too humid for woodworking?",
+  "Good day for roofing work?",
+  "Will rain ruin my construction project?",
+  "Can I pour concrete today?",
+  "Is it safe to use a ladder?",
+  "Is it good lighting for photos today?",
+  "Should I do a photoshoot now?",
+  "Is golden hour good today?",
+  "Will clouds ruin my photos?",
+  "Good weather for outdoor photography?",
+  "Is it too harsh for portraits?",
+  "Best time for landscape photos?",
+  "Will rain affect my shoot?",
+  "Should I bring lighting equipment?",
+  "Is it good for astrophotography tonight?",
+  "Can I shoot the Milky Way?",
+  "Should I have my wedding outdoors today?",
+  "Is it good weather for a picnic?",
+  "Can I host a BBQ this weekend?",
+  "Is it safe for an outdoor concert?",
+  "Should I move my event indoors?",
+  "Will rain cancel my party?",
+  "Is it too windy for tents?",
+  "Good weather for a beach day?",
+  "Should I rent heaters for my event?",
+  "Is it safe to drive today?",
+  "Should I cycle to work?",
+  "Good weather for motorbike?",
+  "Are roads slippery?",
+  "Is it too windy for cycling?",
+  "Should I drive or take a cab?",
+  "Will rain affect my commute?",
+  "Is visibility bad for driving?",
+  "Safe to ride my bike?",
+  "Should I water my crops today?",
+  "Is it good weather for planting?",
+  "Will there be frost tonight?",
+  "Do I need to irrigate?",
+  "Is it safe to spray pesticides?",
+  "Will rain damage my crops?",
+  "Is it good harvesting weather?",
+  "Should I cover my plants?",
+  "Will humidity cause crop disease?",
+  "Should I run AC today?",
+  "Will my heating bill be high?",
+  "Is it good weather to air out the house?",
+  "Should I close windows?",
+  "Do I need to run a dehumidifier?",
+  "Will solar panels work well today?",
+  "Should I use fans or AC?",
+  "Is it cheap to heat the house today?",
+  "Will my hair get frizzy today?",
+  "Do I need sunscreen?",
+  "Is it bad for my skin today?",
+  "Will my makeup melt?",
+  "Should I moisturize more?",
+  "Is the air drying my skin?",
+  "Do I need a hat?",
+  "Will I get sunburned?",
+  "Is it humid enough for curly hair?",
+  "Traveling from Paris to London, weather?",
+  "Mumbai to Delhi, what to expect?",
+  "New York to Tokyo, should I pack a jacket?",
+  "Lagos to Abuja, is there storm?",
+  "Toronto to Montreal, flight weather?",
+  "Road trip from LA to Vegas, weather?",
+  "Flying to Dubai tomorrow, what should I wear?",
+  "Train from Rome to Florence, conditions?",
+  "Is there traffic on my route?",
+  "Are there any accidents near me?",
+  "What's the traffic like right now?",
+  "Is there a road closure?",
+  "How bad is the traffic today?",
+  "Any traffic incidents in my area?",
+  "Traffic to work?",
+  "Is the highway congested?",
+  "How do I get to Lagos?",
+  "What's the route from Abuja to Kano?",
+  "How long will it take to drive to work?",
+  "What's the distance between Lagos and Ibadan?",
+  "Give me directions to the airport",
+  "Route from home to school",
+  "Traffic on my way to work",
+  "How long to get to the office?",
+  "Show me the route with traffic",
+  "What's the fastest way to get there?"
 ]
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -1208,23 +1351,24 @@ export default function ZephyeFullScreen({
   const [ghostText, setGhostText] = useState('')
   const [streamingText, setStreamingText] = useState('')
   const [moonPhase, setMoonPhase] = useState(0)
-  const [activeTab, setActiveTab] = useState('ask')
   const [savedLocations, setSavedLocations] = useState([])
 
-  // ─── Translation & Voice State ────────────────────────────────────────
+  // Translation & Voice State
   const [detectedLanguage, setDetectedLanguage] = useState('en')
   const [isTranslating, setIsTranslating] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [genderPref, setGenderPref] = useState('female')
 
-  // ─── Suggestions State ──────────────────────────────────────────────────
+  // Suggestions State
   const [suggestions, setSuggestions] = useState([])
-  const [showSuggestions, setShowSuggestions] = useState(true)
   const suggestionIntervalRef = useRef(null)
 
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
   const ghostIntervalRef = useRef(null)
+
+  // Menu State
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   // ─── Determine which voice to use ──────────────────────────────────────
   const voiceToUse = useMemo(() => {
@@ -1251,7 +1395,7 @@ export default function ZephyeFullScreen({
   useEffect(() => {
     if (messages.length === 1) {
       const getRandomSuggestions = () => {
-        const shuffled = [...ALL_SAMPLE_QUESTIONS]
+        const shuffled = [...SAMPLE_QUESTIONS]
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
@@ -1260,7 +1404,6 @@ export default function ZephyeFullScreen({
       }
       
       setSuggestions(getRandomSuggestions())
-      setShowSuggestions(true)
       
       suggestionIntervalRef.current = setInterval(() => {
         setSuggestions(getRandomSuggestions())
@@ -1272,7 +1415,6 @@ export default function ZephyeFullScreen({
         }
       }
     } else {
-      setShowSuggestions(false)
       if (suggestionIntervalRef.current) {
         clearInterval(suggestionIntervalRef.current)
         suggestionIntervalRef.current = null
@@ -1434,9 +1576,7 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
   // ─── ROUTE QUESTION ──────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   const routeQuestion = useCallback(async (question) => {
     const q = question.toLowerCase()
@@ -1860,12 +2000,6 @@ export default function ZephyeFullScreen({
     }
   }, [routeQuestion, weatherData, voiceToUse, speakText, lang])
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── MENU DROPDOWN ────────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-
   // ─── Render ──────────────────────────────────────────────────────────
 
   if (!isOpen) return null
@@ -1885,7 +2019,6 @@ export default function ZephyeFullScreen({
   const aqiLabel = aqiLevel.label
   const condition = weatherData.condition
 
-  // ─── Time of day helper ──────────────────────────────────────────────
   const getTimeOfDay = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'morning'
@@ -2097,7 +2230,7 @@ export default function ZephyeFullScreen({
                 flexWrap: 'wrap',
                 justifyContent: 'center'
               }}>
-                <span>{cityName}, NG</span>
+                <span>{cityName}</span>
                 <span style={{ opacity: 0.3 }}>·</span>
                 <span>{temp}°C</span>
                 <span style={{ opacity: 0.3 }}>·</span>
@@ -2154,73 +2287,67 @@ export default function ZephyeFullScreen({
               </div>
             </div>
           ) : (
-            {/* ─── CONVERSATION ────────────────────────────────────────────── */}
-            <>
-              {messages.map((msg, i) => {
-                // Skip the first welcome message if you want to hide it
-                // Or show it as part of the conversation
-                return (
-                  <div key={i} style={{ 
-                    display: 'flex', 
-                    marginBottom: 12, 
-                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
-                  }}>
-                    <div className={`chat-bubble ${msg.role}`}>
-                      {msg.role === 'assistant' && (
-                        <div className="msg-actions-top">
-                          <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
-                            {isSpeaking ? <StopIcon /> : <SpeakIcon />}
-                          </button>
-                          <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
-                            <CopyIcon />
-                          </button>
-                        </div>
-                      )}
-                      
-                      {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: 'var(--text-muted)', 
-                          marginBottom: '8px',
-                          paddingBottom: '8px',
-                          borderBottom: '1px solid rgba(255,255,255,0.05)'
-                        }}>
-                          {msg.originalEnglish}
-                        </div>
-                      )}
-                      
-                      <div className="msg-content">{msg.content}</div>
-                      
-                      {msg.originalLang && msg.originalLang !== 'en' && (
-                        <div style={{ 
-                          fontSize: '10px', 
-                          color: 'var(--text-muted)', 
-                          marginTop: '6px',
-                          opacity: 0.5
-                        }}>
-                          {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
-                        </div>
-                      )}
+            /* ─── CONVERSATION ────────────────────────────────────────────── */
+            messages.map((msg, i) => (
+              <div key={i} style={{ 
+                display: 'flex', 
+                marginBottom: 12, 
+                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
+              }}>
+                <div className={`chat-bubble ${msg.role}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="msg-actions-top">
+                      <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
+                        {isSpeaking ? <StopIcon /> : <SpeakIcon />}
+                      </button>
+                      <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
+                        <CopyIcon />
+                      </button>
                     </div>
-                  </div>
-                )
-              })}
-
-              {streamingText && (
-                <div style={{ display: 'flex', marginBottom: 12 }}>
-                  <div className="chat-bubble ai">{streamingText}▋</div>
+                  )}
+                  
+                  {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: 'var(--text-muted)', 
+                      marginBottom: '8px',
+                      paddingBottom: '8px',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                      {msg.originalEnglish}
+                    </div>
+                  )}
+                  
+                  <div className="msg-content">{msg.content}</div>
+                  
+                  {msg.originalLang && msg.originalLang !== 'en' && (
+                    <div style={{ 
+                      fontSize: '10px', 
+                      color: 'var(--text-muted)', 
+                      marginTop: '6px',
+                      opacity: 0.5
+                    }}>
+                      {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {isLoading && !streamingText && (
-                <div style={{ display: 'flex', marginBottom: 12 }}>
-                  <div className="chat-bubble ai text-muted">Thinking...</div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </>
+              </div>
+            ))
           )}
+
+          {streamingText && (
+            <div style={{ display: 'flex', marginBottom: 12 }}>
+              <div className="chat-bubble ai">{streamingText}▋</div>
+            </div>
+          )}
+
+          {isLoading && !streamingText && (
+            <div style={{ display: 'flex', marginBottom: 12 }}>
+              <div className="chat-bubble ai text-muted">Thinking...</div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
@@ -2415,7 +2542,6 @@ export default function ZephyeFullScreen({
           font-weight: 500;
         }
 
-        /* Scrollbar styling */
         .ai-body::-webkit-scrollbar {
           width: 4px;
         }
