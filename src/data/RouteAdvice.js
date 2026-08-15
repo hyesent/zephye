@@ -10,12 +10,14 @@ const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjkzZGI
 const MAPBOX_KEY = "pk.eyJ1IjoiaHllc2VudCIsImEiOiJjbXNkd2Fsd20wMTRjMndxeHZ1MXZkdWk5In0.oo-poQNG7epNSEADCQFZPQ"
 
 const TRAFFIC_CACHE_TTL = 8 * 60 * 60 * 1000 // 8 hours
+const ROUTE_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── SAMPLE QUESTIONS ──────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export const sampleQuestions = [
+  // BASIC ROUTES
   "How do I get to Lagos?",
   "What's the route from Abuja to Kano?",
   "How long will it take to drive to work?",
@@ -25,7 +27,36 @@ export const sampleQuestions = [
   "Traffic on my way to work",
   "How long to get to the office?",
   "Show me the route with traffic",
-  "What's the fastest way to get there?"
+  "What's the fastest way to get there?",
+  
+  // ADVANCED
+  "Is there a faster route to the mall?",
+  "Should I take the highway or local roads?",
+  "What's the best route during rush hour?",
+  "Can I avoid toll roads?",
+  "Show me a scenic route to the coast",
+  "What's the shortest route to the city center?",
+  "Is there traffic on the expressway?",
+  "How long is the drive to the beach?",
+  
+  // SAVED LOCATIONS
+  "Route from home to my office",
+  "Directions from work to the gym",
+  "How to get from home to the supermarket?",
+  "Traffic from home to school",
+  "Route from my saved location to the airport",
+  
+  // MULTI-STOP
+  "Can I go from home to work and then to the store?",
+  "Route with stops at the bank and pharmacy",
+  "Best route with multiple stops",
+  "How to get from point A to B to C?",
+  
+  // COMPARISON
+  "Compare driving time vs public transport",
+  "Is it faster to drive or take the train?",
+  "Should I drive or take a taxi?",
+  "Which route has less traffic?"
 ]
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -36,6 +67,14 @@ const getTrafficCacheKey = (lat, lon) => {
   const roundedLat = Math.round(lat * 100) / 100
   const roundedLon = Math.round(lon * 100) / 100
   return `zephye_traffic_incidents_${roundedLat}_${roundedLon}`
+}
+
+const getRouteCacheKey = (startLat, startLon, endLat, endLon) => {
+  const slat = Math.round(startLat * 100) / 100
+  const slon = Math.round(startLon * 100) / 100
+  const elat = Math.round(endLat * 100) / 100
+  const elon = Math.round(endLon * 100) / 100
+  return `zephye_route_${slat}_${slon}_${elat}_${elon}`
 }
 
 const getCachedTraffic = (lat, lon) => {
@@ -76,17 +115,45 @@ const setCachedTraffic = (lat, lon, incidents) => {
   }
 }
 
+const getCachedRoute = (startLat, startLon, endLat, endLon) => {
+  try {
+    const key = getRouteCacheKey(startLat, startLon, endLat, endLon)
+    const cached = localStorage.getItem(key)
+    if (!cached) return null
+
+    const data = JSON.parse(cached)
+    if (Date.now() - data.timestamp > ROUTE_CACHE_TTL) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return data.value
+  } catch {
+    return null
+  }
+}
+
+const setCachedRoute = (startLat, startLon, endLat, endLon, routeData) => {
+  try {
+    const key = getRouteCacheKey(startLat, startLon, endLat, endLon)
+    localStorage.setItem(key, JSON.stringify({
+      value: routeData,
+      timestamp: Date.now()
+    }))
+  } catch {}
+}
+
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── HELPERS ────────────────────────────────────────────────────────────────
+// ─── ENHANCED HELPERS ──────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 /**
- * Geocode a location name to coordinates
+ * Geocode a location name to coordinates with multiple attempts
  */
 const geocodeLocation = async (locationName) => {
   if (!locationName) return null
   
   try {
+    // Try Open-Meteo geocoding first
     const res = await fetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationName)}&count=1&language=en&format=json`
     )
@@ -100,7 +167,10 @@ const geocodeLocation = async (locationName) => {
         name: `${r.name}${r.admin1 ? `, ${r.admin1}` : ''}, ${r.country}`,
         admin1: r.admin1,
         country: r.country,
-        country_code: r.country_code
+        country_code: r.country_code,
+        population: r.population || 0,
+        timezone: r.timezone || 'unknown',
+        elevation: r.elevation || 0
       }
     }
     return null
@@ -110,18 +180,47 @@ const geocodeLocation = async (locationName) => {
 }
 
 /**
- * Find a saved location by name
+ * Enhanced location resolution with multiple strategies
+ */
+const resolveLocation = async (locationName, savedLocations, currentLocation) => {
+  if (!locationName) return null
+  
+  // Check if it's a saved location
+  const saved = findSavedLocation(locationName, savedLocations)
+  if (saved) return saved
+  
+  // Check for common references
+  const lower = locationName.toLowerCase().trim()
+  if (lower === 'home' || lower === 'my place') {
+    return currentLocation ? { ...currentLocation, isSaved: true } : null
+  }
+  if (lower === 'work' || lower === 'office') {
+    const work = savedLocations.find(l => 
+      l.label?.toLowerCase().includes('work') || 
+      l.label?.toLowerCase().includes('office')
+    )
+    if (work) return work
+  }
+  
+  // Try geocoding
+  return await geocodeLocation(locationName)
+}
+
+/**
+ * Enhanced saved location search
  */
 const findSavedLocation = (name, savedLocations) => {
   if (!savedLocations || savedLocations.length === 0) return null
   
   const lowerName = name.toLowerCase().trim()
   
+  // Exact match on label
   let match = savedLocations.find(loc => 
     loc.label && loc.label.toLowerCase() === lowerName
   )
   if (match) return match
   
+  // Contains match
   match = savedLocations.find(loc => {
     const label = loc.label?.toLowerCase() || ''
     const locName = loc.name?.toLowerCase() || ''
@@ -132,7 +231,7 @@ const findSavedLocation = (name, savedLocations) => {
 }
 
 /**
- * Get traffic incidents for an area
+ * Get traffic incidents with enhanced details
  */
 const fetchTrafficIncidents = async (lat, lon) => {
   const cached = getCachedTraffic(lat, lon)
@@ -180,6 +279,145 @@ const fetchTrafficIncidents = async (lat, lon) => {
 }
 
 /**
+ * Get traffic incidents for a specific route
+ */
+const getRouteTraffic = async (startLat, startLon, endLat, endLon) => {
+  try {
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startLon},${startLat};${endLon},${endLat}?` +
+      `annotations=congestion,incidents&` +
+      `access_token=${MAPBOX_KEY}`
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (!data.routes || data.routes.length === 0) {
+      return { incidents: [], delay: 0, congestion: [] }
+    }
+
+    const route = data.routes[0]
+    const incidents = route.incidents || []
+    const congestion = route.legs?.[0]?.annotation?.congestion || []
+    
+    // Calculate traffic delay
+    let delay = 0
+    if (route.duration) {
+      // Compare with typical duration (estimate based on distance and speed)
+      const typicalSpeed = 50 // km/h average
+      const distance = route.distance / 1000 // km
+      const typicalDuration = (distance / typicalSpeed) * 60 // minutes
+      const actualDuration = route.duration / 60 // minutes
+      delay = Math.max(0, Math.round(actualDuration - typicalDuration))
+    }
+
+    return { incidents, delay, congestion }
+  } catch {
+    return { incidents: [], delay: 0, congestion: [] }
+  }
+}
+
+/**
+ * Enhanced route calculation with multiple options
+ */
+const calculateRoute = async (startLat, startLon, endLat, endLon, options = {}) => {
+  const cacheKey = getRouteCacheKey(startLat, startLon, endLat, endLon)
+  const cached = getCachedRoute(startLat, startLon, endLat, endLon)
+  if (cached && !options.forceRefresh) {
+    return cached
+  }
+
+  try {
+    let url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
+      `api_key=${ORS_API_KEY}&` +
+      `start=${startLon},${startLat}&` +
+      `end=${endLon},${endLat}`
+
+    // Add preferences
+    if (options.avoidTolls) {
+      url += `&options={"avoid_features":["toll"]}`
+    }
+    if (options.avoidHighways) {
+      url += `&options={"avoid_features":["highway"]}`
+    }
+    if (options.avoidFerries) {
+      url += `&options={"avoid_features":["ferry"]}`
+    }
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.features && data.features.length > 0) {
+      setCachedRoute(startLat, startLon, endLat, endLon, data)
+      return data
+    }
+
+    return null
+  } catch (error) {
+    console.error('Route calculation failed:', error)
+    return null
+  }
+}
+
+/**
+ * Calculate alternative routes
+ */
+const calculateAlternativeRoutes = async (startLat, startLon, endLat, endLon) => {
+  try {
+    // ORS doesn't provide multiple routes directly, so we'll use Mapbox
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startLon},${startLat};${endLon},${endLat}?` +
+      `alternatives=true&` +
+      `steps=true&` +
+      `access_token=${MAPBOX_KEY}`
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.routes && data.routes.length > 1) {
+      return data.routes.slice(1).map(route => ({
+        distance: route.distance / 1000,
+        duration: route.duration / 60,
+        geometry: route.geometry,
+        legs: route.legs
+      }))
+    }
+
+    return []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Calculate route summary for multiple destinations
+ */
+const calculateMultiStopRoute = async (stops) => {
+  if (stops.length < 2) return null
+
+  try {
+    // Build coordinate string for ORS
+    const coords = stops.map(s => `${s.lon},${s.lat}`).join(';')
+    const url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
+      `api_key=${ORS_API_KEY}&` +
+      `start=${coords}&` +
+      `end=${coords}`
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.features && data.features.length > 0) {
+      return data.features[0]
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── FORMATTING FUNCTIONS ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+/**
  * Format duration in a readable way
  */
 const formatDuration = (minutes) => {
@@ -192,12 +430,48 @@ const formatDuration = (minutes) => {
 }
 
 /**
+ * Format duration with more detail
+ */
+const formatDurationDetailed = (minutes) => {
+  if (minutes < 1) return 'less than a minute'
+  if (minutes < 60) return `${Math.round(minutes)} minutes`
+  const hours = Math.floor(minutes / 60)
+  const mins = Math.round(minutes % 60)
+  let result = `${hours} hour${hours > 1 ? 's' : ''}`
+  if (mins > 0) {
+    result += ` and ${mins} minute${mins > 1 ? 's' : ''}`
+  }
+  return result
+}
+
+/**
  * Format distance in a readable way
  */
 const formatDistance = (km) => {
   if (km < 1) return `${Math.round(km * 1000)} meters`
   if (km < 10) return `${km.toFixed(1)} km`
   return `${Math.round(km)} km`
+}
+
+/**
+ * Format speed in a readable way
+ */
+const formatSpeed = (kmh) => {
+  if (kmh < 10) return `${Math.round(kmh * 10) / 10} km/h (slow)`
+  if (kmh < 30) return `${Math.round(kmh)} km/h (moderate)`
+  if (kmh < 50) return `${Math.round(kmh)} km/h (normal)`
+  if (kmh < 70) return `${Math.round(kmh)} km/h (fast)`
+  return `${Math.round(kmh)} km/h (very fast)`
+}
+
+/**
+ * Get time of day greeting
+ */
+const getTimeGreeting = () => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -209,334 +483,366 @@ export const getRouteAdvice = async (data, question, options = {}) => {
   const { 
     lat, lon, city, 
     homeLat, homeLon, homeName, 
-    savedLocations = [] 
+    savedLocations = [],
+    condition,
+    temp,
+    wind,
+    precipitation
   } = data
 
-  // ─── Parse locations from question ──────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── PARSE LOCATIONS FROM QUESTION ──────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   let fromLocation = options.from || 'home'
   let toLocation = options.to || null
+  let isMultiStop = false
+  let stops = []
 
+  // Check for multi-stop routes
+  const stopMatch = q.match(/(?:from|starting|start)\s+([\w\s]+?)\s+(?:to|via|through)\s+([\w\s]+?)\s+(?:then|and|to)\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
+  if (stopMatch) {
+    isMultiStop = true
+    stops = [stopMatch[1].trim(), stopMatch[2].trim(), stopMatch[3].trim()]
+  }
+
+  // Parse destination
   if (!toLocation) {
-    const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
+    const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.]|,)/i)
     if (toMatch) toLocation = toMatch[1].trim()
   }
 
+  // Parse origin
   if (!fromLocation || fromLocation === 'home' || fromLocation === 'my location' || fromLocation === 'here') {
     const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
     if (fromMatch) fromLocation = fromMatch[1].trim()
   }
 
-  // ─── Check if user mentioned any saved location ─────────────────────────
+  // Check for route preferences
+  const avoidTolls = q.includes('avoid toll') || q.includes('no toll')
+  const avoidHighways = q.includes('avoid highway') || q.includes('no highway') || q.includes('local roads')
+  const scenicRoute = q.includes('scenic') || q.includes('beautiful') || q.includes('coastal')
+  const fastestRoute = q.includes('fastest') || q.includes('quickest') || q.includes('shortest time')
+  const shortestRoute = q.includes('shortest distance') || q.includes('closest')
 
-  let mentionedSavedLocation = null
-  for (const loc of savedLocations) {
-    const label = loc.label?.toLowerCase() || ''
-    const locName = loc.name?.toLowerCase() || ''
-    if (q.includes(label) || q.includes(locName)) {
-      mentionedSavedLocation = loc
-      break
-    }
-  }
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── RESOLVE LOCATIONS ──────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-  // ─── Resolve start location ─────────────────────────────────────────────
-
-  let startCoords = null
-  let startLabel = null
-  let startIsSaved = false
-
-  if (typeof fromLocation === 'object' && fromLocation.isSaved) {
-    startCoords = { lat: fromLocation.lat, lon: fromLocation.lon, name: fromLocation.label || fromLocation.name }
-    startLabel = fromLocation.label || fromLocation.name
-    startIsSaved = true
-  } else if (typeof fromLocation === 'string') {
-    if (fromLocation === 'home' || fromLocation === 'my location' || fromLocation === 'here' || fromLocation === 'my place') {
-      startCoords = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
-      startLabel = 'Home'
-    } else {
-      const saved = findSavedLocation(fromLocation, savedLocations)
-      if (saved) {
-        startCoords = { lat: saved.lat, lon: saved.lon, name: saved.label || saved.name }
-        startLabel = saved.label || saved.name
-        startIsSaved = true
-      } else {
-        startCoords = await geocodeLocation(fromLocation)
-        if (startCoords) {
-          startLabel = startCoords.name
-        }
-      }
-    }
-  }
-
-  // ─── Resolve destination location ────────────────────────────────────────
-
-  let endCoords = null
-  let endLabel = null
-  let endIsSaved = false
-
-  if (typeof toLocation === 'object' && toLocation.isSaved) {
-    endCoords = { lat: toLocation.lat, lon: toLocation.lon, name: toLocation.label || toLocation.name }
-    endLabel = toLocation.label || toLocation.name
-    endIsSaved = true
-  } else if (typeof toLocation === 'string') {
-    const saved = findSavedLocation(toLocation, savedLocations)
-    if (saved) {
-      endCoords = { lat: saved.lat, lon: saved.lon, name: saved.label || saved.name }
-      endLabel = saved.label || saved.name
-      endIsSaved = true
-    } else {
-      endCoords = await geocodeLocation(toLocation)
-      if (endCoords) {
-        endLabel = endCoords.name
-      }
-    }
-  }
-
-  // ─── If user mentioned a saved location but didn't specify from/to ──────
-
-  if (mentionedSavedLocation && !toLocation && !fromLocation) {
-    startCoords = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
-    startLabel = 'Home'
-    endCoords = { lat: mentionedSavedLocation.lat, lon: mentionedSavedLocation.lon, name: mentionedSavedLocation.label || mentionedSavedLocation.name }
-    endLabel = mentionedSavedLocation.label || mentionedSavedLocation.name
-    endIsSaved = true
-  }
-
-  // ─── Check if user asked "traffic to [location]" without route ──────────
-
-  const isTrafficOnly = q.includes('traffic') && !q.includes('route') && !q.includes('drive') && !q.includes('go to')
+  const currentLocation = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
   
-  if (isTrafficOnly && endCoords && !startCoords) {
-    startCoords = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
-    startLabel = 'Your Location'
+  // Resolve start
+  let startResolved = null
+  if (typeof fromLocation === 'object' && fromLocation.isSaved) {
+    startResolved = fromLocation
+  } else if (typeof fromLocation === 'string') {
+    startResolved = await resolveLocation(fromLocation, savedLocations, currentLocation)
   }
 
-  // ─── If we couldn't resolve locations ────────────────────────────────────
-
-  if (!endCoords && !toLocation) {
-    return `I couldn't find a destination. Please specify where you want to go, e.g., "Route to Lagos" or "How long to get to work?"`
+  // Resolve destination
+  let endResolved = null
+  if (typeof toLocation === 'object' && toLocation.isSaved) {
+    endResolved = toLocation
+  } else if (typeof toLocation === 'string') {
+    endResolved = await resolveLocation(toLocation, savedLocations, currentLocation)
   }
 
-  if (!endCoords) {
-    const savedNames = savedLocations.map(l => `"${l.label || l.name}"`).join(', ')
-    return `I couldn't find the destination "${toLocation}". ${savedLocations.length > 0 ? `Your saved locations: ${savedNames}` : 'Try saving locations in the app first.'}`
-  }
-
-  if (!startCoords) {
-    return `I couldn't find the starting location "${fromLocation}". Try "from home" or specify a city.`
+  // Resolve multi-stop locations
+  let stopLocations = []
+  if (isMultiStop && stops.length > 0) {
+    for (const stopName of stops) {
+      const resolved = await resolveLocation(stopName, savedLocations, currentLocation)
+      if (resolved) {
+        stopLocations.push(resolved)
+      }
+    }
   }
 
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── CALCULATE ROUTE ─────────────────────────────────────────────────────
+  // ─── HANDLE MISSING LOCATIONS ───────────────────────────────────────────
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-  try {
-    const url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
-      `api_key=${ORS_API_KEY}&` +
-      `start=${startCoords.lon},${startCoords.lat}&` +
-      `end=${endCoords.lon},${endCoords.lat}`
+  if (!startResolved) {
+    return `I couldn't find the starting location "${fromLocation}". Please specify a valid location or use "home".`
+  }
 
-    const response = await fetch(url)
-    const routeData = await response.json()
+  if (!endResolved && !isMultiStop) {
+    return `I couldn't find the destination "${toLocation}". Please specify where you want to go.`
+  }
 
-    if (!routeData.features || routeData.features.length === 0) {
-      return `Could not find a route from ${startLabel || startCoords.name} to ${endLabel || endCoords.name}. Please try different locations.`
-    }
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── MULTI-STOP ROUTE ──────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-    const feature = routeData.features[0]
-    const properties = feature.properties
-    const segments = properties.segments || []
-
-    if (segments.length === 0) {
-      return `No route found between these locations.`
-    }
-
-    const segment = segments[0]
-    const distance = segment.distance || 0
-    const duration = segment.duration || 0
-    const steps = segment.steps || []
-
-    const distanceKm = distance / 1000
-    const durationMin = duration / 60
-
-    // ─── Build response ────────────────────────────────────────────────────
-
-    let responseText = `Route from ${startLabel || startCoords.name} to ${endLabel || endCoords.name}\n\n`
-
-    if (startIsSaved) {
-      responseText += `Start: ${startLabel} (saved location)\n`
-    } else {
-      responseText += `Start: ${startLabel || startCoords.name}\n`
-    }
+  if (isMultiStop && stopLocations.length >= 2) {
+    const allStops = [startResolved, ...stopLocations]
+    const route = await calculateMultiStopRoute(allStops)
     
-    if (endIsSaved) {
-      responseText += `Destination: ${endLabel} (saved location)\n`
-    } else {
-      responseText += `Destination: ${endLabel || endCoords.name}\n`
-    }
+    if (route) {
+      const segments = route.properties.segments || []
+      let totalDistance = 0
+      let totalDuration = 0
+      let stepList = []
 
-    responseText += `\nDistance: ${formatDistance(distanceKm)}\n`
-    responseText += `Estimated driving time: ${formatDuration(durationMin)}\n`
-
-    // ─── Fetch traffic incidents for the route ────────────────────────────
-
-    let incidents = []
-    let trafficDelay = 0
-
-    try {
-      const mapboxUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?` +
-        `annotations=congestion,incidents&` +
-        `access_token=${MAPBOX_KEY}`
-
-      const mapboxRes = await fetch(mapboxUrl)
-      const mapboxData = await mapboxRes.json()
-
-      if (mapboxData.routes && mapboxData.routes.length > 0) {
-        const route = mapboxData.routes[0]
-        incidents = route.incidents || []
-        
-        if (route.duration && duration) {
-          const mapboxDuration = route.duration / 60
-          if (mapboxDuration > durationMin * 1.05) {
-            trafficDelay = Math.round(mapboxDuration - durationMin)
+      segments.forEach((seg, idx) => {
+        totalDistance += seg.distance || 0
+        totalDuration += seg.duration || 0
+        const steps = seg.steps || []
+        steps.forEach(step => {
+          if (step.instruction) {
+            stepList.push(`  ${stepList.length + 1}. ${step.instruction}`)
           }
-        }
-      }
-
-      if (incidents.length === 0) {
-        const cached = getCachedTraffic((startCoords.lat + endCoords.lat) / 2, (startCoords.lon + endCoords.lon) / 2)
-        if (cached) {
-          incidents = cached
-        }
-      }
-
-    } catch {
-      // Traffic data unavailable — proceed without it
-    }
-
-    // ─── Display traffic incidents ────────────────────────────────────────
-
-    if (incidents && incidents.length > 0) {
-      const incidentCount = incidents.length
-      responseText += `\n${incidentCount} traffic incident${incidentCount > 1 ? 's' : ''} on route:\n`
-      
-      incidents.slice(0, 5).forEach((inc, i) => {
-        const type = inc.type || inc.iconCategory || 'unknown'
-        const desc = inc.description || inc.properties?.description || 'Traffic incident reported'
-        const severity = inc.severity || inc.properties?.severity || ''
-        const severityText = severity ? ` (${severity})` : ''
-
-        responseText += `  ${i + 1}. ${type.charAt(0).toUpperCase() + type.slice(1)}${severityText}\n`
-        responseText += `     ${desc}\n`
-
-        if (inc.startTime) {
-          const start = new Date(inc.startTime)
-          responseText += `     Started: ${start.toLocaleString()}\n`
-        }
-        if (inc.endTime) {
-          const end = new Date(inc.endTime)
-          responseText += `     Ends: ${end.toLocaleString()}\n`
-        }
-        if (inc.length) {
-          responseText += `     Affects: ${Math.round(inc.length)}m\n`
-        }
-        if (inc.lanesBlocked) {
-          responseText += `     Lanes blocked: ${inc.lanesBlocked}\n`
-        }
+        })
       })
 
-      if (incidents.length > 5) {
-        responseText += `  ... and ${incidents.length - 5} more incidents on the route.\n`
-      }
+      const distanceKm = totalDistance / 1000
+      const durationMin = totalDuration / 60
 
-      if (trafficDelay > 5) {
-        responseText += `\nTraffic delay: ~${trafficDelay} minutes extra\n`
-        responseText += `   Consider leaving earlier or finding an alternate route.\n`
-      }
-    } else {
-      responseText += `\nNo major traffic incidents reported on this route.\n`
-    }
-
-    // ─── Step-by-step directions (ALL STEPS - NO TRUNCATION) ──────────────
-
-    if (steps && steps.length > 0) {
-      responseText += `\nDirections:\n`
-      
-      // ─── FIX: Show ALL steps, no truncation ──────────────────────────────
-      steps.forEach((step, i) => {
-        const instruction = step.instruction || step.maneuver?.instruction || ''
-        const stepDist = step.distance ? ` (${formatDistance(step.distance / 1000)})` : ''
-        if (instruction) {
-          responseText += `  ${i + 1}. ${instruction}${stepDist}\n`
-        }
+      let response = `MULTI-STOP ROUTE:\n\n`
+      response += `Start: ${startResolved.label || startResolved.name}\n`
+      stopLocations.forEach((loc, i) => {
+        response += `Stop ${i + 1}: ${loc.label || loc.name}\n`
       })
-    }
-
-    // ─── Alternative routes (if available) ────────────────────────────────
-
-    if (routeData.features.length > 1) {
-      responseText += `\n${routeData.features.length - 1} alternative route${routeData.features.length - 1 > 1 ? 's' : ''} available.\n`
-      responseText += `   Ask "show alternative route" for more options.\n`
-    }
-
-    // ─── Weather impact on driving ────────────────────────────────────────
-
-    if (data.condition) {
-      const condition = data.condition.toLowerCase()
-      if (condition.includes('rain') || condition.includes('storm') || condition.includes('thunder')) {
-        responseText += `\nWeather warning: ${data.condition} conditions — drive with extra caution.\n`
+      response += `\nTotal distance: ${formatDistance(distanceKm)}\n`
+      response += `Total estimated time: ${formatDuration(durationMin)}\n\n`
+      response += `Directions:\n`
+      stepList.slice(0, 15).forEach(s => response += `${s}\n`)
+      if (stepList.length > 15) {
+        response += `  ... and ${stepList.length - 15} more steps.\n`
       }
-      if (data.temp && data.temp < 5) {
-        responseText += `Cold weather: ${Math.round(data.temp)}°C — roads may be icy in shaded areas.\n`
-      }
-      if (data.temp && data.temp > 35) {
-        responseText += `Hot weather: ${Math.round(data.temp)}°C — ensure your vehicle is cooled and carry water.\n`
-      }
+      return response
     }
-
-    // ─── Travel tips ──────────────────────────────────────────────────────
-
-    responseText += `\nTravel tips:\n`
-    
-    if (distanceKm > 100) {
-      responseText += `  • Long journey — plan for breaks every 2-3 hours.\n`
-    }
-    
-    if (durationMin > 60) {
-      responseText += `  • Pack snacks and water for the trip.\n`
-      responseText += `  • Check your fuel level before leaving.\n`
-    }
-    
-    if (trafficDelay > 10) {
-      responseText += `  • Significant delays expected — consider leaving earlier.\n`
-    }
-
-    // Find the nearest saved location
-    if (savedLocations.length > 0 && !endIsSaved) {
-      const nearest = savedLocations.reduce((nearest, loc) => {
-        const dist = Math.sqrt(
-          Math.pow(loc.lat - endCoords.lat, 2) + 
-          Math.pow(loc.lon - endCoords.lon, 2)
-        )
-        if (!nearest || dist < nearest.dist) {
-          return { ...loc, dist }
-        }
-        return nearest
-      }, null)
-      
-      if (nearest && nearest.dist < 0.5) {
-        responseText += `\nYou're near "${nearest.label || nearest.name}" — a saved location!\n`
-      }
-    }
-
-    responseText += `\nDrive safely!`
-
-    return responseText
-
-  } catch (error) {
-    console.error('Route calculation failed:', error)
-    return `Error calculating route. Please try again later.`
   }
+
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── SINGLE ROUTE CALCULATION ──────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+  const routePrefs = {
+    avoidTolls: avoidTolls || false,
+    avoidHighways: avoidHighways || false,
+    scenic: scenicRoute || false
+  }
+
+  const routeData = await calculateRoute(
+    startResolved.lat, startResolved.lon,
+    endResolved.lat, endResolved.lon,
+    { forceRefresh: false, ...routePrefs }
+  )
+
+  if (!routeData) {
+    return `Could not find a route from ${startResolved.label || startResolved.name} to ${endResolved.label || endResolved.name}. Please try different locations.`
+  }
+
+  const feature = routeData.features[0]
+  const properties = feature.properties
+  const segments = properties.segments || []
+
+  if (segments.length === 0) {
+    return `No route found between these locations.`
+  }
+
+  const segment = segments[0]
+  const distance = segment.distance || 0
+  const duration = segment.duration || 0
+  const steps = segment.steps || []
+
+  const distanceKm = distance / 1000
+  const durationMin = duration / 60
+  const avgSpeed = durationMin > 0 ? (distanceKm / (durationMin / 60)) : 0
+
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── GET TRAFFIC DATA ──────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+  const traffic = await getRouteTraffic(
+    startResolved.lat, startResolved.lon,
+    endResolved.lat, endResolved.lon
+  )
+
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── GET ALTERNATIVE ROUTES ────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+  const alternatives = await calculateAlternativeRoutes(
+    startResolved.lat, startResolved.lon,
+    endResolved.lat, endResolved.lon
+  )
+
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── BUILD RESPONSE ────────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+  let response = `=== ROUTE ADVISORY ===\n`
+  response += `${getTimeGreeting()}\n\n`
+
+  // Route summary
+  response += `ROUTE SUMMARY:\n`
+  response += `  From: ${startResolved.label || startResolved.name}\n`
+  response += `  To: ${endResolved.label || endResolved.name}\n`
+  response += `  Distance: ${formatDistance(distanceKm)}\n`
+  response += `  Estimated time: ${formatDuration(durationMin)}\n`
+  if (avgSpeed > 0) {
+    response += `  Average speed: ${formatSpeed(avgSpeed)}\n`
+  }
+  if (startResolved.isSaved) {
+    response += `  Start location is saved\n`
+  }
+  if (endResolved.isSaved) {
+    response += `  Destination is saved\n`
+  }
+
+  // Traffic info
+  if (traffic.incidents.length > 0) {
+    response += `\nTRAFFIC INCIDENTS (${traffic.incidents.length}):\n`
+    traffic.incidents.slice(0, 5).forEach((inc, i) => {
+      const type = inc.type || inc.iconCategory || 'unknown'
+      const desc = inc.description || inc.properties?.description || 'Incident reported'
+      const severity = inc.severity || inc.properties?.severity || ''
+      const severityText = severity ? ` (${severity})` : ''
+      response += `  ${i + 1}. ${type.charAt(0).toUpperCase() + type.slice(1)}${severityText}\n`
+      response += `     ${desc}\n`
+      if (inc.length) {
+        response += `     Affects: ${Math.round(inc.length)}m\n`
+      }
+      if (inc.lanesBlocked) {
+        response += `     Lanes blocked: ${inc.lanesBlocked}\n`
+      }
+    })
+    if (traffic.incidents.length > 5) {
+      response += `  ... and ${traffic.incidents.length - 5} more incidents.\n`
+    }
+    if (traffic.delay > 5) {
+      response += `\n  Estimated delay: ${traffic.delay} minutes\n`
+    }
+  } else {
+    response += `\nNo major traffic incidents reported on this route.\n`
+  }
+
+  // Route preferences
+  if (avoidTolls) {
+    response += `\n  Toll roads avoided\n`
+  }
+  if (avoidHighways) {
+    response += `\n  Highways avoided\n`
+  }
+  if (scenicRoute) {
+    response += `\n  Scenic route preferred\n`
+  }
+
+  // Alternative routes
+  if (alternatives.length > 0) {
+    response += `\nALTERNATIVE ROUTES:\n`
+    alternatives.slice(0, 2).forEach((alt, i) => {
+      const timeDiff = Math.round(alt.duration - durationMin)
+      const distDiff = Math.round(alt.distance - distanceKm)
+      response += `  Option ${i + 1}: ${formatDistance(alt.distance)}`
+      response += `, ${formatDuration(alt.duration)}`
+      if (timeDiff > 0) {
+        response += ` (${timeDiff} min longer)`
+      } else if (timeDiff < 0) {
+        response += ` (${Math.abs(timeDiff)} min faster)`
+      }
+      if (distDiff > 0) {
+        response += `, ${distDiff} km longer`
+      } else if (distDiff < 0) {
+        response += `, ${Math.abs(distDiff)} km shorter`
+      }
+      response += `\n`
+    })
+    response += `  Ask "show alternative route" for more options.\n`
+  }
+
+  // Step-by-step directions
+  if (steps && steps.length > 0) {
+    response += `\nDIRECTIONS:\n`
+    const maxSteps = 20
+    steps.slice(0, maxSteps).forEach((step, i) => {
+      const instruction = step.instruction || step.maneuver?.instruction || ''
+      const stepDist = step.distance ? ` (${formatDistance(step.distance / 1000)})` : ''
+      if (instruction) {
+        response += `  ${i + 1}. ${instruction}${stepDist}\n`
+      }
+    })
+    if (steps.length > maxSteps) {
+      response += `  ... and ${steps.length - maxSteps} more steps.\n`
+      response += `  Ask "show full directions" for all steps.\n`
+    }
+  }
+
+  // Weather impact
+  if (condition) {
+    const cond = condition.toLowerCase()
+    let weatherNote = false
+    if (cond.includes('rain') || cond.includes('storm') || cond.includes('thunder')) {
+      response += `\nWEATHER WARNING: ${condition} conditions\n`
+      response += `  Drive with extra caution. Reduce speed. Increase following distance.\n`
+      weatherNote = true
+    }
+    if (temp && temp < 5) {
+      response += `\nCOLD WEATHER: ${Math.round(temp)}°C\n`
+      response += `  Roads may be icy in shaded areas. Watch for black ice on bridges.\n`
+      weatherNote = true
+    }
+    if (temp && temp > 35) {
+      response += `\nHOT WEATHER: ${Math.round(temp)}°C\n`
+      response += `  Ensure your vehicle is cooled. Carry water. Check tire pressure.\n`
+      weatherNote = true
+    }
+    if (!weatherNote) {
+      response += `\nWeather conditions are favorable for driving.\n`
+    }
+  }
+
+  // Travel tips
+  response += `\nTRAVEL TIPS:\n`
+  
+  if (distanceKm > 200) {
+    response += `  • Long journey — plan for breaks every 2-3 hours.\n`
+    response += `  • Check your fuel level before leaving.\n`
+    response += `  • Pack snacks and water for the trip.\n`
+  } else if (distanceKm > 100) {
+    response += `  • Consider a break halfway for refreshments.\n`
+    response += `  • Check your fuel level before leaving.\n`
+  }
+
+  if (durationMin > 120) {
+    response += `  • Stretch your legs during rest stops.\n`
+    response += `  • Share your route and ETA with someone.\n`
+  } else if (durationMin > 60) {
+    response += `  • Allow extra time for unexpected delays.\n`
+  }
+
+  if (traffic.delay > 15) {
+    response += `  • Significant delays expected. Consider leaving earlier.\n`
+  }
+
+  // Nearest saved location
+  if (savedLocations.length > 0) {
+    const nearest = savedLocations.reduce((nearest, loc) => {
+      const dist = Math.sqrt(
+        Math.pow(loc.lat - endResolved.lat, 2) + 
+        Math.pow(loc.lon - endResolved.lon, 2)
+      )
+      if (!nearest || dist < nearest.dist) {
+        return { ...loc, dist }
+      }
+      return nearest
+    }, null)
+    
+    if (nearest && nearest.dist < 0.5) {
+      response += `\nYou are near "${nearest.label || nearest.name}" — a saved location.\n`
+    }
+  }
+
+  // Arrival time estimate
+  const arrivalTime = new Date(Date.now() + durationMin * 60000 + (traffic.delay || 0) * 60000)
+  response += `\nEstimated arrival: ${arrivalTime.toLocaleTimeString()}\n`
+
+  // Final advice
+  response += `\nDrive safely and enjoy the journey!`
+
+  return response
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
