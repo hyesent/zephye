@@ -26,9 +26,15 @@ import {
   getVoiceForDetectedLanguage,
   LANGUAGE_NAMES,
   getVoiceForLocation
-} from './zephyeHelpers'
+} from './zephyeHelpers.js'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
+
+const BackIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+)
 
 const MicIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -67,16 +73,18 @@ const CopyIcon = () => (
   </svg>
 )
 
-const CloseIcon = () => (
+const MoreIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/>
-    <line x1="6" y1="6" x2="18" y2="18"/>
+    <circle cx="12" cy="5" r="1.5"/>
+    <circle cx="12" cy="12" r="1.5"/>
+    <circle cx="12" cy="19" r="1.5"/>
   </svg>
 )
 
-const BackIcon = () => (
+const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6"/>
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 )
 
@@ -88,19 +96,10 @@ const GlobeIcon = () => (
   </svg>
 )
 
-const MaleIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 4L16 8"/>
-    <path d="M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/>
-    <path d="M16 8l2.5 2.5"/>
-  </svg>
-)
-
-const FemaleIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/>
-    <path d="M12 14v7"/>
-    <path d="M9 18h6"/>
+const LocationIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+    <circle cx="12" cy="10" r="3"/>
   </svg>
 )
 
@@ -114,7 +113,8 @@ const CONFIG = {
   SECONDARY_THRESHOLD: 0.35,
   MAX_SECONDARY_LINES: 4,
   MAX_WARNINGS: 8,
-  TTS_API: 'https://hyezen.onrender.com/api/tts'
+  TTS_API: 'https://hyezen.onrender.com/api/tts',
+  SUGGESTION_ROTATION_INTERVAL: 10000 // 10 seconds
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────
@@ -737,37 +737,51 @@ const mergeResponses = (responses, intents, question) => {
   return merged
 }
 
-// ─── SUGGESTIONS ENGINE ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SUGGESTIONS FROM SAMPLE QUESTIONS ──────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-const getDynamicSuggestions = (savedLocations = []) => {
-  const base = [
-    'Ask "stargazing tonight" or "moon phase"',
-    'Try "what should I wear" or "safe to run"',
-    'Ask "will it rain" or "UV burn time"',
-    'Type "paint drying time" or "best photo hour"',
-    'Compare "today vs tomorrow" for anything',
-    'Ask "biking vs running today?"',
-    'Try "drive or bike to work?"'
-  ]
-  
-  const suggestions = [...base]
-  
-  if (savedLocations.length > 0) {
-    const locNames = savedLocations.map(l => l.label || 'Untitled').filter(Boolean)
-    if (locNames.length > 0) {
-      suggestions.push(`Route to ${locNames[0]}?`)
-      suggestions.push(`Traffic to ${locNames[0]}?`)
-    }
-    if (locNames.length > 1) {
-      suggestions.push(`Compare ${locNames[0]} and ${locNames[1]} weather?`)
-      suggestions.push(`Route from ${locNames[0]} to ${locNames[1]}?`)
-    }
-  }
-  
-  return suggestions
-}
+import { sampleQuestions as weatherQuestions } from './data/BasicWeatherAdvice.js'
+import { sampleQuestions as clothingQuestions } from './data/ClothingAdvice.js'
+import { sampleQuestions as lifestyleQuestions } from './data/Lifestyle.js'
+import { sampleQuestions as skinHairQuestions } from './data/SkinHair.js'
+import { sampleQuestions as drivingQuestions } from './data/Driving.js'
+import { sampleQuestions as travelingQuestions } from './data/Traveling.js'
+import { sampleQuestions as farmingQuestions } from './data/Farming.js'
+import { sampleQuestions as stargazingQuestions } from './data/Stargazing.js'
+import { sampleQuestions as photographyQuestions } from './data/Photography.js'
+import { sampleQuestions as eventsQuestions } from './data/Events.js'
+import { sampleQuestions as sportsQuestions } from './data/Sports.js'
+import { sampleQuestions as healthQuestions } from './data/Health.js'
+import { sampleQuestions as diyQuestions } from './data/DIYconstruction.js'
+import { sampleQuestions as petsQuestions } from './data/Pets.js'
+import { sampleQuestions as energyQuestions } from './data/EnergyHome.js'
+import { sampleQuestions as trafficQuestions } from './data/TrafficAdvice.js'
+import { sampleQuestions as routeQuestions } from './data/RouteAdvice.js'
 
+const ALL_SAMPLE_QUESTIONS = [
+  ...weatherQuestions,
+  ...clothingQuestions,
+  ...lifestyleQuestions,
+  ...skinHairQuestions,
+  ...drivingQuestions,
+  ...travelingQuestions,
+  ...farmingQuestions,
+  ...stargazingQuestions,
+  ...photographyQuestions,
+  ...eventsQuestions,
+  ...sportsQuestions,
+  ...healthQuestions,
+  ...diyQuestions,
+  ...petsQuestions,
+  ...energyQuestions,
+  ...trafficQuestions,
+  ...routeQuestions
+]
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── SMART VERDICT GENERATOR ──────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const generateVerdict = (question, data, intent) => {
   const q = question.toLowerCase()
@@ -1210,18 +1224,21 @@ export default function ZephyeFullScreen({
   const [showOriginal, setShowOriginal] = useState(false)
   const [genderPref, setGenderPref] = useState('female')
 
+  // ─── Suggestions State ──────────────────────────────────────────────────
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(true)
+  const suggestionIntervalRef = useRef(null)
+
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
   const ghostIntervalRef = useRef(null)
 
   // ─── Determine which voice to use ──────────────────────────────────────
   const voiceToUse = useMemo(() => {
-    // If user typed in a non-English language, use that language's voice
     if (detectedLanguage !== 'en' && detectedLanguage !== lang) {
       const detectedVoice = getVoiceForDetectedLanguage(detectedLanguage, genderPref)
       if (detectedVoice) return detectedVoice
     }
-    // Otherwise use the prop voice
     return propVoiceToUse
   }, [detectedLanguage, genderPref, propVoiceToUse, lang])
 
@@ -1236,6 +1253,42 @@ export default function ZephyeFullScreen({
       }
     }
   }, [input])
+
+  // ─── Rotate suggestions every 10 seconds ──────────────────────────────
+  useEffect(() => {
+    if (messages.length === 0) {
+      // Get 4 random questions from ALL sample questions
+      const getRandomSuggestions = () => {
+        const shuffled = [...ALL_SAMPLE_QUESTIONS]
+        // Shuffle array
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        }
+        return shuffled.slice(0, 4)
+      }
+      
+      setSuggestions(getRandomSuggestions())
+      setShowSuggestions(true)
+      
+      // Rotate every 10 seconds
+      suggestionIntervalRef.current = setInterval(() => {
+        setSuggestions(getRandomSuggestions())
+      }, CONFIG.SUGGESTION_ROTATION_INTERVAL)
+      
+      return () => {
+        if (suggestionIntervalRef.current) {
+          clearInterval(suggestionIntervalRef.current)
+        }
+      }
+    } else {
+      setShowSuggestions(false)
+      if (suggestionIntervalRef.current) {
+        clearInterval(suggestionIntervalRef.current)
+        suggestionIntervalRef.current = null
+      }
+    }
+  }, [messages.length])
 
   // ─── Weather Data ──────────────────────────────────────────────────────
 
@@ -1315,50 +1368,32 @@ export default function ZephyeFullScreen({
       return
     }
     
-    const suggestions = getDynamicSuggestions(savedLocations)
+    const suggestionsList = [
+      'Ask "stargazing tonight" or "moon phase"',
+      'Try "what should I wear" or "safe to run"',
+      'Ask "will it rain" or "UV burn time"',
+      'Type "paint drying time" or "best photo hour"',
+      'Compare "today vs tomorrow" for anything',
+      'Ask "biking vs running today?"',
+      'Try "drive or bike to work?"'
+    ]
+    
     let i = 0
-    setGhostText(suggestions[0])
+    setGhostText(suggestionsList[0])
     
     ghostIntervalRef.current = setInterval(() => {
-      i = (i + 1) % suggestions.length
-      setGhostText(suggestions[i])
+      i = (i + 1) % suggestionsList.length
+      setGhostText(suggestionsList[i])
     }, 3000)
     
     return () => {
       if (ghostIntervalRef.current) clearInterval(ghostIntervalRef.current)
     }
-  }, [input, savedLocations])
+  }, [input])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
-
-  // ─── Quick Actions ────────────────────────────────────────────────────
-
-  const quickActionChips = useMemo(() => {
-    const chips = [
-      'Will it rain tomorrow?',
-      'What should I wear?',
-      'Stargazing tonight?',
-      'Safe to drive?',
-      'Traffic incidents near me?',
-      'Can I go biking?',
-      'Compare today vs tomorrow',
-      'Biking vs running today?'
-    ]
-
-    const locs = savedLocations.slice(0, 2)
-    if (locs.length > 0) {
-      chips.push(`Route to ${locs[0].label || 'saved location'}?`)
-      chips.push(`Traffic to ${locs[0].label || 'saved location'}?`)
-    }
-    if (locs.length > 1) {
-      chips.push(`Compare ${locs[0].label} and ${locs[1].label} weather?`)
-      chips.push(`Route from ${locs[0].label} to ${locs[1].label}?`)
-    }
-
-    return chips
-  }, [savedLocations])
 
   // ─── Speaking ─────────────────────────────────────────────────────────
 
@@ -1415,7 +1450,6 @@ export default function ZephyeFullScreen({
     const q = question.toLowerCase()
     let data = weatherData
     
-    // ─── FIX: Ensure we have full weather data ──────────────────────────
     if (!data.hourly || !data.hourly.time || data.hourly.time.length === 0) {
       const fetched = await fetchFullWeather(data.lat, data.lon)
       if (fetched) {
@@ -1426,7 +1460,6 @@ export default function ZephyeFullScreen({
     const comparison = detectComparison(question)
     
     if (comparison) {
-      // ─── Multi-time comparison ──────────────────────────────────────
       if (comparison.type === 'multi_time') {
         const times = comparison.times
         const detectedIntents = detectIntents(q)
@@ -1465,7 +1498,6 @@ export default function ZephyeFullScreen({
         return comparisonResponse
       }
       
-      // ─── Location comparison ──────────────────────────────────────────
       if (comparison.type === 'location') {
         const locations = comparison.locations
         const detectedIntents = detectIntents(q)
@@ -1519,7 +1551,6 @@ export default function ZephyeFullScreen({
         return comparisonResponse
       }
       
-      // ─── Activity comparison ──────────────────────────────────────────
       if (comparison.type === 'activity') {
         const activities = comparison.activities
         
@@ -1567,7 +1598,6 @@ export default function ZephyeFullScreen({
         return comparisonResponse
       }
       
-      // ─── Scenario comparison ──────────────────────────────────────────
       if (comparison.type === 'scenario') {
         const scenarios = comparison.scenarios
         const dest = comparison.destination
@@ -1615,7 +1645,6 @@ export default function ZephyeFullScreen({
         return comparisonResponse
       }
       
-      // ─── Standard two-time comparison ────────────────────────────────
       const detectedIntents = detectIntents(q)
       
       if (detectedIntents.length === 0) {
@@ -1668,7 +1697,6 @@ export default function ZephyeFullScreen({
       return comparisonResponse
     }
 
-    // ─── NORMAL FLOW ──────────────────────────────────────────────────────
     const detectedIntents = detectIntents(q)
     
     console.log(`Intents:`, detectedIntents.map(d => 
@@ -1725,7 +1753,6 @@ export default function ZephyeFullScreen({
       return `I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, or health. Current temp is ${data.temp}°C.`
     }
 
-    // ─── PARALLEL FETCHING ──────────────────────────────────────────────
     const results = await Promise.all(
       detectedIntents.map(async (detected) => {
         try {
@@ -1780,13 +1807,11 @@ export default function ZephyeFullScreen({
   const handleAsk = useCallback(async (question) => {
     if (!question.trim()) return
 
-    // ─── DETECT LANGUAGE ──────────────────────────────────────────────────
     const detectedLang = detectLanguageFromText(question)
     if (detectedLang !== 'en') {
       setDetectedLanguage(detectedLang)
     }
 
-    // ─── TRANSLATE QUESTION TO ENGLISH IF NEEDED ────────────────────────
     let englishQuestion = question
     const needsTranslation = detectedLang !== 'en' && detectedLang !== lang
 
@@ -1808,7 +1833,6 @@ export default function ZephyeFullScreen({
     try {
       const answer = await routeQuestion(englishQuestion)
 
-      // ─── TRANSLATE RESPONSE BACK TO USER LANGUAGE ──────────────────────
       let finalAnswer = answer
       if (needsTranslation) {
         setIsTranslating(true)
@@ -1844,6 +1868,12 @@ export default function ZephyeFullScreen({
     }
   }, [routeQuestion, weatherData, voiceToUse, speakText, lang])
 
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── MENU DROPDOWN ────────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
   // ─── Render ──────────────────────────────────────────────────────────
 
   if (!isOpen) return null
@@ -1858,231 +1888,310 @@ export default function ZephyeFullScreen({
     )
   }
 
+  const cityName = location?.name?.split(',')[0] || 'City'
+  const temp = weatherData.temp
+  const aqiLabel = aqiLevel.label
+
   return (
     <div className="ai-fullscreen">
-      {/* HEADER */}
-      <div className="ai-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 10px' }}>
+      {/* HEADER - NEW DESIGN */}
+      <div className="ai-header" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        flexShrink: 0,
+        minHeight: '56px'
+      }}>
+        {/* Left: Back + Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 8px' }}>
             <BackIcon />
           </button>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {location?.name?.split(',')[0] || 'City'}
-          </span>
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '15px', letterSpacing: '-0.3px' }}>
+              ZEPHYE
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '400', marginTop: '-1px' }}>
+              AI Weather Intelligence
+            </div>
+          </div>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Language Indicator */}
-          {detectedLanguage !== 'en' && (
-            <span style={{ 
-              fontSize: '11px', 
-              color: 'var(--text-muted)', 
-              padding: '2px 10px',
-              background: 'rgba(56,189,248,0.1)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <GlobeIcon />
-              {LANGUAGE_NAMES[detectedLanguage] || detectedLanguage}
-              {isTranslating && ' ⌛'}
-            </span>
-          )}
 
-          {/* Show Original Toggle */}
-          {detectedLanguage !== 'en' && (
+        {/* Right: Location + Temp + Menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            fontSize: '12px',
+            color: 'var(--text)'
+          }}>
+            <LocationIcon />
+            <span>{cityName}</span>
+            <span style={{ color: 'var(--text-muted)' }}>·</span>
+            <span>{temp}°C</span>
+            <span style={{ color: 'var(--text-muted)' }}>·</span>
+            <span className="aqi-badge" style={{ color: aqiLevel.color }}>{aqiLabel}</span>
+          </div>
+
+          {/* Menu Dropdown (3 dots) */}
+          <div style={{ position: 'relative' }}>
             <button
-              onClick={() => setShowOriginal(!showOriginal)}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               style={{
-                fontSize: '11px',
-                padding: '4px 10px',
-                borderRadius: '12px',
-                background: showOriginal ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                padding: '4px 8px',
+                background: 'transparent',
+                border: 'none',
                 color: 'var(--text-muted)',
                 cursor: 'pointer'
               }}
             >
-              {showOriginal ? 'Original' : 'Show Original'}
+              <MoreIcon />
             </button>
-          )}
 
-          {/* Gender Toggle */}
-          <div style={{
-            display: 'flex',
-            background: 'rgba(255,255,255,0.06)',
-            borderRadius: '20px',
-            padding: '2px',
-            border: '1px solid rgba(255,255,255,0.06)'
-          }}>
-            <button
-              onClick={() => setGenderPref('female')}
-              style={{
-                padding: '4px 10px',
-                borderRadius: '18px',
-                fontSize: '12px',
-                fontWeight: '600',
-                background: genderPref === 'female' ? 'var(--accent)' : 'transparent',
-                color: genderPref === 'female' ? 'var(--bg-deep)' : 'var(--text-muted)',
-                border: 'none',
-                cursor: 'pointer',
+            {isMenuOpen && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                minWidth: '180px',
+                background: 'rgba(15,23,42,0.96)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '12px',
+                padding: '8px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                zIndex: 100,
                 display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <FemaleIcon />
-            </button>
-            <button
-              onClick={() => setGenderPref('male')}
-              style={{
-                padding: '4px 10px',
-                borderRadius: '18px',
-                fontSize: '12px',
-                fontWeight: '600',
-                background: genderPref === 'male' ? 'var(--accent)' : 'transparent',
-                color: genderPref === 'male' ? 'var(--bg-deep)' : 'var(--text-muted)',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <MaleIcon />
-            </button>
-          </div>
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                {/* Voice Gender */}
+                <div style={{ padding: '4px 8px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Voice
+                </div>
+                <button
+                  onClick={() => { setGenderPref('female'); setIsMenuOpen(false) }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: genderPref === 'female' ? 'rgba(56,189,248,0.15)' : 'transparent',
+                    border: 'none',
+                    color: genderPref === 'female' ? 'var(--accent)' : 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Female
+                </button>
+                <button
+                  onClick={() => { setGenderPref('male'); setIsMenuOpen(false) }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: genderPref === 'male' ? 'rgba(56,189,248,0.15)' : 'transparent',
+                    border: 'none',
+                    color: genderPref === 'male' ? 'var(--accent)' : 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Male
+                </button>
 
-          <div className="capsule-switch">
-            <button
-              className={`capsule-option ${activeTab === 'ask' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ask')}
-            >
-              Ask Zephye
-            </button>
-            <button className="capsule-option pro" onClick={() => {}} title="Pro — coming soon">
-              Pro
-            </button>
-          </div>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div className="weather-badge">
-            <span>{location?.name?.split(',')[0] || 'City'}</span>
-            <span>{weatherData.temp}°C</span>
-            <span className="aqi-badge">{aqiLevel.label}</span>
-          </div>
-        </div>
-      </div>
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
 
-      {/* Quick Actions */}
-      {messages.length <= 1 && (
-        <div style={{ 
-          display: 'flex', 
-          gap: 8, 
-          padding: '10px 16px', 
-          overflowX: 'auto',
-          flexWrap: 'wrap',
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
-        }}>
-          {quickActionChips.slice(0, 10).map((q, i) => (
-            <button
-              key={i}
-              onClick={() => handleAsk(q)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = 'rgba(255,255,255,0.12)'
-                e.target.style.borderColor = 'rgba(255,255,255,0.2)'
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = 'rgba(255,255,255,0.06)'
-                e.target.style.borderColor = 'rgba(255,255,255,0.1)'
-              }}
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* BODY */}
-      <div className="ai-body">
-        <div style={{ maxWidth: '768px', margin: '0 auto' }}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{ display: 'flex', marginBottom: 12, justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div className={`chat-bubble ${msg.role}`}>
-                {msg.role === 'assistant' && (
-                  <div className="msg-actions-top">
-                    <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
-                      {isSpeaking ? <StopIcon /> : <SpeakIcon />}
-                    </button>
-                    <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
-                      <CopyIcon />
-                    </button>
-                  </div>
+                {/* Language */}
+                {detectedLanguage !== 'en' && (
+                  <>
+                    <div style={{ padding: '4px 8px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Language
+                    </div>
+                    <div style={{ padding: '6px 12px', fontSize: '13px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <GlobeIcon />
+                      {LANGUAGE_NAMES[detectedLanguage] || detectedLanguage}
+                      {isTranslating && ' ⌛'}
+                    </div>
+                  </>
                 )}
-                
-                {/* Show original English if toggled */}
-                {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: 'var(--text-muted)', 
-                    marginBottom: '8px',
-                    paddingBottom: '8px',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)'
-                  }}>
-                    {msg.originalEnglish}
-                  </div>
-                )}
-                
-                <div className="msg-content">{msg.content}</div>
-                
-                {/* Language indicator */}
-                {msg.originalLang && msg.originalLang !== 'en' && (
-                  <div style={{ 
-                    fontSize: '10px', 
-                    color: 'var(--text-muted)', 
-                    marginTop: '6px',
-                    opacity: 0.5
-                  }}>
-                    {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
-                  </div>
+
+                {/* Show Original */}
+                {detectedLanguage !== 'en' && (
+                  <button
+                    onClick={() => { setShowOriginal(!showOriginal); setIsMenuOpen(false) }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      background: showOriginal ? 'rgba(56,189,248,0.15)' : 'transparent',
+                      border: 'none',
+                      color: showOriginal ? 'var(--accent)' : 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {showOriginal ? 'Hide Original' : 'Show Original'}
+                  </button>
                 )}
               </div>
-            </div>
-          ))}
-
-          {streamingText && (
-            <div style={{ display: 'flex', marginBottom: 12 }}>
-              <div className="chat-bubble ai">{streamingText}▋</div>
-            </div>
-          )}
-
-          {isLoading && !streamingText && (
-            <div style={{ display: 'flex', marginBottom: 12 }}>
-              <div className="chat-bubble ai text-muted">Thinking...</div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* INPUT */}
-      <div className="ai-input-wrap">
+      {/* BODY - SCROLLABLE */}
+      <div className="ai-body" style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <div style={{ maxWidth: '768px', margin: '0 auto', width: '100%' }}>
+          
+          {/* ─── WELCOME STATE ────────────────────────────────────────────── */}
+          {messages.length === 0 ? (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%',
+              minHeight: '300px',
+              textAlign: 'center',
+              padding: '20px'
+            }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '4px' }}>
+                Hey, {userName || 'there'} 👋
+              </h2>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                What can I help you with today?
+              </p>
+
+              {/* 4 Dynamic Suggestions */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '10px',
+                width: '100%',
+                maxWidth: '420px'
+              }}>
+                {suggestions.map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleAsk(q)}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      textAlign: 'left',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      lineHeight: '1.4',
+                      fontWeight: '500'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '16px', opacity: 0.5 }}>
+                Suggestions rotate every 10 seconds
+              </p>
+            </div>
+          ) : (
+            /* ─── CONVERSATION ────────────────────────────────────────────── */
+            <>
+              {messages.map((msg, i) => (
+                <div key={i} style={{ 
+                  display: 'flex', 
+                  marginBottom: 12, 
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
+                }}>
+                  <div className={`chat-bubble ${msg.role}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="msg-actions-top">
+                        <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
+                          {isSpeaking ? <StopIcon /> : <SpeakIcon />}
+                        </button>
+                        <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
+                          <CopyIcon />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: 'var(--text-muted)', 
+                        marginBottom: '8px',
+                        paddingBottom: '8px',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        {msg.originalEnglish}
+                      </div>
+                    )}
+                    
+                    <div className="msg-content">{msg.content}</div>
+                    
+                    {msg.originalLang && msg.originalLang !== 'en' && (
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: 'var(--text-muted)', 
+                        marginTop: '6px',
+                        opacity: 0.5
+                      }}>
+                        {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {streamingText && (
+                <div style={{ display: 'flex', marginBottom: 12 }}>
+                  <div className="chat-bubble ai">{streamingText}▋</div>
+                </div>
+              )}
+
+              {isLoading && !streamingText && (
+                <div style={{ display: 'flex', marginBottom: 12 }}>
+                  <div className="chat-bubble ai text-muted">Thinking...</div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* INPUT - FIXED */}
+      <div className="ai-input-wrap" style={{
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        padding: '12px 16px',
+        flexShrink: 0,
+        background: 'var(--bg-deep)'
+      }}>
         <div style={{ maxWidth: '768px', margin: '0 auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <div className="input-wrapper">
             <input
@@ -2100,7 +2209,7 @@ export default function ZephyeFullScreen({
             onClick={() => handleAsk(input)}
             disabled={!input.trim() || isLoading}
             className="btn-primary"
-            style={{ width: 'auto', padding: '10px 20px' }}
+            style={{ width: 'auto', padding: '10px 16px', borderRadius: '40px' }}
           >
             <SendIcon />
           </button>
@@ -2108,59 +2217,24 @@ export default function ZephyeFullScreen({
       </div>
 
       <style jsx>{`
-        .capsule-switch {
+        .ai-fullscreen {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: var(--bg-deep);
           display: flex;
-          background: rgba(255,255,255,0.06);
-          border-radius: 40px;
-          padding: 3px;
-          border: 1px solid var(--glass-border);
-        }
-        .capsule-option {
-          padding: 5px 16px;
-          border-radius: 30px;
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--text-muted);
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          transition: 0.2s;
-          letter-spacing: -0.2px;
-        }
-        .capsule-option.active {
-          background: var(--accent);
-          color: var(--bg-deep);
-          box-shadow: 0 2px 8px rgba(56,189,248,0.25);
-        }
-        .capsule-option.pro {
-          opacity: 0.5;
-          cursor: default;
-        }
-        .capsule-option.pro::after {
-          content: ' 🔒';
-          font-size: 10px;
-          opacity: 0.6;
+          flex-direction: column;
+          z-index: 9999;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        .weather-badge {
-          background: rgba(255,255,255,0.06);
-          padding: 4px 12px;
-          border-radius: 30px;
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--text);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          border: 1px solid var(--glass-border);
-          white-space: nowrap;
-        }
-        .aqi-badge {
-          background: rgba(255,255,255,0.1);
-          padding: 0 8px;
-          border-radius: 30px;
-          font-size: 10px;
-          font-weight: 600;
+        .ai-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px;
+          scroll-behavior: smooth;
         }
 
         .input-wrapper {
@@ -2206,7 +2280,62 @@ export default function ZephyeFullScreen({
           background: rgba(56,189,248,0.12);
         }
 
-        .msg-actions-top {
+        .btn-primary {
+          background: var(--accent);
+          color: var(--bg-deep);
+          border: none;
+          font-weight: 600;
+          cursor: pointer;
+          transition: 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .btn-primary:hover:not(:disabled) {
+          opacity: 0.85;
+          transform: scale(0.97);
+        }
+        .btn-primary:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+
+        .btn-ghost {
+          background: transparent;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 8px;
+          transition: 0.2s;
+          display: flex;
+          align-items: center;
+        }
+        .btn-ghost:hover {
+          background: rgba(255,255,255,0.06);
+          color: var(--text);
+        }
+
+        .chat-bubble {
+          max-width: 92%;
+          padding: 14px 16px;
+          border-radius: 16px;
+          font-size: 14px;
+          line-height: 1.6;
+          position: relative;
+          word-break: break-word;
+        }
+        .chat-bubble.user {
+          background: var(--accent);
+          color: var(--bg-deep);
+          border-bottom-right-radius: 4px;
+        }
+        .chat-bubble.ai {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-bottom-left-radius: 4px;
+        }
+        .chat-bubble .msg-actions-top {
           display: flex;
           gap: 6px;
           margin-bottom: 8px;
@@ -2216,7 +2345,7 @@ export default function ZephyeFullScreen({
         .chat-bubble:hover .msg-actions-top {
           opacity: 1;
         }
-        .speak-btn {
+        .chat-bubble .speak-btn {
           display: flex;
           align-items: center;
           gap: 4px;
@@ -2228,11 +2357,38 @@ export default function ZephyeFullScreen({
           font-size: 12px;
           cursor: pointer;
         }
-        .speak-btn:hover {
+        .chat-bubble .speak-btn:hover {
           background: rgba(255,255,255,0.12);
         }
-        .msg-content {
+        .chat-bubble .msg-content {
           white-space: pre-wrap;
+        }
+
+        .text-muted {
+          color: var(--text-muted);
+        }
+
+        .aqi-badge {
+          background: rgba(255,255,255,0.06);
+          padding: 0 8px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+        }
+
+        /* Scrollbar styling */
+        .ai-body::-webkit-scrollbar {
+          width: 4px;
+        }
+        .ai-body::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .ai-body::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
+          border-radius: 4px;
+        }
+        .ai-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.2);
         }
       `}</style>
     </div>
