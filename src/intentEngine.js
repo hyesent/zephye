@@ -168,8 +168,8 @@ const INTENT_MAP = [
       'soil preparation', 'soil testing', 'soil drainage',
       'soil erosion', 'soil conservation'
     ],
-    contextBoost: ['crop', 'plant', 'farm', 'soil', 'harvest', 'garden', 'seed', 'livestock', 'cattle', 'poultry'],
-    exclude: ['weather', 'temperature', 'rain', 'snow', 'hot', 'cold', 'sport', 'run', 'walk', 'dog', 'cat', 'pet']
+    contextBoost: ['crop', 'plant', 'farm', 'pesticide', 'soil', 'harvest', 'garden', 'seed', 'livestock', 'cattle', 'poultry'],
+    exclude: ['weather', 'temperature', 'rain', 'snow', 'hot', 'cold', 'sport', 'run', 'walk', 'dog', 'cat', 'pest']
   },
   {
     id: 'sports',
