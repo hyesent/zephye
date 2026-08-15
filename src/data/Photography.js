@@ -717,7 +717,7 @@ function getFoggingRisk(data) {
 // MILKY WAY VISIBILITY CALCULATOR
 // ============================================================================
 
-function getMilkyWayVisibility(data) {
+function calculateGetMilkyWayVisibility(data) {
   const { cloudCover, moonPhase, moonIllumination, aqi, visibility, lat, lon } = data;
   const factors = [];
   let score = 0;
