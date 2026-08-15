@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useAudio } from './AudioContext'
 import { getMoonPhase, mapWeatherCode, getMoonIllumination } from './data/calculations.js'
 
@@ -26,7 +26,7 @@ import {
   getVoiceForDetectedLanguage,
   LANGUAGE_NAMES,
   getVoiceForLocation
-} from './zephyeHelpers'
+} from './zephyeHelpers.js'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ const GlobeIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/>
     <line x1="2" y1="12" x2="22" y2="12"/>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/>
   </svg>
 )
 
@@ -93,6 +93,18 @@ const LocationIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
     <circle cx="12" cy="10" r="3"/>
+  </svg>
+)
+
+const ChevronDownIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+)
+
+const ChevronUpIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="18 15 12 9 6 15"/>
   </svg>
 )
 
@@ -695,7 +707,9 @@ const INTENT_MAP = [
   }
 ]
 
-// ─── SCORING ENGINE ──────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SCORING ENGINE ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const scoreQuestion = (question, intent) => {
   const q = question.toLowerCase()
@@ -728,7 +742,9 @@ const scoreQuestion = (question, intent) => {
   return { score, matched }
 }
 
-// ─── INTENT DETECTION ────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── INTENT DETECTION ────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const detectIntents = (question) => {
   const results = []
@@ -752,172 +768,38 @@ const detectIntents = (question) => {
   return selected.slice(0, CONFIG.MAX_INTENTS)
 }
 
-// ─── SMART RESPONSE MERGER ──────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MERGE RESPONSES ─────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const mergeResponses = (responses, intents, question) => {
   if (responses.length === 0) return null
   if (responses.length === 1) return responses[0]
 
-  const parsedSections = []
-
+  let merged = ''
+  
   for (let i = 0; i < responses.length; i++) {
     const text = responses[i]
     const intent = intents[i]?.intent
     const isPrimary = intents[i]?.isPrimary || false
-    const lines = text.split('\n').filter(l => l.trim())
-
-    const section = {
-      header: intent?.section || 'Advice',
-      isPrimary,
-      score: intents[i]?.score || 0,
-      contentLines: [],
-      warnings: [],
-      bottomLine: '',
-      raw: text
-    }
-
-    let currentSection = 'content'
-    let warningBuffer = []
-    let bottomBuffer = []
-
-    for (const line of lines) {
-      const trimmed = line.trim()
-      
-      if (trimmed.includes('WARNING') || trimmed.includes('Warning')) {
-        currentSection = 'warnings'
-        warningBuffer = []
-        continue
-      }
-      
-      if (trimmed.includes('BOTTOM') || trimmed.includes('Bottom') || trimmed.includes('Verdict') || trimmed.includes('Bottom Line')) {
-        currentSection = 'bottom'
-        bottomBuffer = []
-        continue
-      }
-
-      if (trimmed.includes('---') || trimmed.includes('===')) continue
-
-      if (currentSection === 'warnings') {
-        if (trimmed && !trimmed.includes('WARNING') && !trimmed.includes('Warning') && !trimmed.includes('BOTTOM')) {
-          warningBuffer.push(trimmed)
-        }
-      } else if (currentSection === 'bottom') {
-        if (trimmed && !trimmed.includes('BOTTOM') && !trimmed.includes('Bottom') && !trimmed.includes('Verdict')) {
-          bottomBuffer.push(trimmed)
-        }
-      } else {
-        if (!trimmed.includes('WARNING') && !trimmed.includes('Warning') && 
-            !trimmed.includes('BOTTOM') && !trimmed.includes('Bottom') &&
-            !trimmed.includes('Verdict') &&
-            trimmed.length > 2) {
-          section.contentLines.push(trimmed)
-        }
-      }
-    }
-
-    if (warningBuffer.length === 0) {
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if ((trimmed.includes('WARNING') || trimmed.includes('Warning')) &&
-            !trimmed.includes('Warnings:') && !trimmed.includes('Warning:')) {
-          warningBuffer.push(trimmed)
-        }
-      }
-    }
-
-    if (bottomBuffer.length === 0) {
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if ((trimmed.includes('BOTTOM LINE') || trimmed.includes('Bottom Line') || trimmed.includes('Verdict')) &&
-            !trimmed.includes('Bottom Line:')) {
-          bottomBuffer.push(trimmed)
-        }
-      }
-    }
-
-    section.warnings = warningBuffer
-    section.bottomLine = bottomBuffer.join('\n')
-    parsedSections.push(section)
-  }
-
-  parsedSections.sort((a, b) => {
-    if (a.isPrimary && !b.isPrimary) return -1
-    if (!a.isPrimary && b.isPrimary) return 1
-    return b.score - a.score
-  })
-
-  let merged = ''
-  const primary = parsedSections.find(s => s.isPrimary) || parsedSections[0]
-  const secondary = parsedSections.filter(s => !s.isPrimary)
-
-  merged += `${primary.header}\n`
-  merged += primary.contentLines.join('\n')
-  
-  if (primary.warnings.length > 0) {
-    merged += '\n\nWarnings:\n'
-    merged += primary.warnings.join('\n')
-  }
-  
-  if (primary.bottomLine) {
-    merged += '\n\nBottom Line:\n'
-    merged += primary.bottomLine
-  }
-  merged += '\n\n'
-
-  if (secondary.length > 0) {
-    merged += `Also consider:\n\n`
-    for (const sec of secondary) {
-      merged += `${sec.header}\n`
-      
-      const isRoute = sec.header === 'Route'
-      const maxLines = isRoute ? 999 : CONFIG.MAX_SECONDARY_LINES
-      
-      const topLines = sec.contentLines.slice(0, maxLines)
-      merged += topLines.join('\n')
-      
-      if (!isRoute && sec.contentLines.length > CONFIG.MAX_SECONDARY_LINES) {
-        merged += `\n  ... and ${sec.contentLines.length - CONFIG.MAX_SECONDARY_LINES} more items`
-      }
+    
+    if (typeof text === 'string') {
+      merged += `${intent?.section || 'Advice'}\n`
+      merged += text
+      merged += '\n\n'
+    } else if (text && typeof text === 'object') {
+      merged += `${intent?.section || 'Advice'}\n`
+      merged += text.summary || text.verdict || ''
       merged += '\n\n'
     }
   }
 
-  const allWarnings = []
-  for (const sec of parsedSections) {
-    for (const w of sec.warnings) {
-      const key = w.substring(0, 30)
-      if (!allWarnings.some(existing => existing.includes(key) || key.includes(existing.substring(0, 30)))) {
-        allWarnings.push(w)
-      }
-    }
-  }
-
-  if (allWarnings.length > 0 && primary.warnings.length === 0) {
-    merged += `Warnings:\n`
-    for (const w of allWarnings.slice(0, CONFIG.MAX_WARNINGS)) {
-      merged += `${w}\n`
-    }
-    if (allWarnings.length > CONFIG.MAX_WARNINGS) {
-      merged += `... and ${allWarnings.length - CONFIG.MAX_WARNINGS} more\n`
-    }
-    merged += '\n'
-  }
-
-  const allBottomLines = parsedSections
-    .map(s => s.bottomLine)
-    .filter(Boolean)
-    .filter((line, index, self) => self.indexOf(line) === index)
-
-  if (allBottomLines.length > 0) {
-    const primaryBottom = parsedSections.find(s => s.isPrimary)?.bottomLine
-    const bestBottom = primaryBottom || allBottomLines[0]
-    merged += `Bottom Line:\n${bestBottom}\n`
-  }
-
-  return merged
+  return merged.trim()
 }
 
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── SMART VERDICT GENERATOR ──────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const generateVerdict = (question, data, intent) => {
   const q = question.toLowerCase()
@@ -936,25 +818,21 @@ const generateVerdict = (question, data, intent) => {
     case 'stargazing': {
       const cloudCover = data.cloudCover || 0
       const moonIllumination = data.moonPhase ? Math.round(getMoonIllumination(data.moonPhase) * 100) : 0
-      const seeing = data.seeing || 5
       
       if (cloudCover > 70) {
-        verdict = 'NO'
+        verdict = 'No'
         confidence = 90
       } else if (cloudCover > 40) {
-        verdict = 'MIGHT'
+        verdict = 'Maybe'
         confidence = 60
       } else if (moonIllumination > 80) {
-        verdict = 'MIGHT'
+        verdict = 'Maybe'
         confidence = 65
-      } else if (seeing <= 3 && cloudCover < 20 && moonIllumination < 30) {
-        verdict = 'YES'
-        confidence = 95
       } else if (cloudCover < 30 && moonIllumination < 50) {
-        verdict = 'YES'
+        verdict = 'Yes'
         confidence = 80
       } else {
-        verdict = 'MIGHT'
+        verdict = 'Maybe'
         confidence = 55
       }
       break
@@ -966,46 +844,46 @@ const generateVerdict = (question, data, intent) => {
       
       if (q.includes('rain') || q.includes('storm')) {
         if (rainChance > 70) {
-          verdict = 'YES'
+          verdict = 'Yes'
           confidence = 90
         } else if (rainChance > 40) {
-          verdict = 'MIGHT'
+          verdict = 'Maybe'
           confidence = 60
         } else {
-          verdict = 'NO'
+          verdict = 'No'
           confidence = 85
         }
       } else if (q.includes('hot') || q.includes('warm')) {
         if (temp > 28) {
-          verdict = 'YES'
+          verdict = 'Yes'
           confidence = 90
         } else if (temp > 22) {
-          verdict = 'MIGHT'
+          verdict = 'Maybe'
           confidence = 60
         } else {
-          verdict = 'NO'
+          verdict = 'No'
           confidence = 85
         }
       } else if (q.includes('cold')) {
         if (temp < 10) {
-          verdict = 'YES'
+          verdict = 'Yes'
           confidence = 90
         } else if (temp < 18) {
-          verdict = 'MIGHT'
+          verdict = 'Maybe'
           confidence = 60
         } else {
-          verdict = 'NO'
+          verdict = 'No'
           confidence = 85
         }
       } else if (q.includes('clear') || q.includes('sunny')) {
         if (data.cloudCover < 30) {
-          verdict = 'YES'
+          verdict = 'Yes'
           confidence = 90
         } else if (data.cloudCover < 60) {
-          verdict = 'MIGHT'
+          verdict = 'Maybe'
           confidence = 60
         } else {
-          verdict = 'NO'
+          verdict = 'No'
           confidence = 85
         }
       }
@@ -1019,87 +897,17 @@ const generateVerdict = (question, data, intent) => {
       
       if (q.includes('run') || q.includes('jog') || q.includes('bike') || q.includes('cycle')) {
         if (temp > 35 || temp < -5) {
-          verdict = 'NO'
+          verdict = 'No'
           confidence = 90
         } else if (rainChance > 60 || wind > 40) {
-          verdict = 'NO'
+          verdict = 'No'
           confidence = 85
         } else if (rainChance > 30 || wind > 25 || temp > 30 || temp < 5) {
-          verdict = 'MIGHT'
+          verdict = 'Maybe'
           confidence = 55
         } else {
-          verdict = 'YES'
+          verdict = 'Yes'
           confidence = 90
-        }
-      }
-      break
-    }
-    
-    case 'driving': {
-      const rainChance = data.precipitationProb || 0
-      const visibility = data.visibility || 10
-      const wind = data.wind || 0
-      const condition = data.condition || ''
-      
-      if (condition === 'thunderstorm' || condition === 'snow') {
-        verdict = 'NO'
-        confidence = 95
-      } else if (rainChance > 70 || visibility < 2 || wind > 50) {
-        verdict = 'NO'
-        confidence = 85
-      } else if (rainChance > 40 || visibility < 5 || wind > 30) {
-        verdict = 'MIGHT'
-        confidence = 60
-      } else {
-        verdict = 'YES'
-        confidence = 90
-      }
-      break
-    }
-    
-    case 'traffic': {
-      const hour = new Date().getHours()
-      const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 18)
-      const isWeekend = [0, 6].includes(new Date().getDay())
-      
-      if (isRushHour && !isWeekend) {
-        verdict = 'YES'
-        confidence = 80
-      } else if ((isRushHour && isWeekend) || (hour >= 12 && hour <= 13)) {
-        verdict = 'MIGHT'
-        confidence = 55
-      } else {
-        verdict = 'NO'
-        confidence = 75
-      }
-      break
-    }
-    
-    case 'clothing': {
-      const temp = data.temp || 0
-      const rainChance = data.precipitationProb || 0
-      
-      if (q.includes('jacket') || q.includes('coat')) {
-        if (temp < 10) {
-          verdict = 'YES'
-          confidence = 90
-        } else if (temp < 18) {
-          verdict = 'MIGHT'
-          confidence = 60
-        } else {
-          verdict = 'NO'
-          confidence = 85
-        }
-      } else if (q.includes('umbrella') || q.includes('raincoat')) {
-        if (rainChance > 60) {
-          verdict = 'YES'
-          confidence = 90
-        } else if (rainChance > 30) {
-          verdict = 'MIGHT'
-          confidence = 60
-        } else {
-          verdict = 'NO'
-          confidence = 85
         }
       }
       break
@@ -1108,29 +916,26 @@ const generateVerdict = (question, data, intent) => {
     default: {
       const rainChance = data.precipitationProb || 0
       if (rainChance > 60) {
-        verdict = 'MIGHT'
+        verdict = 'Maybe'
         confidence = 55
       } else {
-        verdict = 'YES'
+        verdict = 'Yes'
         confidence = 70
       }
     }
   }
   
   if (!verdict) {
-    verdict = 'MIGHT'
+    verdict = 'Maybe'
     confidence = 50
   }
   
-  let confidenceLabel = ''
-  if (confidence >= 90) confidenceLabel = ' (high confidence)'
-  else if (confidence >= 70) confidenceLabel = ' (moderate confidence)'
-  else if (confidence >= 50) confidenceLabel = ' (low confidence)'
-  
-  return `${verdict}${confidenceLabel}`
+  return verdict
 }
 
-// ─── COMPARISON DETECTION ──────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── COMPARISON DETECTION ────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 const detectComparison = (question) => {
   const q = question.toLowerCase()
@@ -1141,66 +946,30 @@ const detectComparison = (question) => {
     'weekend', 'weekday', 'monday', 'tuesday', 
     'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
     'this morning', 'this afternoon', 'this evening',
-    '6 PM', '7 PM', '8 PM', '9 PM', '10 PM',
-    '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
     'noon', 'midnight', 'sunrise', 'sunset',
     'rush hour', 'commute time', 'lunch time'
   ]
   
   const savedLocs = getSavedLocations()
   const locationWords = savedLocs.map(l => l.label?.toLowerCase()).filter(Boolean)
-  
   const activityWords = ['run', 'bike', 'drive', 'walk', 'cycle', 'jog', 'hike', 'swim', 'sport', 'gym']
   const compareWords = ['vs', 'versus', 'compare', 'difference', 'or', 'vs.', 'and', 'better', 'best', 'rather']
   
   const hasCompare = compareWords.some(w => q.includes(w))
   
-  const foundTimes = timeWords.filter(w => q.includes(w))
-  if (hasCompare && foundTimes.length >= 3) {
-    return {
-      type: 'multi_time',
-      times: foundTimes,
-      count: foundTimes.length
+  if (hasCompare) {
+    const foundTimes = timeWords.filter(w => q.includes(w))
+    const foundLocations = locationWords.filter(w => q.includes(w))
+    const foundActivities = activityWords.filter(w => q.includes(w))
+    
+    if (foundTimes.length >= 2) {
+      return { type: 'time', time1: foundTimes[0], time2: foundTimes[1] }
     }
-  }
-  
-  const foundLocations = locationWords.filter(w => q.includes(w))
-  if (hasCompare && foundLocations.length >= 2) {
-    return {
-      type: 'location',
-      locations: foundLocations,
-      count: foundLocations.length
+    if (foundLocations.length >= 2) {
+      return { type: 'location', locations: foundLocations }
     }
-  }
-  
-  const foundActivities = activityWords.filter(w => q.includes(w))
-  if (hasCompare && foundActivities.length >= 2) {
-    if (q.includes('vs') || q.includes('or') || q.includes('versus') || q.includes('rather')) {
-      return {
-        type: 'activity',
-        activities: foundActivities,
-        count: foundActivities.length
-      }
-    }
-  }
-  
-  const scenarioKeywords = ['drive', 'bike', 'walk', 'cycle', 'run', 'commute', 'travel']
-  const foundScenarios = scenarioKeywords.filter(w => q.includes(w))
-  if (hasCompare && foundScenarios.length >= 2) {
-    if (q.includes('to work') || q.includes('to school') || q.includes('to the') || q.includes('commute')) {
-      return {
-        type: 'scenario',
-        scenarios: foundScenarios,
-        destination: q.match(/to\s+([\w\s]+?)(?:\?|$)/)?.[1]?.trim() || 'destination'
-      }
-    }
-  }
-  
-  if (hasCompare && foundTimes.length >= 2) {
-    return {
-      type: 'time',
-      time1: foundTimes[0],
-      time2: foundTimes[1]
+    if (foundActivities.length >= 2) {
+      return { type: 'activity', activities: foundActivities }
     }
   }
   
@@ -1208,128 +977,80 @@ const detectComparison = (question) => {
     return { type: 'time', time1: 'today', time2: 'tomorrow' }
   }
   
-  if (q.includes('now') && q.includes('later')) {
-    return { type: 'time', time1: 'now', time2: 'later' }
-  }
-  
   return null
 }
 
-// ─── COMPARISON HELPERS ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── STRUCTURED RESPONSE COMPONENT ──────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-const extractKeyPoints = (response, maxLines = 5) => {
-  const lines = response.split('\n').filter(l => l.trim() && !l.includes('---') && !l.includes('==='))
-  return lines.slice(0, maxLines).join('\n')
-}
+function StructuredResponse({ data, onSpeak, isSpeaking, onCopy }) {
+  const [showDetails, setShowDetails] = useState(false)
+  const [showFull, setShowFull] = useState(false)
 
-const generateComparisonVerdict = (results, comparison, intent) => {
-  let verdict = ''
-  
-  switch (comparison.type) {
-    case 'time':
-    case 'multi_time': {
-      const times = comparison.type === 'multi_time' ? comparison.times : [comparison.time1, comparison.time2]
-      const tempValues = results.map(r => r.temp)
-      const rainValues = results.map(r => r.rain)
-      const cloudValues = results.map(r => r.cloudCover)
-      
-      if (tempValues.some(v => v !== null && v !== undefined)) {
-        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
-        if (temps.length > 1) {
-          const max = Math.max(...temps)
-          const min = Math.min(...temps)
-          const diff = max - min
-          if (diff > 3) {
-            const hottest = times[tempValues.indexOf(max)]
-            const coldest = times[tempValues.indexOf(min)]
-            verdict += `${hottest} is hottest at ${max}°C, ${coldest} is coolest at ${min}°C. `
-          } else {
-            verdict += `Temperatures are similar across all times (${Math.round(temps.reduce((a,b) => a + b, 0) / temps.length)}°C avg). `
-          }
-        }
-      }
-      
-      if (rainValues.some(v => v !== null && v !== undefined)) {
-        const rains = rainValues.filter(v => v !== null && v !== undefined).map(Number)
-        if (rains.length > 1) {
-          const max = Math.max(...rains)
-          const min = Math.min(...rains)
-          if (max > 40) {
-            const rainiest = times[rainValues.indexOf(max)]
-            const driest = times[rainValues.indexOf(min)]
-            verdict += `${rainiest} is rainier (${max}%) than ${driest} (${min}%). `
-          } else {
-            verdict += `Low rain chance across all times (${Math.round(rains.reduce((a,b) => a + b, 0) / rains.length)}% avg). `
-          }
-        }
-      }
-      
-      if (cloudValues.some(v => v !== null && v !== undefined)) {
-        const clouds = cloudValues.filter(v => v !== null && v !== undefined).map(Number)
-        if (clouds.length > 1) {
-          const max = Math.max(...clouds)
-          const min = Math.min(...clouds)
-          if (max - min > 30) {
-            const cloudiest = times[cloudValues.indexOf(max)]
-            const clearest = times[cloudValues.indexOf(min)]
-            verdict += `${cloudiest} is cloudiest (${max}%), ${clearest} is clearest (${min}%). `
-          }
-        }
-      }
-      
-      if (!verdict) {
-        const timeList = times.join(', ')
-        verdict = `The conditions across ${timeList} are fairly similar. Check the details above.`
-      }
-      break
-    }
-    
-    case 'location': {
-      const locs = comparison.locations
-      const tempValues = results.map(r => r.temp)
-      
-      if (tempValues.some(v => v !== null && v !== undefined)) {
-        const temps = tempValues.filter(v => v !== null && v !== undefined).map(Number)
-        if (temps.length > 1) {
-          const max = Math.max(...temps)
-          const min = Math.min(...temps)
-          const diff = max - min
-          if (diff > 5) {
-            const hottest = locs[tempValues.indexOf(max)]
-            const coldest = locs[tempValues.indexOf(min)]
-            verdict += `${hottest} is warmer (${max}°C) than ${coldest} (${min}°C). `
-          }
-        }
-      }
-      
-      verdict += `Weather can vary by location. Check details above.`
-      break
-    }
-    
-    case 'activity': {
-      const activities = comparison.activities
-      verdict = `Comparing ${activities.join(' vs ')}. `
-      verdict += `Consider weather impact on each activity. `
-      verdict += `Check the details above for specific recommendations.`
-      break
-    }
-    
-    case 'scenario': {
-      const scenarios = comparison.scenarios
-      const dest = comparison.destination
-      verdict = `Comparing ${scenarios.join(' vs ')} to ${dest}. `
-      verdict += `Consider time, weather, and traffic for each option.`
-      break
-    }
-    
-    default:
-      verdict = 'Comparison complete. See details above.'
+  if (!data || typeof data !== 'object') {
+    return <div className="msg-content">{String(data)}</div>
   }
-  
-  return verdict
+
+  const { verdict, summary, note, details, fullText } = data
+
+  return (
+    <div className="structured-response">
+      {/* Verdict */}
+      <div className="verdict">{verdict}</div>
+      
+      {/* Summary */}
+      <div className="summary">{summary}</div>
+      
+      {/* Note */}
+      {note && <div className="note">{note}</div>}
+      
+      {/* Actions */}
+      <div className="response-actions">
+        {details && details.length > 0 && (
+          <button 
+            className="action-btn"
+            onClick={() => setShowDetails(!showDetails)}
+          >
+            {showDetails ? 'Hide details' : 'Why?'}
+          </button>
+        )}
+        {fullText && (
+          <button 
+            className="action-btn"
+            onClick={() => setShowFull(!showFull)}
+          >
+            {showFull ? 'Show less' : 'More details'}
+          </button>
+        )}
+      </div>
+      
+      {/* Details */}
+      {showDetails && details && details.length > 0 && (
+        <div className="details-section">
+          <div className="details-title">Why this recommendation?</div>
+          {details.map((d, i) => (
+            <div key={i} className="detail-row">
+              <span className="detail-label">{d.label}</span>
+              <span className="detail-value">{d.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Full text */}
+      {showFull && fullText && (
+        <div className="full-section">
+          <div className="full-text">{fullText}</div>
+        </div>
+      )}
+    </div>
+  )
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export default function ZephyeFullScreen({
   isOpen,
@@ -1464,8 +1185,9 @@ export default function ZephyeFullScreen({
     if (aqi == null) return { label: 'Unknown', color: '#6b7280' }
     if (aqi <= 50) return { label: 'Good', color: '#22c55e' }
     if (aqi <= 100) return { label: 'Moderate', color: '#eab308' }
-    if (aqi <= 150) return { label: 'Unhealthy', color: '#f97316' }
-    return { label: 'Hazardous', color: '#ef4444' }
+    if (aqi <= 150) return { label: 'Unhealthy for sensitive groups', color: '#f97316' }
+    if (aqi <= 200) return { label: 'Unhealthy', color: '#ef4444' }
+    return { label: 'Hazardous', color: '#dc2626' }
   }, [aqi])
 
   // ─── Effects ──────────────────────────────────────────────────────────
@@ -1488,7 +1210,13 @@ export default function ZephyeFullScreen({
       setMessages([
         {
           role: 'assistant',
-          content: `${greeting || 'Hello'}, ${userName || location?.name?.split(',')[0] || 'there'}\n${location?.name || 'Your location'}\n${weatherData.temp}°C • ${condition} • AQI ${aqiLevel.label}`
+          content: {
+            verdict: `${greeting || 'Hello'}, ${userName || location?.name?.split(',')[0] || 'there'}`,
+            summary: `${location?.name || 'Your location'} • ${weatherData.temp}°C • ${condition} • AQI ${aqiLevel.label}`,
+            note: 'What can I help you with today?',
+            details: [],
+            fullText: ''
+          }
         }
       ])
     }
@@ -1501,11 +1229,10 @@ export default function ZephyeFullScreen({
     }
     
     const suggestionsList = [
-      'Ask "stargazing tonight" or "moon phase"',
-      'Try "what should I wear" or "safe to run"',
-      'Ask "will it rain" or "UV burn time"',
-      'Type "paint drying time" or "best photo hour"',
-      'Compare "today vs tomorrow" for anything',
+      'Ask "stargazing tonight"',
+      'Try "what should I wear"',
+      'Ask "will it rain"',
+      'Compare "today vs tomorrow"',
       'Ask "biking vs running today?"',
       'Try "drive or bike to work?"'
     ]
@@ -1534,13 +1261,22 @@ export default function ZephyeFullScreen({
       stopGlobal()
       return
     }
-    const cleanText = text
+    
+    // Extract text from structured response if needed
+    let speakableText = text
+    if (typeof text === 'object' && text !== null) {
+      speakableText = `${text.verdict || ''} ${text.summary || ''} ${text.note || ''}`
+    }
+    
+    const cleanText = String(speakableText)
       .replace(/\*\*/g, '')
       .replace(/#/g, '')
       .replace(/•/g, '')
       .replace(/\n/g, '. ')
       .replace(/\s+/g, ' ')
       .trim()
+    
+    if (!cleanText) return
     
     try {
       const res = await fetch(CONFIG.TTS_API, {
@@ -1558,7 +1294,12 @@ export default function ZephyeFullScreen({
   }, [isSpeaking, stopGlobal, playGlobal, voiceToUse])
 
   const copyText = useCallback((text) => {
-    navigator.clipboard.writeText(text)
+    let copyableText = text
+    if (typeof text === 'object' && text !== null) {
+      copyableText = `${text.verdict || ''}\n${text.summary || ''}\n${text.note || ''}`
+      if (text.fullText) copyableText += `\n\n${text.fullText}`
+    }
+    navigator.clipboard.writeText(String(copyableText))
   }, [])
 
   // ─── Voice Recognition ───────────────────────────────────────────────
@@ -1592,303 +1333,86 @@ export default function ZephyeFullScreen({
     const comparison = detectComparison(question)
     
     if (comparison) {
-      if (comparison.type === 'multi_time') {
-        const times = comparison.times
-        const detectedIntents = detectIntents(q)
+      // Simple comparison handling
+      if (comparison.type === 'time') {
+        const time1Data = getTimeShiftedData(data, comparison.time1, question)
+        const time2Data = getTimeShiftedData(data, comparison.time2, question)
         
-        if (detectedIntents.length === 0) {
-          return "I can compare multiple times. Try asking 'Compare today, tomorrow, and this weekend for stargazing?'"
+        const response1 = await getWeatherAdvice(time1Data, question)
+        const response2 = await getWeatherAdvice(time2Data, question)
+        
+        return {
+          type: 'comparison',
+          title: `${comparison.time1} vs ${comparison.time2}`,
+          items: [
+            { label: comparison.time1, content: response1 },
+            { label: comparison.time2, content: response2 }
+          ]
         }
-        
-        const primaryIntent = detectedIntents[0].intent
-        const results = []
-        
-        for (const time of times) {
-          const timeData = getTimeShiftedData(data, time, question)
-          const response = await primaryIntent.fn(timeData, question)
-          const tempMatch = response.match(/(\d+)°C/)
-          const rainMatch = response.match(/(\d+)% rain/i)
-          const cloudMatch = response.match(/Cloud Cover:\s*(\d+)%/)
-          results.push({
-            time,
-            response: extractKeyPoints(response, 4),
-            temp: tempMatch ? parseInt(tempMatch[1]) : null,
-            rain: rainMatch ? parseInt(rainMatch[1]) : null,
-            cloudCover: cloudMatch ? parseInt(cloudMatch[1]) : null
-          })
-        }
-        
-        let comparisonResponse = `Multi-Time Comparison:\n\n`
-        
-        for (const result of results) {
-          comparisonResponse += `${result.time.toUpperCase()}:\n${result.response}\n\n`
-        }
-        
-        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
-        comparisonResponse += `Verdict: ${verdict}`
-        
-        return comparisonResponse
       }
       
       if (comparison.type === 'location') {
+        // Handle location comparison
         const locations = comparison.locations
-        const detectedIntents = detectIntents(q)
-        
-        if (detectedIntents.length === 0) {
-          return "I can compare locations. Try asking 'Compare Lagos and Abuja weather?'"
-        }
-        
-        const primaryIntent = detectedIntents[0].intent
         const results = []
         
         for (const locName of locations) {
           const savedLoc = findSavedLocation(locName)
-          if (!savedLoc) {
-            return `I couldn't find "${locName}" in your saved locations. Please save it first.`
+          if (savedLoc) {
+            const freshData = await fetchFullWeather(savedLoc.lat, savedLoc.lon)
+            if (freshData) {
+              freshData.city = savedLoc.label || savedLoc.name
+              const response = await getWeatherAdvice(freshData, question)
+              results.push({ label: savedLoc.label || savedLoc.name, content: response })
+            }
           }
-          
-          const freshData = await fetchFullWeather(savedLoc.lat, savedLoc.lon)
-          if (!freshData) {
-            results.push({
-              location: locName,
-              response: `Could not fetch weather for ${locName}`,
-              temp: null
-            })
-            continue
+        }
+        
+        if (results.length > 0) {
+          return {
+            type: 'comparison',
+            title: 'Location Comparison',
+            items: results
           }
-          
-          freshData.city = savedLoc.label || savedLoc.name
-          freshData.savedLocations = savedLocations
-          freshData.lat = savedLoc.lat
-          freshData.lon = savedLoc.lon
-          
-          const response = await primaryIntent.fn(freshData, question)
-          const tempMatch = response.match(/(\d+)°C/)
-          results.push({
-            location: locName,
-            response: extractKeyPoints(response, 4),
-            temp: tempMatch ? parseInt(tempMatch[1]) : freshData.temp
-          })
         }
-        
-        let comparisonResponse = `Location Comparison:\n\n`
-        
-        for (const result of results) {
-          comparisonResponse += `${result.location.toUpperCase()}:\n${result.response}\n\n`
-        }
-        
-        const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
-        comparisonResponse += `Verdict: ${verdict}`
-        
-        return comparisonResponse
       }
-      
-      if (comparison.type === 'activity') {
-        const activities = comparison.activities
-        
-        const activityToIntent = {
-          'run': 'sports',
-          'bike': 'sports',
-          'cycle': 'sports',
-          'drive': 'driving',
-          'walk': 'lifestyle',
-          'jog': 'sports',
-          'hike': 'sports',
-          'swim': 'sports'
-        }
-        
-        const results = []
-        
-        for (const activity of activities) {
-          const intentId = activityToIntent[activity] || 'sports'
-          const intent = INTENT_MAP.find(i => i.id === intentId)
-          
-          if (!intent) continue
-          
-          const activityQuestion = `Is it good for ${activity}?`
-          const response = await intent.fn(data, activityQuestion)
-          
-          results.push({
-            activity,
-            response: extractKeyPoints(response, 4)
-          })
-        }
-        
-        if (results.length === 0) {
-          return "I couldn't compare those activities. Try 'Biking vs running today?'"
-        }
-        
-        let comparisonResponse = `Activity Comparison:\n\n`
-        
-        for (const result of results) {
-          comparisonResponse += `${result.activity.toUpperCase()}:\n${result.response}\n\n`
-        }
-        
-        const verdict = generateComparisonVerdict(results, comparison, { id: 'sports' })
-        comparisonResponse += `Verdict: ${verdict}`
-        
-        return comparisonResponse
-      }
-      
-      if (comparison.type === 'scenario') {
-        const scenarios = comparison.scenarios
-        const dest = comparison.destination
-        
-        const scenarioToIntent = {
-          'drive': 'driving',
-          'bike': 'sports',
-          'cycle': 'sports',
-          'walk': 'lifestyle',
-          'run': 'sports',
-          'commute': 'route',
-          'travel': 'route'
-        }
-        
-        const results = []
-        
-        for (const scenario of scenarios) {
-          const intentId = scenarioToIntent[scenario] || 'route'
-          const intent = INTENT_MAP.find(i => i.id === intentId)
-          
-          if (!intent) continue
-          
-          const scenarioQuestion = `${scenario} to ${dest}?`
-          const response = await intent.fn(data, scenarioQuestion)
-          
-          results.push({
-            scenario,
-            response: extractKeyPoints(response, 4)
-          })
-        }
-        
-        if (results.length === 0) {
-          return "I couldn't compare those scenarios. Try 'Drive or bike to work?'"
-        }
-        
-        let comparisonResponse = `Scenario Comparison: ${dest.toUpperCase()}\n\n`
-        
-        for (const result of results) {
-          comparisonResponse += `${result.scenario.toUpperCase()}:\n${result.response}\n\n`
-        }
-        
-        const verdict = generateComparisonVerdict(results, comparison, { id: 'route' })
-        comparisonResponse += `Verdict: ${verdict}`
-        
-        return comparisonResponse
-      }
-      
-      const detectedIntents = detectIntents(q)
-      
-      if (detectedIntents.length === 0) {
-        return "I can compare times. Try asking 'Stargazing tonight vs tomorrow?'"
-      }
-      
-      const primaryIntent = detectedIntents[0].intent
-      const results = []
-      
-      const time1Data = getTimeShiftedData(data, comparison.time1, question)
-      const time2Data = getTimeShiftedData(data, comparison.time2, question)
-      
-      const [response1, response2] = await Promise.all([
-        primaryIntent.fn(time1Data, question),
-        primaryIntent.fn(time2Data, question)
-      ])
-      
-      const temp1 = response1.match(/(\d+)°C/)
-      const temp2 = response2.match(/(\d+)°C/)
-      const rain1 = response1.match(/(\d+)% rain/i)
-      const rain2 = response2.match(/(\d+)% rain/i)
-      const cloud1 = response1.match(/Cloud Cover:\s*(\d+)%/)
-      const cloud2 = response2.match(/Cloud Cover:\s*(\d+)%/)
-      
-      results.push({
-        time: comparison.time1,
-        response: extractKeyPoints(response1, 4),
-        temp: temp1 ? parseInt(temp1[1]) : null,
-        rain: rain1 ? parseInt(rain1[1]) : null,
-        cloudCover: cloud1 ? parseInt(cloud1[1]) : null
-      })
-      
-      results.push({
-        time: comparison.time2,
-        response: extractKeyPoints(response2, 4),
-        temp: temp2 ? parseInt(temp2[1]) : null,
-        rain: rain2 ? parseInt(rain2[1]) : null,
-        cloudCover: cloud2 ? parseInt(cloud2[1]) : null
-      })
-      
-      let comparisonResponse = `Comparison: ${comparison.time1} vs ${comparison.time2}\n\n`
-      
-      for (const result of results) {
-        comparisonResponse += `${result.time.toUpperCase()}:\n${result.response}\n\n`
-      }
-      
-      const verdict = generateComparisonVerdict(results, comparison, primaryIntent)
-      comparisonResponse += `Verdict: ${verdict}`
-      
-      return comparisonResponse
     }
 
     const detectedIntents = detectIntents(q)
     
-    console.log(`Intents:`, detectedIntents.map(d => 
-      `${d.intent.name} (${d.score.toFixed(1)})`
-    ).join(', '))
-
     if (detectedIntents.length === 0) {
-      const routeKeywords = ['route', 'how long', 'distance', 'drive', 'driving time', 'get to', 'from', 'to', 'eta', 'travel time', 'how far', 'navigate', 'commute']
-      const trafficKeywords = ['traffic', 'accident', 'jam', 'congestion', 'gridlock', 'slow', 'standstill']
-
-      const hasRoute = routeKeywords.some(k => q.includes(k))
-      const hasTraffic = trafficKeywords.some(k => q.includes(k))
-
-      if (hasRoute || hasTraffic) {
-        const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
-        const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
-
-        let fromLocation = null
-        let toLocation = null
-
-        if (fromMatch) {
-          const fromName = fromMatch[1].trim()
-          const savedFrom = findSavedLocation(fromName)
-          fromLocation = savedFrom ? { ...savedFrom, isSaved: true } : fromName
-        }
-
-        if (toMatch) {
-          const toName = toMatch[1].trim()
-          const savedTo = findSavedLocation(toName)
-          toLocation = savedTo ? { ...savedTo, isSaved: true } : toName
-        }
-
-        if (toLocation && !fromLocation) fromLocation = 'home'
-
-        if (hasTraffic && !toLocation) {
-          const response = await getTrafficAdvice(data, question, {})
-          const verdict = generateVerdict(question, data, { id: 'traffic' })
-          return verdict ? `${verdict}\n\n${response}` : response
-        }
-
-        if (hasRoute && toLocation) {
-          const response = await getRouteAdvice(data, question, { from: fromLocation, to: toLocation, savedLocations })
-          const verdict = generateVerdict(question, data, { id: 'route' })
-          return verdict ? `${verdict}\n\n${response}` : response
-        }
-      }
-
-      if (q.match(/rain|storm|cloud|sun|wind|humid|cold|hot|weather|tomorrow|today|forecast|weekend|temperature/)) {
-        const response = await getWeatherAdvice(data, question)
-        const verdict = generateVerdict(question, data, { id: 'weather' })
-        return verdict ? `${verdict}\n\n${response}` : response
-      }
-
-      return `I'm not sure what you're asking. Try asking about weather, clothing, routes, traffic, sports, farming, stargazing, or health. Current temp is ${data.temp}°C.`
+      const response = await getWeatherAdvice(data, question)
+      return response
     }
 
+    // If only one intent, return structured response
+    if (detectedIntents.length === 1) {
+      const intent = detectedIntents[0].intent
+      const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intent.id)
+      const response = isAsync 
+        ? await intent.fn(data, question)
+        : intent.fn(data, question)
+      
+      // If response is already structured, return it
+      if (response && typeof response === 'object' && response.verdict) {
+        return response
+      }
+      
+      // If response is string, wrap it
+      return {
+        verdict: 'Here\'s what I found',
+        summary: String(response).slice(0, 200),
+        note: 'Check the full response below for all details.',
+        details: [],
+        fullText: String(response)
+      }
+    }
+
+    // Multiple intents - merge
     const results = await Promise.all(
       detectedIntents.map(async (detected) => {
         try {
-          const isAsync = ['farming', 'stargazing'].includes(detected.intent.id)
+          const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(detected.intent.id)
           const response = isAsync 
             ? await detected.intent.fn(data, question)
             : detected.intent.fn(data, question)
@@ -1900,38 +1424,43 @@ export default function ZephyeFullScreen({
       })
     )
 
-    const responses = []
-    const intents = []
+    const validResults = results.filter(r => r !== null)
+    if (validResults.length === 0) {
+      const response = await getWeatherAdvice(data, question)
+      return response
+    }
 
-    for (const result of results) {
-      if (result) {
-        responses.push(result.response)
-        intents.push(result.detected)
+    // Build merged response
+    let mergedSummary = ''
+    const mergedDetails = []
+    
+    for (const result of validResults) {
+      const content = result.response
+      if (typeof content === 'object' && content.verdict) {
+        mergedSummary += `${result.detected.intent.section}: ${content.verdict}\n`
+        if (content.details) {
+          mergedDetails.push({
+            section: result.detected.intent.section,
+            details: content.details
+          })
+        }
+      } else if (typeof content === 'string') {
+        mergedSummary += `${result.detected.intent.section}: ${content.slice(0, 100)}...\n`
       }
     }
 
-    if (responses.length === 0) {
-      const response = await getWeatherAdvice(data, question)
-      const verdict = generateVerdict(question, data, { id: 'weather' })
-      return verdict ? `${verdict}\n\n${response}` : response
+    return {
+      verdict: 'Here\'s what I found',
+      summary: mergedSummary.trim(),
+      note: 'Multiple topics covered. Check each section below for details.',
+      details: mergedDetails.flatMap(d => d.details || []),
+      fullText: validResults.map(r => {
+        const content = r.response
+        if (typeof content === 'object' && content.fullText) return content.fullText
+        if (typeof content === 'string') return content
+        return JSON.stringify(content)
+      }).join('\n\n---\n\n')
     }
-
-    const primaryIntent = intents[0]?.intent
-    let verdict = null
-    
-    if (primaryIntent) {
-      verdict = generateVerdict(question, data, primaryIntent)
-    }
-
-    let mergedResponse = responses.length === 1 
-      ? responses[0] 
-      : mergeResponses(responses, intents, question)
-
-    if (verdict) {
-      mergedResponse = `${verdict}\n\n${mergedResponse}`
-    }
-
-    return mergedResponse || responses[0]
   }, [weatherData, savedLocations])
 
   // ─── Handle Ask ──────────────────────────────────────────────────────
@@ -1968,28 +1497,56 @@ export default function ZephyeFullScreen({
       let finalAnswer = answer
       if (needsTranslation) {
         setIsTranslating(true)
-        finalAnswer = await translateText(answer, detectedLang)
+        // Handle structured translation
+        if (typeof answer === 'object' && answer.verdict) {
+          finalAnswer = {
+            ...answer,
+            verdict: await translateText(answer.verdict, detectedLang),
+            summary: await translateText(answer.summary, detectedLang),
+            note: answer.note ? await translateText(answer.note, detectedLang) : '',
+            fullText: answer.fullText ? await translateText(answer.fullText, detectedLang) : '',
+            details: answer.details ? await Promise.all(answer.details.map(async (d) => ({
+              ...d,
+              value: await translateText(d.value, detectedLang)
+            }))) : []
+          }
+        } else if (typeof answer === 'string') {
+          finalAnswer = await translateText(answer, detectedLang)
+        } else {
+          finalAnswer = answer
+        }
         setIsTranslating(false)
       }
 
-      let text = ''
-      for (const word of finalAnswer.split(' ')) {
-        text += word + ' '
-        setStreamingText(text)
-        await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
+      // Stream response
+      let streamText = ''
+      if (typeof finalAnswer === 'string') {
+        for (const word of finalAnswer.split(' ')) {
+          streamText += word + ' '
+          setStreamingText(streamText)
+          await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
+        }
+      } else if (typeof finalAnswer === 'object' && finalAnswer.verdict) {
+        const fullText = `${finalAnswer.verdict} ${finalAnswer.summary} ${finalAnswer.note || ''}`
+        for (const word of fullText.split(' ')) {
+          streamText += word + ' '
+          setStreamingText(streamText)
+          await new Promise(r => setTimeout(r, CONFIG.STREAM_DELAY_MS))
+        }
       }
 
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: finalAnswer,
         originalLang: detectedLang,
-        originalEnglish: needsTranslation ? answer : null
+        originalEnglish: needsTranslation && typeof answer === 'object' ? answer : null
       }])
       setStreamingText('')
 
       if (voiceToUse) speakText(finalAnswer)
 
     } catch (e) {
+      console.error('Error:', e)
       const fallback = `Error getting advice. Current temp is ${weatherData.temp}°C with ${weatherData.condition}.`
       const finalFallback = needsTranslation 
         ? await translateText(fallback, detectedLang)
@@ -2000,7 +1557,9 @@ export default function ZephyeFullScreen({
     }
   }, [routeQuestion, weatherData, voiceToUse, speakText, lang])
 
-  // ─── Render ──────────────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  // ─── RENDER ──────────────────────────────────────────────────────────
+  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
   if (!isOpen) return null
 
@@ -2038,7 +1597,6 @@ export default function ZephyeFullScreen({
         flexShrink: 0,
         minHeight: '64px'
       }}>
-        {/* Left: Back + Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={onClose} className="btn-ghost" style={{ padding: '4px 6px' }}>
             <BackIcon />
@@ -2058,7 +1616,6 @@ export default function ZephyeFullScreen({
           </div>
         </div>
 
-        {/* Right: Location + Temp + AQI + Menu */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ 
             display: 'flex', 
@@ -2085,7 +1642,6 @@ export default function ZephyeFullScreen({
             </div>
           </div>
 
-          {/* Menu Dropdown (3 dots) */}
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -2119,7 +1675,6 @@ export default function ZephyeFullScreen({
                 flexDirection: 'column',
                 gap: '2px'
               }}>
-                {/* Voice Gender */}
                 <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Voice
                 </div>
@@ -2158,7 +1713,6 @@ export default function ZephyeFullScreen({
 
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
 
-                {/* Language */}
                 {detectedLanguage !== 'en' && (
                   <>
                     <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -2172,7 +1726,6 @@ export default function ZephyeFullScreen({
                   </>
                 )}
 
-                {/* Show Original */}
                 {detectedLanguage !== 'en' && (
                   <button
                     onClick={() => { setShowOriginal(!showOriginal); setIsMenuOpen(false) }}
@@ -2219,7 +1772,6 @@ export default function ZephyeFullScreen({
               textAlign: 'center',
               padding: '20px'
             }}>
-              {/* Location + Weather */}
               <div style={{ 
                 fontSize: '13px', 
                 color: 'var(--text-muted)', 
@@ -2239,7 +1791,6 @@ export default function ZephyeFullScreen({
                 <span style={{ color: aqiLevel.color }}>AQI {aqiLabel}</span>
               </div>
 
-              {/* Greeting */}
               <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '6px' }}>
                 Good {getTimeOfDay()}, {userName || 'there'}
               </h2>
@@ -2247,7 +1798,6 @@ export default function ZephyeFullScreen({
                 How can I help you today?
               </p>
 
-              {/* 4 Dynamic Suggestions */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
@@ -2287,52 +1837,66 @@ export default function ZephyeFullScreen({
               </div>
             </div>
           ) : (
-            /* ─── CONVERSATION ────────────────────────────────────────────── */
-            messages.map((msg, i) => (
-              <div key={i} style={{ 
-                display: 'flex', 
-                marginBottom: 12, 
-                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
-              }}>
-                <div className={`chat-bubble ${msg.role}`}>
-                  {msg.role === 'assistant' && (
-                    <div className="msg-actions-top">
-                      <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
-                        {isSpeaking ? <StopIcon /> : <SpeakIcon />}
-                      </button>
-                      <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
-                        <CopyIcon />
-                      </button>
-                    </div>
-                  )}
-                  
-                  {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
-                    <div style={{ 
-                      fontSize: '12px', 
-                      color: 'var(--text-muted)', 
-                      marginBottom: '8px',
-                      paddingBottom: '8px',
-                      borderBottom: '1px solid rgba(255,255,255,0.05)'
-                    }}>
-                      {msg.originalEnglish}
-                    </div>
-                  )}
-                  
-                  <div className="msg-content">{msg.content}</div>
-                  
-                  {msg.originalLang && msg.originalLang !== 'en' && (
-                    <div style={{ 
-                      fontSize: '10px', 
-                      color: 'var(--text-muted)', 
-                      marginTop: '6px',
-                      opacity: 0.5
-                    }}>
-                      {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
-                    </div>
-                  )}
+            messages.map((msg, i) => {
+              const isStructured = msg.content && typeof msg.content === 'object' && msg.content.verdict
+              
+              return (
+                <div key={i} style={{ 
+                  display: 'flex', 
+                  marginBottom: 12, 
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' 
+                }}>
+                  <div className={`chat-bubble ${msg.role}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="msg-actions-top">
+                        <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
+                          {isSpeaking ? <StopIcon /> : <SpeakIcon />}
+                        </button>
+                        <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
+                          <CopyIcon />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {showOriginal && msg.originalEnglish && msg.role === 'assistant' && (
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: 'var(--text-muted)', 
+                        marginBottom: '8px',
+                        paddingBottom: '8px',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        {typeof msg.originalEnglish === 'object' 
+                          ? msg.originalEnglish.verdict || msg.originalEnglish.summary || ''
+                          : msg.originalEnglish}
+                      </div>
+                    )}
+                    
+                    {isStructured ? (
+                      <StructuredResponse 
+                        data={msg.content}
+                        onSpeak={() => speakText(msg.content)}
+                        isSpeaking={isSpeaking}
+                        onCopy={() => copyText(msg.content)}
+                      />
+                    ) : (
+                      <div className="msg-content">{String(msg.content)}</div>
+                    )}
+                    
+                    {msg.originalLang && msg.originalLang !== 'en' && (
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: 'var(--text-muted)', 
+                        marginTop: '6px',
+                        opacity: 0.5
+                      }}>
+                        {LANGUAGE_NAMES[msg.originalLang] || msg.originalLang}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
 
           {streamingText && (
@@ -2554,6 +2118,142 @@ export default function ZephyeFullScreen({
         }
         .ai-body::-webkit-scrollbar-thumb:hover {
           background: rgba(255,255,255,0.2);
+        }
+
+        /* ─── Structured Response Styles ──────────────────────────────── */
+        .structured-response {
+          width: 100%;
+        }
+
+        .structured-response .verdict {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 6px;
+          color: var(--text);
+        }
+
+        .structured-response .summary {
+          font-size: 14px;
+          color: var(--text);
+          line-height: 1.6;
+          margin-bottom: 8px;
+        }
+
+        .structured-response .note {
+          font-size: 13px;
+          color: var(--text-muted);
+          margin-bottom: 12px;
+          padding: 8px 12px;
+          background: rgba(255,255,255,0.04);
+          border-radius: 8px;
+          border-left: 2px solid var(--accent);
+        }
+
+        .structured-response .response-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 4px;
+        }
+
+        .structured-response .action-btn {
+          padding: 4px 12px;
+          border-radius: 16px;
+          font-size: 12px;
+          font-weight: 500;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: var(--text-muted);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .structured-response .action-btn:hover {
+          background: rgba(255,255,255,0.12);
+          color: var(--text);
+        }
+
+        .structured-response .details-section {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .structured-response .details-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 8px;
+        }
+
+        .structured-response .detail-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 4px 0;
+          font-size: 13px;
+          border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .structured-response .detail-row:last-child {
+          border-bottom: none;
+        }
+
+        .structured-response .detail-label {
+          color: var(--text-muted);
+          font-weight: 500;
+        }
+
+        .structured-response .detail-value {
+          color: var(--text);
+          text-align: right;
+        }
+
+        .structured-response .full-section {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .structured-response .full-text {
+          font-size: 13px;
+          color: var(--text-muted);
+          line-height: 1.6;
+          white-space: pre-wrap;
+          background: rgba(255,255,255,0.03);
+          padding: 12px;
+          border-radius: 8px;
+        }
+
+        /* ─── Comparison Styles ─────────────────────────────────────────── */
+        .comparison-container {
+          width: 100%;
+        }
+
+        .comparison-title {
+          font-weight: 600;
+          font-size: 15px;
+          margin-bottom: 12px;
+        }
+
+        .comparison-item {
+          margin-bottom: 12px;
+          padding: 12px;
+          background: rgba(255,255,255,0.03);
+          border-radius: 8px;
+          border-left: 2px solid var(--accent);
+        }
+
+        .comparison-item-label {
+          font-weight: 600;
+          font-size: 13px;
+          margin-bottom: 4px;
+          color: var(--text-muted);
+        }
+
+        .comparison-item-content {
+          font-size: 14px;
         }
       `}</style>
     </div>
