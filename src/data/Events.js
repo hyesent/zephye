@@ -19,7 +19,19 @@ import {
 // ============================================================================
 
 export const sampleQuestions = [
+  // WEDDINGS
   "Should I have my wedding outdoors today?",
+  "Is it good weather for an outdoor wedding ceremony?",
+  "Will it rain on my wedding day?",
+  "Should I rent a tent for my wedding?",
+  "Is it too hot for an outdoor wedding?",
+  "Will my wedding photos be ruined by weather?",
+  "Should I have an indoor backup for my wedding?",
+  "What time should I schedule my wedding ceremony?",
+  "Will it be windy for my wedding?",
+  "Is it safe for elderly guests at my outdoor wedding?",
+  
+  // GENERAL EVENTS
   "Is it good weather for a picnic?",
   "Can I host a BBQ this weekend?",
   "Is it safe for an outdoor concert?",
@@ -53,7 +65,7 @@ export const sampleQuestions = [
   "Should I rent air conditioning for my tent?",
   "Can I have a sunrise ceremony?",
   "Is sunset viewing good tonight?",
-  "Will humidity ruin my hair/makeup?",
+  "Will humidity ruin my hair and makeup?",
   "Can I use candles outside?",
   "Should I postpone my outdoor market?",
   "Is it safe for a children's outdoor party?",
@@ -61,18 +73,43 @@ export const sampleQuestions = [
   "Will the sound system be affected?",
   "Do I need permits for bad weather contingency?",
   "Should I have a rain plan B?",
-  "What's the comfort level for guests?",
+  "What is the comfort level for guests?",
   "Can I serve champagne outside?",
   "Will my flowers wilt?",
   "Is it good weather for a marquee?",
   "Should I have a temperature-controlled tent?",
   "Can I set up outdoor games?",
   "Will the porta-potties be an issue?",
-  "Is parking accessible in this weather?"
+  "Is parking accessible in this weather?",
+  
+  // CORPORATE
+  "Is it good weather for a corporate retreat?",
+  "Should I host my team-building event outdoors?",
+  "Will weather affect my outdoor meeting?",
+  "Is it safe for outdoor team activities?",
+  
+  // FESTIVALS
+  "Will the festival be affected by weather?",
+  "Should I postpone my food festival?",
+  "Is it safe for outdoor vendors?",
+  "Will my outdoor market be successful?",
+  
+  // PHOTOGRAPHY
+  "Will my photos be good today?",
+  "What is the best time for outdoor photography?",
+  "Will the sunset be visible today?",
+  "Is there good lighting for photos?",
+  
+  // SPECIAL
+  "Can I have a kids' party outside today?",
+  "Is it safe for a pet event outdoors?",
+  "Should I have my charity gala outside?",
+  "Is it good weather for a car show?",
+  "Can I host a sports event outside today?"
 ];
 
 // ============================================================================
-// EVENT TYPE DATABASE
+// ENHANCED EVENT TYPE DATABASE
 // ============================================================================
 
 const EVENT_TYPES = {
@@ -83,19 +120,21 @@ const EVENT_TYPES = {
     setupTime: 8,
     criticalElements: ['ceremony', 'photos', 'food', 'dancing'],
     weatherTolerance: {
-      rain: 2,        // 1-10 tolerance (10 = very tolerant)
+      rain: 2,
       wind: 4,
       heat: 5,
       cold: 4,
       humidity: 4
     },
     special: [
-      'Wedding dress/attire considerations',
+      'Wedding dress and attire considerations',
       'Photography lighting needs',
       'Hair and makeup humidity sensitivity',
       'Cake and food temperature requirements',
       'Flower preservation',
-      'Sound system for vows'
+      'Sound system for vows',
+      'Formal attire comfort in extreme conditions',
+      'Elderly guests common'
     ]
   },
   corporate_event: {
@@ -115,7 +154,8 @@ const EVENT_TYPES = {
       'AV equipment sensitivity',
       'Professional attire comfort',
       'Networking space comfort',
-      'Branding/signage durability'
+      'Branding and signage durability',
+      'Client impression important'
     ]
   },
   birthday_party: {
@@ -132,10 +172,11 @@ const EVENT_TYPES = {
       humidity: 5
     },
     special: [
-      'Children\'s heat/cold sensitivity',
+      'Children\'s heat and cold sensitivity',
       'Party decoration durability',
-      'Game/activity equipment',
-      'Cake preservation'
+      'Game and activity equipment',
+      'Cake preservation',
+      'Parents expect safe environment'
     ]
   },
   concert: {
@@ -156,7 +197,8 @@ const EVENT_TYPES = {
       'Electrical equipment safety',
       'Crowd comfort in extreme conditions',
       'Sound propagation in different conditions',
-      'Artist/crew safety'
+      'Artist and crew safety',
+      'Emergency evacuation plan required'
     ]
   },
   festival: {
@@ -174,9 +216,11 @@ const EVENT_TYPES = {
     },
     special: [
       'Multi-day weather planning',
-      'Ground conditions (mud prevention)',
+      'Ground conditions and mud prevention',
       'Vendor equipment protection',
-      'Camping/outdoor accommodations'
+      'Camping and outdoor accommodations',
+      'Emergency services access',
+      'Public safety paramount'
     ]
   },
   picnic: {
@@ -196,7 +240,8 @@ const EVENT_TYPES = {
       'Food safety temperatures',
       'Ground moisture',
       'Insect activity',
-      'Shade availability'
+      'Shade availability',
+      'Easy to reschedule'
     ]
   },
   bbq: {
@@ -216,7 +261,8 @@ const EVENT_TYPES = {
       'Grill safety in wind',
       'Smoke direction management',
       'Food temperature maintenance',
-      'Fire safety considerations'
+      'Fire safety considerations',
+      'Propane and charcoal storage'
     ]
   },
   pool_party: {
@@ -233,10 +279,11 @@ const EVENT_TYPES = {
       humidity: 8
     },
     special: [
-      'Lightning safety (pool = dangerous)',
+      'Lightning safety (pool is dangerous)',
       'Sun exposure intensity',
       'Water temperature comfort',
-      'Slip hazards when wet'
+      'Slip hazards when wet',
+      'Children supervision requirements'
     ]
   },
   beach_event: {
@@ -256,7 +303,8 @@ const EVENT_TYPES = {
       'Tide schedule consideration',
       'Sand management in wind',
       'Salt spray on equipment',
-      'Stronger sun reflection from sand/water'
+      'Stronger sun reflection from sand and water',
+      'Footwear needed for hot sand'
     ]
   },
   garden_party: {
@@ -273,10 +321,11 @@ const EVENT_TYPES = {
       humidity: 5
     },
     special: [
-      'Plant/lawn damage prevention',
+      'Plant and lawn damage prevention',
       'Ground softness',
       'Pollen levels',
-      'Insect management'
+      'Insect management',
+      'Aesthetic quality of garden'
     ]
   },
   sports_event: {
@@ -284,7 +333,7 @@ const EVENT_TYPES = {
     typicalDuration: 4,
     guestCount: 'large',
     setupTime: 6,
-    criticalElements: ['field/venue', 'spectators', 'equipment', 'safety'],
+    criticalElements: ['field or venue', 'spectators', 'equipment', 'safety'],
     weatherTolerance: {
       rain: 3,
       wind: 4,
@@ -296,7 +345,8 @@ const EVENT_TYPES = {
       'Playing surface conditions',
       'Athlete safety in extreme conditions',
       'Spectator comfort',
-      'Cancellation thresholds'
+      'Cancellation thresholds',
+      'Insurance and liability'
     ]
   },
   market: {
@@ -316,7 +366,8 @@ const EVENT_TYPES = {
       'Vendor product protection',
       'Customer dwell time in bad weather',
       'Ground conditions',
-      'Wind protection for displays'
+      'Wind protection for displays',
+      'Vendor revenue impact'
     ]
   },
   fundraiser: {
@@ -336,7 +387,8 @@ const EVENT_TYPES = {
       'High-value item protection',
       'Donor comfort (often older demographic)',
       'AV equipment for speeches',
-      'Silent auction display protection'
+      'Silent auction display protection',
+      'Donor experience paramount'
     ]
   },
   religious_ceremony: {
@@ -353,16 +405,17 @@ const EVENT_TYPES = {
       humidity: 5
     },
     special: [
-      'Ritual/ceremonial requirements',
+      'Ritual and ceremonial requirements',
       'Elderly attendees common',
       'Formal attire considerations',
-      'Sacred space protection'
+      'Sacred space protection',
+      'Reverence and solemnity'
     ]
   }
 };
 
 // ============================================================================
-// VENUE STRUCTURE DATABASE
+// ENHANCED VENUE STRUCTURE DATABASE
 // ============================================================================
 
 const STRUCTURES = {
@@ -371,9 +424,11 @@ const STRUCTURES = {
     rainProtection: 0,
     sunProtection: 0,
     temperatureControl: 0,
-    maxWindSpeed: 25,      // km/h before unsafe
+    maxWindSpeed: 25,
     maxTemp: 35,
     minTemp: 10,
+    costPerSqFt: 0,
+    setupTimeHours: 0,
     notes: 'Completely exposed. All weather directly impacts guests.'
   },
   popup_canopy: {
@@ -384,7 +439,9 @@ const STRUCTURES = {
     maxWindSpeed: 25,
     maxTemp: 38,
     minTemp: 5,
-    notes: 'Light duty. Secure with weights. Not for wind >25km/h.'
+    costPerSqFt: 5,
+    setupTimeHours: 1,
+    notes: 'Light duty. Secure with weights. Not for wind over 25km/h.'
   },
   event_tent_small: {
     windResistance: 4,
@@ -394,7 +451,9 @@ const STRUCTURES = {
     maxWindSpeed: 35,
     maxTemp: 40,
     minTemp: 0,
-    notes: '10x10 to 20x20. Can add sides. Portable heaters/fans optional.'
+    costPerSqFt: 12,
+    setupTimeHours: 3,
+    notes: '10x10 to 20x20. Can add sides. Portable heaters and fans optional.'
   },
   event_tent_large: {
     windResistance: 5,
@@ -404,7 +463,9 @@ const STRUCTURES = {
     maxWindSpeed: 40,
     maxTemp: 42,
     minTemp: -5,
-    notes: '20x30+. Professional setup. Can add flooring, HVAC, lighting.'
+    costPerSqFt: 18,
+    setupTimeHours: 6,
+    notes: '20x30 and larger. Professional setup. Can add flooring, HVAC, lighting.'
   },
   marquee: {
     windResistance: 6,
@@ -414,6 +475,8 @@ const STRUCTURES = {
     maxWindSpeed: 45,
     maxTemp: 43,
     minTemp: -10,
+    costPerSqFt: 25,
+    setupTimeHours: 8,
     notes: 'Luxury tent. Hard walls option. Full climate control possible.'
   },
   clearspan: {
@@ -424,6 +487,8 @@ const STRUCTURES = {
     maxWindSpeed: 60,
     maxTemp: 45,
     minTemp: -20,
+    costPerSqFt: 35,
+    setupTimeHours: 12,
     notes: 'Industrial grade. No center poles. Full HVAC capable.'
   },
   pavilion: {
@@ -434,6 +499,8 @@ const STRUCTURES = {
     maxWindSpeed: 40,
     maxTemp: 38,
     minTemp: 5,
+    costPerSqFt: 0,
+    setupTimeHours: 0,
     notes: 'Permanent roof structure. Open sides. Limited weather protection.'
   },
   gazebo: {
@@ -444,6 +511,8 @@ const STRUCTURES = {
     maxWindSpeed: 30,
     maxTemp: 36,
     minTemp: 8,
+    costPerSqFt: 0,
+    setupTimeHours: 0,
     notes: 'Small, decorative. Good for ceremonies, not full events.'
   },
   indoor_backup: {
@@ -454,12 +523,14 @@ const STRUCTURES = {
     maxWindSpeed: 200,
     maxTemp: 50,
     minTemp: -50,
+    costPerSqFt: 0,
+    setupTimeHours: 0,
     notes: 'Complete weather protection. Always have as Plan B for critical events.'
   }
 };
 
 // ============================================================================
-// EQUIPMENT & RENTAL DATABASE
+// ENHANCED EQUIPMENT & RENTAL DATABASE
 // ============================================================================
 
 const EQUIPMENT_NEEDS = {
@@ -468,250 +539,539 @@ const EQUIPMENT_NEEDS = {
     tempRise: '5-10°C',
     minTemp: -10,
     maxWind: 25,
-    notes: 'Wind reduces effectiveness. 1 per 20 guests in cold.',
-    cost: 'medium'
+    powerWatts: 1500,
+    costPerUnit: 150,
+    notes: 'Wind reduces effectiveness. 1 per 20 guests in cold.'
   },
   industrial_heater: {
     coverage: '30ft radius',
     tempRise: '10-20°C',
     minTemp: -30,
     maxWind: 35,
-    notes: 'Enclosed tent needed. Professional installation.',
-    cost: 'high'
+    powerWatts: 5000,
+    costPerUnit: 300,
+    notes: 'Enclosed tent needed. Professional installation required.'
   },
   misting_fan: {
     coverage: '10ft radius',
     tempDrop: '3-7°C',
     maxTemp: 45,
     maxHumidity: 60,
-    notes: 'Ineffective in high humidity. Increases moisture.',
-    cost: 'low'
+    powerWatts: 200,
+    costPerUnit: 80,
+    notes: 'Ineffective in high humidity. Increases moisture.'
   },
   portable_ac: {
     coverage: '400 sq ft',
     tempDrop: '10-15°C',
     maxTemp: 45,
-    notes: 'Requires enclosed space. Generator may be needed.',
-    cost: 'high'
+    powerWatts: 3500,
+    costPerUnit: 400,
+    notes: 'Requires enclosed space. Generator may be needed.'
   },
   evaporative_cooler: {
     coverage: '500 sq ft',
     tempDrop: '8-12°C',
     maxTemp: 45,
     maxHumidity: 50,
-    notes: 'Only works in dry heat. Adds humidity.',
-    cost: 'medium'
+    powerWatts: 500,
+    costPerUnit: 250,
+    notes: 'Only works in dry heat. Adds humidity.'
   },
   flooring: {
     types: ['plywood', 'composite', 'carpet', 'dance floor'],
-    notes: 'Essential for wet ground. Protects heels, wheelchairs, equipment.',
-    cost: 'medium-high'
+    costPerSqFt: 8,
+    notes: 'Essential for wet ground. Protects heels, wheelchairs, and equipment.'
   },
   lighting: {
     types: ['string', 'spot', 'flood', 'decorative'],
     weatherRating: 'Must be outdoor rated if exposed',
-    notes: 'IP65 minimum for outdoor use. GFCI protection required.',
-    cost: 'variable'
+    costPerUnit: 50,
+    notes: 'IP65 minimum for outdoor use. GFCI protection required.'
   },
   sound_system: {
-    windImpact: 'Wind disperses sound, especially >20km/h',
+    windImpact: 'Wind disperses sound, especially over 20km/h',
     rainProtection: 'Must be fully covered',
-    notes: 'Extra speakers needed in wind. Bass travels less in humid air.',
-    cost: 'high'
+    costPerDay: 500,
+    notes: 'Extra speakers needed in wind. Bass travels less in humid air.'
   },
   generator: {
-    notes: 'Always have backup. Fuel for 2x expected runtime.',
-    weatherProtection: 'Cover from rain, but ventilated (CO risk).',
-    cost: 'medium-high'
+    power: 'Variable',
+    costPerDay: 200,
+    notes: 'Always have backup. Fuel for 2x expected runtime.'
   }
 };
 
 // ============================================================================
-// FOOD & BEVERAGE SAFETY
+// FOOD & BEVERAGE SAFETY CALCULATOR
 // ============================================================================
 
 function getFoodSafetyAdvice(data) {
-  const { temp, humidity, uvIndex, condition } = data;
+  const { temp, humidity, uvIndex, condition, wind } = data;
   const advice = [];
+  const warnings = [];
   const heatIndex = calcHeatIndex(temp, humidity);
+  let riskLevel = 'low';
   
-  if (heatIndex > 32) {
-    advice.push("FOOD SAFETY CRITICAL: Bacteria doubles every 20 minutes above 32°C.");
-    advice.push("Cold food must stay below 4°C - use ice baths, replace ice frequently.");
-    advice.push("Hot food must stay above 60°C - chafing dishes + sterno fuel.");
-    advice.push("Serve in shifts rather than leaving all food out. Discard after 1 hour.");
-    advice.push("Seafood, dairy, mayonnaise-based dishes: extreme risk. Consider eliminating.");
+  advice.push("FOOD AND BEVERAGE SAFETY:");
+  
+  // Temperature safety
+  if (heatIndex > 35) {
+    riskLevel = 'extreme';
+    warnings.push("EXTREME HEAT: Food safety critical");
+    advice.push("  Bacteria doubles every 20 minutes above 32°C");
+    advice.push("  Cold food: must stay below 4°C. Use ice baths, replace ice frequently.");
+    advice.push("  Hot food: must stay above 60°C. Chafing dishes with sterno fuel.");
+    advice.push("  Serve in shifts rather than leaving all food out at once");
+    advice.push("  Discard any food left out after 1 hour (2 hours maximum)");
+    advice.push("  Seafood, dairy, mayonnaise-based dishes: extreme risk. Consider eliminating.");
+    
+  } else if (temp > 28) {
+    riskLevel = 'high';
+    warnings.push("HIGH TEMPERATURE: Food safety risk");
+    advice.push("  Monitor food temperatures constantly");
+    advice.push("  2-hour rule: discard any food left out over 2 hours");
+    advice.push("  Keep cold food on ice. Hot food in thermal containers.");
+    advice.push("  Cream-based desserts are risky. Consider fruit-based alternatives.");
+    
   } else if (temp > 25) {
-    advice.push("Warm temps: Monitor food temps. 2-hour rule (discard after 2hrs out).");
-    advice.push("Keep cold food on ice. Hot food in thermal containers.");
-    advice.push("Cream-based desserts risky. Consider fruit-based alternatives.");
+    riskLevel = 'moderate';
+    advice.push("  Warm conditions: Monitor food temps regularly");
+    advice.push("  Cold food on ice. Hot food in chafing dishes.");
+    
   } else if (temp < 5) {
-    advice.push("Cold food safety: Hot food cools rapidly. Use insulated containers.");
-    advice.push("Warm food frequently. Guests eat slower in cold.");
+    riskLevel = 'moderate';
+    advice.push("  Cold conditions: Hot food cools rapidly");
+    advice.push("  Use insulated containers. Warm food frequently.");
+    advice.push("  Guests eat slower in cold - keep food warm longer.");
+    
+  } else {
+    advice.push("  Temperature safe for food service");
   }
   
+  // UV effects
   if (uvIndex > 6) {
-    advice.push("Direct sun: Food wilts/dries fast. Keep all food in shade.");
-    advice.push("Butter, chocolate, cheese will melt. Ice cream impossible outdoors.");
-    advice.push("Wine warms quickly. White/rosé in ice buckets. Red in shade.");
+    advice.push("  UV and direct sun: Food wilts and dries fast");
+    advice.push("  Keep all food in shade. Refrigerate until serving.");
+    advice.push("  Butter, chocolate, cheese will melt in sun");
+    advice.push("  Ice cream impossible to serve outdoors in these conditions");
+    advice.push("  Wine warms quickly. White and rosé in ice buckets. Red in shade.");
   }
   
+  // Rain effects
   if (condition === 'rain' || condition === 'drizzle') {
-    advice.push("Cover all food. Rainwater contamination = food poisoning risk.");
-    advice.push("Use lidded chafing dishes. Covered cake stands.");
-    advice.push("No open bowls of chips/nuts/etc. - will get soggy.");
+    warnings.push("RAIN: Water contamination risk");
+    advice.push("  Cover all food. Rainwater causes food poisoning risk.");
+    advice.push("  Use lidded chafing dishes and covered cake stands.");
+    advice.push("  No open bowls of chips, nuts, or other snacks");
+    advice.push("  Umbrellas over buffet stations. Wet guests = wet food.");
   }
   
-  if (condition === 'windy' && temp > 20) {
-    advice.push("Wind: Dust/debris in food. All food must be covered.");
-    advice.push("Napkins, plates, cups become projectiles. Weight everything.");
+  // Wind effects
+  if (wind > 20) {
+    advice.push("  Wind: Dust and debris in food");
+    advice.push("  All food must be covered when not serving");
+    advice.push("  Napkins, plates, cups become projectiles. Weight everything.");
+    advice.push("  Use heavy tablecloths. Secure with clips.");
   }
   
   // Specific items
   if (temp > 28) {
-    advice.push("CAKE WARNING: Buttercream melts above 28°C. Fondant sweats.");
-    advice.push("Consider faux display cake + sheet cake in fridge.");
-    advice.push("Chocolate fountain: impossible above 25°C (seizes, burns).");
+    advice.push("");
+    advice.push("SPECIFIC ITEM WARNINGS:");
+    advice.push("  CAKE: Buttercream melts above 28°C. Fondant sweats.");
+    advice.push("  Consider faux display cake with sheet cake in fridge.");
+    advice.push("  Chocolate fountain: impossible above 25°C");
+    advice.push("  Champagne: Warm bottles foam excessively. Keep in ice 20 minutes before.");
+    advice.push("  Red wine: Serve slightly chilled (16-18°C) in heat.");
+    advice.push("  Cocktails: Ice melts instantly. Pre-batch and chill. Extra ice needed.");
   }
   
-  if (temp > 30) {
-    advice.push("Champagne/sparkling: Warm bottles foam excessively. Keep in ice 20min before.");
-    advice.push("Red wine: Serve slightly chilled (16-18°C) in heat.");
-    advice.push("Cocktails: Ice melts instantly. Pre-batch and chill. Extra ice = 1lb per guest.");
-  }
-  
-  return advice;
+  return { advice, warnings, riskLevel };
 }
 
 // ============================================================================
-// GUEST COMFORT CALCULATOR
+// ENHANCED GUEST COMFORT CALCULATOR
 // ============================================================================
 
-function getGuestComfortScore(data) {
-  const { temp, humidity, wind, uvIndex, precipitation } = data;
+function getGuestComfortScore(data, eventType = 'birthday_party') {
+  const { temp, humidity, wind, uvIndex, precipitation, condition } = data;
   let score = 100;
   const deductions = [];
+  const eventConfig = EVENT_TYPES[eventType] || EVENT_TYPES.birthday_party;
+  const tolerance = eventConfig.weatherTolerance || { rain: 5, wind: 5, heat: 5, cold: 5, humidity: 5 };
   
-  // Temperature
-  if (temp < 0) { score -= 40; deductions.push('Freezing temperatures'); }
-  else if (temp < 10) { score -= 20; deductions.push('Cold conditions'); }
-  else if (temp < 15) { score -= 10; deductions.push('Cool conditions'); }
-  else if (temp > 35) { score -= 40; deductions.push('Extreme heat'); }
-  else if (temp > 30) { score -= 20; deductions.push('Very hot'); }
-  else if (temp > 28) { score -= 10; deductions.push('Hot conditions'); }
+  // Temperature penalties
+  if (temp < -5) {
+    score -= 40 * (10 - tolerance.cold) / 10;
+    deductions.push('Extreme cold (below -5°C)');
+  } else if (temp < 0) {
+    score -= 25 * (10 - tolerance.cold) / 10;
+    deductions.push('Freezing temperatures');
+  } else if (temp < 5) {
+    score -= 15 * (10 - tolerance.cold) / 10;
+    deductions.push('Very cold');
+  } else if (temp < 10) {
+    score -= 8 * (10 - tolerance.cold) / 10;
+    deductions.push('Cold conditions');
+  } else if (temp < 15) {
+    score -= 3 * (10 - tolerance.cold) / 10;
+    deductions.push('Cool conditions');
+  } else if (temp > 40) {
+    score -= 40 * (10 - tolerance.heat) / 10;
+    deductions.push('Extreme heat (above 40°C)');
+  } else if (temp > 35) {
+    score -= 25 * (10 - tolerance.heat) / 10;
+    deductions.push('Dangerous heat');
+  } else if (temp > 30) {
+    score -= 15 * (10 - tolerance.heat) / 10;
+    deductions.push('Very hot');
+  } else if (temp > 28) {
+    score -= 8 * (10 - tolerance.heat) / 10;
+    deductions.push('Hot conditions');
+  }
   
-  // Precipitation
-  if (precipitation > 10) { score -= 30; deductions.push('Heavy precipitation'); }
-  else if (precipitation > 5) { score -= 20; deductions.push('Moderate precipitation'); }
-  else if (precipitation > 0) { score -= 10; deductions.push('Light precipitation'); }
+  // Precipitation penalties
+  if (condition === 'thunderstorm') {
+    score -= 50 * (10 - tolerance.rain) / 10;
+    deductions.push('Thunderstorm (dangerous)');
+  } else if (precipitation > 15) {
+    score -= 30 * (10 - tolerance.rain) / 10;
+    deductions.push('Heavy rain');
+  } else if (precipitation > 10) {
+    score -= 20 * (10 - tolerance.rain) / 10;
+    deductions.push('Moderate rain');
+  } else if (precipitation > 5) {
+    score -= 15 * (10 - tolerance.rain) / 10;
+    deductions.push('Light rain');
+  } else if (precipitation > 0) {
+    score -= 8 * (10 - tolerance.rain) / 10;
+    deductions.push('Drizzle');
+  }
   
-  // Wind
-  if (wind > 40) { score -= 25; deductions.push('Dangerous wind'); }
-  else if (wind > 25) { score -= 15; deductions.push('Strong wind'); }
-  else if (wind > 15) { score -= 5; deductions.push('Breezy'); }
+  // Wind penalties
+  if (wind > 60) {
+    score -= 35 * (10 - tolerance.wind) / 10;
+    deductions.push('Hurricane-force wind');
+  } else if (wind > 45) {
+    score -= 25 * (10 - tolerance.wind) / 10;
+    deductions.push('Dangerous wind');
+  } else if (wind > 35) {
+    score -= 18 * (10 - tolerance.wind) / 10;
+    deductions.push('Very strong wind');
+  } else if (wind > 25) {
+    score -= 10 * (10 - tolerance.wind) / 10;
+    deductions.push('Strong wind');
+  } else if (wind > 15) {
+    score -= 5 * (10 - tolerance.wind) / 10;
+    deductions.push('Breezy');
+  }
   
-  // Humidity
-  if (humidity > 90) { score -= 10; deductions.push('Oppressive humidity'); }
-  else if (humidity > 80) { score -= 5; deductions.push('High humidity'); }
-  else if (humidity < 20) { score -= 5; deductions.push('Very dry'); }
+  // Humidity penalties
+  if (humidity > 90) {
+    score -= 15 * (10 - tolerance.humidity) / 10;
+    deductions.push('Oppressive humidity');
+  } else if (humidity > 80) {
+    score -= 10 * (10 - tolerance.humidity) / 10;
+    deductions.push('High humidity');
+  } else if (humidity > 70) {
+    score -= 5 * (10 - tolerance.humidity) / 10;
+    deductions.push('Moderate humidity');
+  } else if (humidity < 20) {
+    score -= 5 * (10 - tolerance.humidity) / 10;
+    deductions.push('Very dry');
+  }
   
-  // UV
-  if (uvIndex > 8) { score -= 10; deductions.push('Extreme UV'); }
-  else if (uvIndex > 5) { score -= 5; deductions.push('High UV'); }
+  // UV penalties
+  if (uvIndex > 11) {
+    score -= 15;
+    deductions.push('Extreme UV (burn in under 10 minutes)');
+  } else if (uvIndex > 8) {
+    score -= 10;
+    deductions.push('Very high UV');
+  } else if (uvIndex > 6) {
+    score -= 5;
+    deductions.push('High UV');
+  }
+  
+  // Event type sensitivity adjustment
+  if (eventConfig.sensitivity > 8) {
+    // High-sensitivity events get larger penalties
+    score = score * 0.9;
+  }
   
   return {
-    score: Math.max(0, score),
+    score: Math.max(0, Math.round(score)),
     deductions,
-    rating: score > 80 ? 'Excellent' : score > 60 ? 'Good' : score > 40 ? 'Fair' : score > 20 ? 'Poor' : 'Unacceptable'
+    rating: score > 80 ? 'Excellent' : score > 65 ? 'Good' : score > 50 ? 'Fair' : score > 35 ? 'Poor' : 'Unacceptable',
+    isSafe: score > 40
   };
 }
 
 // ============================================================================
-// DECORATION & SETUP ADVISOR
+// ENHANCED DECORATION & SETUP ADVISOR
 // ============================================================================
 
 function getDecorationAdvice(data) {
-  const { wind, precipitation, condition, temp, humidity } = data;
+  const { wind, precipitation, condition, temp, humidity, uvIndex } = data;
   const advice = [];
+  const warnings = [];
+  let riskLevel = 'low';
   
-  // Wind effects on decorations
-  if (wind > 30) {
-    advice.push("CRITICAL: All lightweight decorations WILL become projectiles.");
-    advice.push("No balloons (even weighted - they whip and pop).");
-    advice.push("No paper decorations, tablecloths without heavy clips, or freestanding signs.");
-    advice.push("Floral arrangements: heavy bases only. No tall centerpieces (topple).");
-    advice.push("Backdrop/arch: Professional rigging required. Sandbags on all bases.");
+  advice.push("DECORATIONS AND SETUP:");
+  
+  // Wind effects
+  if (wind > 40) {
+    riskLevel = 'extreme';
+    warnings.push("EXTREME WIND: Decorations are dangerous");
+    advice.push("  All lightweight decorations WILL become projectiles");
+    advice.push("  No balloons of any kind (even weighted)");
+    advice.push("  No paper decorations, tablecloths, or freestanding signs");
+    advice.push("  Floral arrangements: heavy bases only. No tall centerpieces.");
+    advice.push("  Backdrops and arches: professional rigging required");
+    advice.push("  Sandbags on all bases (100lbs minimum per base)");
+    
+  } else if (wind > 30) {
+    riskLevel = 'high';
+    warnings.push("HIGH WIND: Decorations at risk");
+    advice.push("  Secure all decorations. Tablecloth weights every 2 feet.");
+    advice.push("  Balloons ok if heavily weighted (3x normal weight)");
+    advice.push("  No hanging decorations without wind damping");
+    advice.push("  Candles: impossible to keep lit. Use LED alternatives.");
+    advice.push("  No paper lanterns or streamers");
+    
   } else if (wind > 20) {
-    advice.push("Secure all decorations. Tablecloth weights every 2ft.");
-    advice.push("Balloons ok if heavily weighted (3x normal weight).");
-    advice.push("No hanging decorations without wind damping.");
-    advice.push("Candles: impossible to keep lit. Use LED alternatives.");
+    riskLevel = 'moderate';
+    advice.push("  Moderate wind: Secure tablecloths with clips");
+    advice.push("  Balloons need extra weight (2x normal)");
+    advice.push("  Candles in hurricanes or glass vases only");
+    advice.push("  Napkins and place cards need holders");
+    
   } else if (wind > 10) {
-    advice.push("Light breeze: Tablecloth weights recommended.");
-    advice.push("Napkins, place cards, menus need holders.");
-    advice.push("Candles in hurricanes/vases only.");
+    advice.push("  Light breeze: Tablecloth weights recommended");
+    advice.push("  Place cards and menus need holders");
+    advice.push("  Candles in hurricanes recommended");
   }
   
   // Rain effects
   if (precipitation > 0) {
-    advice.push("Paper everything: menus, place cards, signage = ruined.");
-    advice.push("Consider waterproof/laminate all printed materials.");
-    advice.push("Flowers: some varieties wilt instantly in rain (peonies, garden roses).");
-    advice.push("Fabric decorations: will water stain. Synthetic fabrics better.");
+    advice.push("");
+    advice.push("RAIN PROTECTION FOR DECORATIONS:");
+    advice.push("  Paper items: menus, place cards, signage = ruined in rain");
+    advice.push("  Laminate or waterproof all printed materials");
+    advice.push("  Flowers: certain varieties wilt instantly (peonies, garden roses)");
+    advice.push("  Fabric decorations: water stains. Use synthetic fabrics.");
+    advice.push("  String lights: must be waterproof rated (IP65+)");
+    advice.push("  Candles: protect from water (use glass enclosures)");
   }
   
-  // Temperature effects
+  // Heat effects
   if (temp > 32) {
-    advice.push("Flowers: wilt fast in heat. Keep in water until last moment.");
-    advice.push("Certain flowers droop in heat: hydrangeas, tulips, ranunculus.");
-    advice.push("Candles: soften and bend. Use LED or keep refrigerated until use.");
-    advice.push("Balloons: expand in heat, may pop. Under-inflate by 10%.");
+    advice.push("");
+    advice.push("HEAT PROTECTION FOR DECORATIONS:");
+    advice.push("  Flowers: wilt fast in heat. Keep in water until last moment.");
+    advice.push("  Hydrangeas, tulips, ranunculus droop in heat");
+    advice.push("  Candles: soften and bend. Use LED or keep refrigerated.");
+    advice.push("  Balloons: expand in heat, may pop. Under-inflate by 10%.");
+    advice.push("  Floral foam: keep saturated. Mist flowers frequently.");
   }
   
   if (temp < 5) {
-    advice.push("Flowers: freeze damage to tropical varieties (orchids, anthuriums).");
-    advice.push("Certain flowers handle cold: roses, carnations, chrysanthemums.");
-    advice.push("Balloons: shrink in cold. Over-inflate by 10%.");
+    advice.push("");
+    advice.push("COLD PROTECTION FOR DECORATIONS:");
+    advice.push("  Flowers: freeze damage to tropical varieties");
+    advice.push("  Roses, carnations, chrysanthemums handle cold best");
+    advice.push("  Balloons: shrink in cold. Over-inflate by 10%.");
+    advice.push("  Vinyl signage: becomes brittle. Handle carefully.");
   }
   
-  return advice;
+  // UV effects
+  if (uvIndex > 6) {
+    advice.push("");
+    advice.push("UV PROTECTION:");
+    advice.push("  Colored items: will fade in direct sun");
+    advice.push("  Paper items: will yellow and become brittle");
+    advice.push("  Use UV-resistant materials where possible");
+    advice.push("  Provide shade for all decorative items");
+  }
+  
+  return { advice, warnings, riskLevel };
 }
 
 // ============================================================================
-// PHOTOGRAPHY CONDITIONS
+// ENHANCED PHOTOGRAPHY CONDITIONS
 // ============================================================================
 
 function getPhotographyConditions(data) {
-  const { temp, condition, uvIndex, wind, sunPosition } = data;
+  const { temp, condition, uvIndex, wind, sunPosition, humidity, timeOfDay } = data;
   const advice = [];
+  const warnings = [];
+  let quality = 8; // scale 1-10
   
-  if (sunPosition === 'golden_hour') {
-    advice.push("PERFECT LIGHT: Golden hour today. Soft, warm, flattering light.");
-    advice.push("Schedule key photos during this window.");
-  } else if (sunPosition === 'harsh_midday') {
-    advice.push("HARSH LIGHT: Midday sun causes unflattering shadows (raccoon eyes).");
-    advice.push("Seek open shade (edge of building, large tree).");
-    advice.push("Consider canopy or scrim to diffuse light.");
+  advice.push("PHOTOGRAPHY CONDITIONS:");
+  
+  // Light quality
+  if (sunPosition === 'golden_hour' || sunPosition === 'sunset') {
+    quality = 10;
+    advice.push("  PERFECT LIGHT: Golden hour conditions");
+    advice.push("  Soft, warm, flattering light for all subjects");
+    advice.push("  Schedule key photos during this window");
+    advice.push("  Duration: approximately 30-45 minutes");
+    
+  } else if (sunPosition === 'sunrise') {
+    quality = 9;
+    advice.push("  BEAUTIFUL MORNING LIGHT");
+    advice.push("  Soft directional light. Good for landscapes and portraits.");
+    advice.push("  Best for outdoor ceremonies and early photos.");
+    
+  } else if (sunPosition === 'harsh_midday' || sunPosition === 'midday') {
+    quality = 4;
+    warnings.push("HARSH LIGHT: Midday sun causes unflattering shadows");
+    advice.push("  Seek open shade (edge of building, large tree)");
+    advice.push("  Consider canopy or scrim to diffuse light");
+    advice.push("  Use fill flash to reduce raccoon eyes");
+    advice.push("  Overcast conditions actually better at this time");
+    
   } else if (condition === 'cloudy' || condition === 'overcast') {
-    advice.push("SOFT LIGHT: Clouds act as giant softbox. Even, flattering light.");
-    advice.push("Great for portraits. Colors appear more saturated.");
+    quality = 8;
+    advice.push("  SOFT LIGHT: Clouds act as giant softbox");
+    advice.push("  Even, flattering light for portraits");
+    advice.push("  Colors appear more saturated");
+    advice.push("  No harsh shadows, ideal for group photos");
+    
+  } else {
+    quality = 7;
+    advice.push("  Good conditions for most photography");
   }
   
-  if (wind > 20) {
-    advice.push("Wind: Hair will fly. Veil chaos. Have stylist on standby.");
-    advice.push("Light clothing/dresses will billow (can be beautiful or problematic).");
+  // Wind effects
+  if (wind > 25) {
+    quality = Math.max(1, quality - 3);
+    warnings.push("HIGH WIND: Photography challenging");
+    advice.push("  Hair will fly. Veil chaos. Have stylist on standby.");
+    advice.push("  Light clothing and dresses will billow");
+    advice.push("  Tripods may vibrate - use heavy weights");
+    advice.push("  Lenses exposed to dust - bring cleaning supplies");
+    
+  } else if (wind > 15) {
+    quality = Math.max(1, quality - 1);
+    advice.push("  Wind: Hair will move. Work quickly for posed shots.");
+    advice.push("  Use faster shutter speed to freeze motion");
   }
   
-  if (uvIndex > 6) {
-    advice.push("Bright sun: Squinting guests. Schedule photos in shade.");
-    advice.push("Backlit photos beautiful but need fill flash/reflector.");
+  // UV effects
+  if (uvIndex > 8) {
+    warnings.push("EXTREME UV: Squinting subjects");
+    advice.push("  Guests will squint in direct sun");
+    advice.push("  Schedule photos in shade");
+    advice.push("  Backlit photos beautiful but need fill flash or reflector");
+    advice.push("  Use polarizing filter to reduce glare");
+    
+  } else if (uvIndex > 6) {
+    advice.push("  Bright sun: Some squinting. Use shade where possible.");
+    advice.push("  Polarizing filter recommended");
+  }
+  
+  // Temperature effects
+  if (temp > 35) {
+    advice.push("  HEAT: Equipment overheating risk");
+    advice.push("  Keep cameras in shade when not in use");
+    advice.push("  Extra batteries (heat drains batteries)");
+    advice.push("  Lens fogging: acclimate equipment slowly");
+    
+  } else if (temp < 0) {
+    warnings.push("FREEZING: Equipment issues");
+    advice.push("  Batteries lose 40-50% capacity in cold");
+    advice.push("  Keep batteries in pocket to preserve charge");
+    advice.push("  Lens fogging: acclimate before use");
+    advice.push("  Condensation: let equipment warm slowly");
+  }
+  
+  // Humidity effects
+  if (humidity > 80) {
+    advice.push("  HIGH HUMIDITY: Lens fogging risk");
+    advice.push("  Acclimate equipment before use");
+    advice.push("  Use silica gel packs in camera bag");
+    advice.push("  Moisture can damage electronics");
+  }
+  
+  return { advice, warnings, quality };
+}
+
+// ============================================================================
+// EVENT TIMING OPTIMIZER
+// ============================================================================
+
+function getEventTimingOptimizer(data) {
+  const { temp, tempMax, tempMin, uvIndex, precipitationProbability, wind, condition, sunrise, sunset } = data;
+  const advice = [];
+  const windows = [];
+  
+  advice.push("EVENT TIMING OPTIMIZATION:");
+  
+  // Temperature windows
+  if (tempMax > 35) {
+    advice.push(`  AVOID 11am-5pm (above ${tempMax}°C)`);
+    windows.push({ time: '6am-10am', tempRange: `${tempMin}-${Math.round(tempMin + 8)}°C`, quality: 'Excellent' });
+    windows.push({ time: '6pm-10pm', tempRange: `${Math.round(tempMax - 5)}-${Math.round(tempMin)}°C`, quality: 'Good' });
+    
+  } else if (tempMax > 30) {
+    advice.push(`  Caution 12pm-4pm (above 30°C)`);
+    windows.push({ time: '8am-11am', tempRange: `${Math.round(tempMin + 5)}-${Math.round(tempMax - 3)}°C`, quality: 'Excellent' });
+    windows.push({ time: '5pm-9pm', tempRange: `${Math.round(tempMax - 5)}-${Math.round(tempMin + 3)}°C`, quality: 'Good' });
+    
+  } else if (tempMin < 5) {
+    advice.push(`  Best: 11am-3pm (warmest hours)`);
+    windows.push({ time: '11am-3pm', tempRange: `${Math.round(tempMin + 5)}-${Math.round(tempMax)}°C`, quality: 'Excellent' });
+    advice.push(`  Avoid: before 9am and after 6pm (below ${Math.round(tempMin)}°C)`);
+    
+  } else {
+    windows.push({ time: 'All day', tempRange: `${Math.round(tempMin)}-${Math.round(tempMax)}°C`, quality: 'Excellent' });
+    windows.push({ time: 'Morning or evening', tempRange: 'Comfortable all day', quality: 'Good' });
+  }
+  
+  // UV timing
+  if (uvIndex > 8) {
+    advice.push(`  Peak UV 10am-3pm (UV ${uvIndex}) - avoid exposure`);
+    advice.push(`  Low UV before 8am and after 5pm - safer for outdoor`);
+  } else if (uvIndex > 6) {
+    advice.push(`  Moderate UV until 4pm. Shade essential midday.`);
+  }
+  
+  // Rain probability
+  if (precipitationProbability > 30) {
+    advice.push(`  ${precipitationProbability}% chance of rain`);
+    advice.push(`  Consider flexible timing or indoor backup`);
+    advice.push(`  Monitor radar for clearing windows`);
+  }
+  
+  // Wind timing
+  if (wind > 15) {
+    advice.push(`  Calmer conditions usually in morning (6am-10am)`);
+    advice.push(`  Wind peaks 2pm-6pm. Evening winds often decrease after sunset.`);
+  }
+  
+  // Light conditions
+  advice.push("");
+  advice.push("OPTICAL CONDITIONS:");
+  advice.push(`  Sunrise: ${sunrise} - Beautiful for morning events`);
+  advice.push(`  Sunset: ${sunset} - Golden hour for photography`);
+  advice.push(`  Total daylight: ${getDayLength(data)} hours`);
+  
+  // Recommended window
+  if (windows.length > 0) {
+    advice.push("");
+    advice.push("RECOMMENDED TIME WINDOWS:");
+    windows.forEach(w => {
+      advice.push(`  ${w.time}: ${w.tempRange} (${w.quality})`);
+    });
   }
   
   return advice;
 }
 
 // ============================================================================
-// MAIN EVENTS ADVICE FUNCTION
+// MAIN EVENTS ADVICE FUNCTION (EXPANDED)
 // ============================================================================
 
 export const getEventsAdvice = (data, question = '') => {
@@ -723,6 +1083,8 @@ export const getEventsAdvice = (data, question = '') => {
     precipitation, precipitationProbability, city, pressure,
     dewPoint, sunrise, sunset, moonPhase
   } = data;
+  
+  const q = question.toLowerCase();
   
   const heatIndex = calcHeatIndex(temp, humidity);
   const windChill = calcWindChill(temp, wind);
@@ -737,8 +1099,7 @@ export const getEventsAdvice = (data, question = '') => {
   const aqiLevel = getAQICategory(aqi);
   const uvLevel = getUVLevel(uvIndex);
   
-  // Detect event type from question
-  const q = question.toLowerCase();
+  // Detect event type
   const eventType = 
     q.includes('wedding') || q.includes('marriage') ? 'wedding' :
     q.includes('corporate') || q.includes('conference') || q.includes('meeting') ? 'corporate_event' :
@@ -754,512 +1115,240 @@ export const getEventsAdvice = (data, question = '') => {
     q.includes('market') || q.includes('fair') || q.includes('bazaar') ? 'market' :
     q.includes('fundraiser') || q.includes('gala') || q.includes('charity') ? 'fundraiser' :
     q.includes('religious') || q.includes('ceremony') || q.includes('service') ? 'religious_ceremony' :
-    'birthday_party'; // default
-
-  // Detect structure type from question
-  const structureType = 
-    q.includes('marquee') || q.includes('luxury tent') ? 'marquee' :
-    q.includes('clearspan') || q.includes('industrial tent') ? 'clearspan' :
-    q.includes('large tent') || q.includes('big tent') ? 'event_tent_large' :
-    q.includes('tent') || q.includes('canopy') ? 'event_tent_small' :
-    q.includes('pavilion') ? 'pavilion' :
-    q.includes('gazebo') ? 'gazebo' :
-    q.includes('indoor') || q.includes('inside') ? 'indoor_backup' :
-    'open_air'; // default
+    'birthday_party';
 
   const eventConfig = EVENT_TYPES[eventType];
-  const structure = STRUCTURES[structureType];
-  
-  let verdict = [];
-  let setup = [];
-  let guestComfort = [];
-  let warnings = [];
-  let contingency = [];
-  let timing = [];
-  let foodSafety = [];
-  let decorAdvice = [];
-  let photoAdvice = [];
-  let equipmentNeeded = [];
-  let cancellationThreshold = false;
-
-  // ========================================================================
-  // CATASTROPHIC CONDITIONS (immediate cancellation)
-  // ========================================================================
-  
-  if (condition === 'thunderstorm' && eventConfig.sensitivity > 5) {
-    cancellationThreshold = true;
-    verdict.push("🚫 EVENT CANCELLATION ADVISED: Thunderstorm conditions.");
-    warnings.push("LIGHTNING: Tents, canopies, umbrellas provide NO protection. Seek permanent structures.");
-    warnings.push("If thunder is heard, lightning is close enough to strike. 30/30 rule applies.");
-    contingency.push("MANDATORY INDOOR BACKUP: Activate immediately. Do not wait for storm to start.");
-    contingency.push("If no indoor option: delay 30 minutes from last thunder for outdoor resumption.");
-  }
-  
-  if (wind > 50 || windGust > 70) {
-    cancellationThreshold = true;
-    verdict.push("🚫 DANGEROUS WINDS: Event structures will fail catastrophically.");
-    warnings.push(`Sustained winds ${wind}km/h with gusts to ${windGust}km/h.`);
-    warnings.push("All temporary structures unsafe. Flying debris risk. Cannot be mitigated.");
-    contingency.push("Postpone or move to permanent building. No tent is rated for these winds.");
-  }
-  
-  if (heatIndex > 50 && eventConfig.sensitivity > 6) {
-    cancellationThreshold = true;
-    verdict.push("🚫 EXTREME HEAT EMERGENCY: Outdoor events dangerous to human life.");
-    warnings.push(`Heat index ${heatIndex}°C. Heat stroke can occur in 15 minutes.`);
-    warnings.push("Elderly, children, and those with medical conditions at extreme risk.");
-    contingency.push("Cancel or move to climate-controlled indoor venue. Medical standby not sufficient.");
-  }
-  
-  if (windChill < -25 && eventConfig.sensitivity > 6) {
-    cancellationThreshold = true;
-    verdict.push("🚫 EXTREME COLD: Outdoor exposure dangerous.");
-    warnings.push(`Wind chill ${windChill}°C. Frostbite in under 10 minutes exposed skin.`);
-    contingency.push("Cancel outdoor component entirely. Indoor heating mandatory if event proceeds.");
-  }
-
-  // ========================================================================
-  // MAIN EVENT VERDICT
-  // ========================================================================
-  
-  if (!cancellationThreshold) {
-    if (comfort === "Perfect" || comfort === "Good") {
-      verdict.push(`✅ IDEAL EVENT WEATHER: ${comfort} conditions in ${city}.`);
-      verdict.push(`${temp}°C with ${humidity}% humidity, ${wind}km/h wind.`);
-      verdict.push("Minimal weather preparations needed. Guests will be comfortable.");
-    } else if (comfort === "Moderate" || comfort === "Fair") {
-      verdict.push(`⚠️ ACCEPTABLE WITH PREPARATION: ${comfort} conditions.`);
-      verdict.push(`Event possible but weather mitigation required.`);
-    } else if (comfort === "Poor") {
-      verdict.push(`⚠️ CHALLENGING: ${comfort} conditions. Extensive preparation needed.`);
-      verdict.push("Guest comfort significantly impacted. Indoor backup strongly advised.");
-    } else if (comfort === "Extreme") {
-      verdict.push(`❌ DANGEROUS: ${comfort} conditions. Strongly consider cancellation.`);
-      if (eventConfig.sensitivity > 7) {
-        verdict.push("High-stakes event in extreme conditions = unacceptable risk.");
-      }
-    }
-  }
-
-  // ========================================================================
-  // RAIN & PRECIPITATION
-  // ========================================================================
-  
-  if (condition === 'thunderstorm' && !cancellationThreshold) {
-    warnings.push("⛈️ THUNDERSTORM: Immediate lightning risk. 30/30 rule in effect.");
-    setup.push("NO outdoor activities during thunder. No umbrellas (lightning rods).");
-    setup.push("All electrical equipment on surge protectors. Unplug if possible.");
-    contingency.push("Indoor shelter accessible within 30 seconds for all guests.");
-  } else if (precipitation > 15 && isRaining) {
-    verdict.push("Heavy rain will significantly impact outdoor experience.");
-    setup.push("Professional tent with raised flooring mandatory.");
-    setup.push("Waterproof walkways between structures. Drainage plan essential.");
-    warnings.push("Standing water = slip hazard + mosquito breeding + electrical danger.");
-    guestComfort.push("Guests will get wet moving between areas. Umbrella stations needed.");
-    contingency.push("Indoor backup plan B must be ready. Don't wait to activate.");
-  } else if (precipitation > 5 && isRaining) {
-    setup.push("Rain plan in effect. Waterproof tents for all guest areas.");
-    setup.push("Non-slip flooring at all entrances. Towel service for wet guests.");
-    setup.push("Plastic covers for electronics. Waterproof bags for guest belongings.");
-    guestComfort.push("Provide umbrellas or covered walkways between tent areas.");
-    warnings.push("Grass becomes muddy with foot traffic. Flooring essential for high-traffic areas.");
-  } else if (condition === 'drizzle' || (precipitation > 0 && precipitation <= 5)) {
-    setup.push("Light rain/drizzle. Tent coverage recommended but not mandatory.");
-    setup.push("Have umbrellas available. Quick-dry seating materials.");
-    warnings.push("Even light rain makes grass damp. Guests in nice clothes will complain.");
-  } else if (precipitationProbability > 50 && !isRaining) {
-    warnings.push(`⚠️ ${precipitationProbability}% chance of rain. Have backup plan ready.`);
-    setup.push("Set up tents proactively - easier in dry conditions.");
-    contingency.push("Monitor radar. Don't wait for rain to start before activating rain plan.");
-  }
-
-  // ========================================================================
-  // WIND & STRUCTURES
-  // ========================================================================
-  
-  if (wind > 35) {
-    warnings.push(`STRONG WIND ${wind}km/h: Exceeds safe limits for most temporary structures.`);
-    warnings.push("Tent collapse risk. Professional rigging inspection mandatory.");
-    setup.push("Industrial-grade stakes (3ft+) or ballast blocks (500lbs+ per leg).");
-    setup.push("Remove tent sides to reduce wind load. No solid walls.");
-    decorAdvice.push("ALL decorations must be removed or industrial-secured.");
-    equipmentNeeded.push("Professional tent installer on standby. Wind meters for monitoring.");
-    if (eventConfig.sensitivity > 7) {
-      contingency.push("Wedding/critical event: Strongly consider indoor move. Tent failure = disaster.");
-    }
-  } else if (wind > 25) {
-    warnings.push(`WINDY ${wind}km/h: Temporary structures at risk without proper anchoring.`);
-    setup.push("All tents: stakes (not just weights). Sandbags on every leg (40lbs+).");
-    setup.push("Tent walls upwind side only. Ventilation on downwind side.");
-    setup.push("No freestanding umbrellas, signage, or arches without heavy bases.");
-    guestComfort.push(`Wind chill makes ${temp}°C feel like ${windChill}°C. Guests need layers.`);
-    decorAdvice.push("Secure all centerpieces. No taper candles. Tablecloth clips every 2ft.");
-    equipmentNeeded.push("Extra sound speakers facing wind direction. Wind screens for buffet.");
-  } else if (wind > 15) {
-    setup.push("Moderate breeze. Weight tablecloths, menus, place cards.");
-    setup.push("Balloons ok if weighted. Hair considerations for photos.");
-    guestComfort.push("Light breeze pleasant if warm. Chilly if temp < 18°C.");
-  }
-
-  // ========================================================================
-  // TEMPERATURE MANAGEMENT
-  // ========================================================================
-  
-  // Extreme Heat
-  if (heatIndex > 40) {
-    warnings.push(`EXTREME HEAT ${heatIndex}°C: Heat exhaustion/heat stroke risk.`);
-    guestComfort.push("Provide: shade structures, misting fans, cold water stations, cooling towels.");
-    guestComfort.push("Schedule event in shorter segments with cooling breaks.");
-    guestComfort.push("Elderly guests: personal fans, shaded seating, medical supervision.");
-    guestComfort.push("Alert guests in advance: dress in light, breathable fabrics, hydrate beforehand.");
-    setup.push("Industrial misting system. Portable A/C in tents. Light-colored tent (reflects heat).");
-    setup.push("Insulated water coolers every 50ft. Electrolyte drinks available.");
-    foodSafety.push(...getFoodSafetyAdvice(data));
-    timing.push("Avoid 12pm-4pm peak heat. Morning (7-11am) or evening (5-9pm) best.");
-    if (eventConfig.sensitivity > 8) {
-      contingency.push("Wedding/critical: Air-conditioned tent or indoor venue. Heat stroke = liability.");
-    }
-  } else if (heatIndex > 35) {
-    guestComfort.push(`Hot ${heatIndex}°C: Provide shade, fans, cold drinks.`);
-    setup.push("Misting fans or portable A/C in guest areas. Shade sails if no tent.");
-    foodSafety.push(...getFoodSafetyAdvice(data));
-    timing.push("Avoid peak sun hours. Evening events more comfortable.");
-  } else if (temp > 30) {
-    guestComfort.push(`Warm ${temp}°C: Shade and hydration needed.`);
-    setup.push("Shade structures for all guest areas. Cold drink stations.");
-    timing.push("Midday sun intense. Shaded areas essential.");
-  }
-  
-  // Extreme Cold
-  if (windChill < -15) {
-    warnings.push(`EXTREME COLD ${windChill}°C: Hypothermia/frostbite risk.`);
-    guestComfort.push("Guests need: heavy coats, hats, gloves, insulated boots - communicated in advance.");
-    guestComfort.push("Provide: heated tent, hot drink stations, blankets, hand warmers.");
-    guestComfort.push("Limit outdoor exposure to 15-minute segments. Heated rest areas.");
-    setup.push("Industrial heaters (1 per 200 sq ft). Enclosed tent with insulated walls.");
-    setup.push("Heated restroom trailers (standard porta-potties = miserable).");
-    setup.push("Hot water stations for tea/coffee/cocoa. Warm food (soups, stews).");
-    equipmentNeeded.push("Backup generators (heaters draw significant power). CO monitors in tents.");
-    if (eventConfig.sensitivity > 7) {
-      contingency.push("Wedding/critical: Consider rescheduling. Guests remember freezing events negatively.");
-    }
-  } else if (windChill < 0) {
-    guestComfort.push(`Cold ${windChill}°C: Guests need warm clothing, communicated in advance.`);
-    setup.push("Patio heaters every 15ft. Enclosed tent sides. Heated flooring if possible.");
-    guestComfort.push("Blanket station. Hot beverages upon arrival. Hand warmers as favors.");
-    setup.push("Coat check mandatory. Wet coats need drying area.");
-  } else if (temp < 10) {
-    guestComfort.push(`Cool ${temp}°C: Guests will need jackets, especially when sun sets.`);
-    setup.push("Heaters if event extends into evening. Blanket baskets as thoughtful touch.");
-    timing.push("Afternoon events (12-4pm) capture warmest hours.");
-  } else if (tempMin < 10 && timeOfDay === 'evening') {
-    warnings.push(`Evening temperature drops to ${tempMin}°C. Guests dressed for daytime will be cold.`);
-    setup.push("Heaters for evening portion. Communicate temperature drop to guests.");
-    guestComfort.push("Pashmina/blanket favors appreciated for evening events.");
-  }
-
-  // ========================================================================
-  // HUMIDITY EFFECTS
-  // ========================================================================
-  
-  if (humidity > 85) {
-    if (temp > 25) {
-      guestComfort.push(`Oppressive humidity ${humidity}%. Feels like ${heatIndex}°C.`);
-      guestComfort.push("Guests will sweat through formal clothes. Hair frizz inevitable.");
-      setup.push("Extra fans for air circulation. Dehumidifiers in enclosed tents.");
-      setup.push("Cold towel service. Paper programs (not fabric - will wilt).");
-      warnings.push("High humidity + heat = heat exhaustion risk increases 3x.");
-      decorAdvice.push("Flowers: tropical varieties only. Some flowers (peonies, hydrangeas) will wilt instantly.");
-    } else {
-      guestComfort.push(`Damp conditions. Chill penetrates clothing.`);
-      setup.push("Moisture-resistant seating. Extra blankets (damp cold feels worse).");
-    }
-  } else if (humidity < 25 && temp > 25) {
-    guestComfort.push("Very dry heat. Stay hydrated. Lip balm/moisturizer appreciated.");
-    warnings.push("Fire danger elevated. Check burn bans for open flames/BBQ/fire pits.");
-  }
-
-  // ========================================================================
-  // SUN & UV
-  // ========================================================================
-  
-  if (uvIndex >= 10) {
-    warnings.push(`EXTREME UV ${uvIndex}: Burn time ${burnMin} minutes. Severe sun damage possible.`);
-    setup.push("Sunscreen stations mandatory. SPF 50+ provided. Umbrellas at all outdoor seating.");
-    setup.push("All tents must have UV-resistant fabric (not all do). Shade sails for uncovered areas.");
-    guestComfort.push("Warn guests: hat, sunglasses, sunscreen essential. Sun poisoning risk real.");
-    timing.push("Strongly avoid 10am-4pm. Schedule for morning or late afternoon.");
-    if (eventConfig.sensitivity > 7) {
-      warnings.push("Elderly guests and children especially vulnerable. Medical shade breaks required.");
-    }
-  } else if (uvIndex >= 6) {
-    setup.push("High UV. Shade structures essential. Sunscreen provided.");
-    guestComfort.push("Guests should wear hats and sunglasses. Sunburn will impact event enjoyment.");
-    timing.push("Peak UV 10am-2pm. Shade critical during these hours.");
-  } else if (uvIndex >= 3 && condition === 'clear') {
-    setup.push("Moderate UV. Sunscreen stations thoughtful touch.");
-    guestComfort.push("Sunglasses recommended for comfort.");
-  }
-
-  // ========================================================================
-  // AIR QUALITY
-  // ========================================================================
-  
-  if (aqi > 200) {
-    warnings.push(`HAZARDOUS AIR ${aqi}: Health emergency. Outdoor events dangerous for all.`);
-    warnings.push("Everyone may experience serious health effects. Cancel outdoor event.");
-    contingency.push("Must move indoors with HEPA air filtration. Provide N95 masks if outdoor unavoidable.");
-  } else if (aqi > 150) {
-    warnings.push(`UNHEALTHY AIR ${aqi}: Sensitive groups at risk. Everyone may feel effects.`);
-    guestComfort.push("Provide N95 masks. Limit physical activity. Medical tent advised.");
-    guestComfort.push("Alert guests with asthma, heart conditions, elderly - high risk.");
-    contingency.push("Indoor backup with air purification strongly recommended.");
-  } else if (aqi > 100) {
-    guestComfort.push(`Moderate air quality ${aqi}. Sensitive individuals may be affected.`);
-    guestComfort.push("Limit strenuous activities. Have masks available.");
-    warnings.push("Avoid BBQs, fire pits, anything that adds particulates.");
-  }
-
-  // ========================================================================
-  // VISIBILITY
-  // ========================================================================
-  
-  if (visibility < 0.5) {
-    warnings.push("DENSE FOG: Visibility under 500m. Guest travel dangerous.");
-    warnings.push("Guests may get lost, late, or not attend. Event elements invisible.");
-    setup.push("Extra signage with reflective markers. Lighting at all pathways.");
-    setup.push("Designated parking attendants with high-visibility gear.");
-    guestComfort.push("Consider delaying start time for guest safety.");
-    decorAdvice.push("Decorations, signage, photo ops will be hidden. Lighting key.");
-  } else if (visibility < 2) {
-    warnings.push("Reduced visibility. Early morning/evening events affected.");
-    setup.push("Extra lighting for pathways and parking. Clear signage.");
-  }
-
-  // ========================================================================
-  // EVENT-SPECIFIC CONSIDERATIONS
-  // ========================================================================
-  
-  if (eventType === 'wedding') {
-    if (temp > 30) {
-      warnings.push("BRIDAL ALERT: Wedding dress + heat = dangerous. Consider lightweight fabrics.");
-      warnings.push("Groomsmen in suits/wool = heat exhaustion candidates. Allow jacket removal.");
-      guestComfort.push("Ceremony under 20 minutes. Water provided during ceremony.");
-      setup.push("Battery-operated fans in wedding party area. Ice packs available.");
-    }
-    if (temp < 5) {
-      warnings.push("Bridal gowns not designed for cold. Bride needs thermal underlayers.");
-      warnings.push("Bridesmaids in matching dresses = shivering. Provide wraps/shawls.");
-      guestComfort.push("Ceremony under 15 minutes. Blankets on chairs.");
-    }
-    if (sunPos === 'harsh_midday') {
-      photoAdvice.push("Harsh light creates unflattering shadows. Seek open shade for photos.");
-      photoAdvice.push("Squinting in ceremony photos. Position sun behind officiant (guests face away from sun).");
-    }
-    if (sunPos === 'golden_hour') {
-      photoAdvice.push("PERFECT: Golden hour during event. Schedule couple photos at this time.");
-      photoAdvice.push("Communicate timing to photographer in advance.");
-    }
-  }
-  
-  if (eventType === 'pool_party') {
-    if (condition === 'thunderstorm') {
-      warnings.push("LIGHTNING + POOL = DEATH. Clear pool immediately. No exceptions.");
-      warnings.push("Wait 30 minutes after last thunder before re-entering water.");
-    }
-    if (uvIndex > 8) {
-      warnings.push("Water reflects UV, increasing exposure 25%. Reapply sunscreen every hour.");
-      warnings.push("Swim shirts/rash guards strongly recommended for all guests.");
-    }
-  }
-  
-  if (eventType === 'beach_event') {
-    warnings.push("Check tide schedule. High tide can eliminate beach space.");
-    setup.push("Windbreaks essential. Sand gets everywhere - protect food and electronics.");
-    setup.push("Footwear needed - sand can reach 50°C+ in sun.");
-    guestComfort.push("Salt spray + wind = everything gets sticky. Wet wipes station recommended.");
-  }
-  
-  if (eventType === 'concert') {
-    if (wind > 25) {
-      warnings.push("Sound dispersion: wind >25km/h significantly degrades audio quality.");
-      setup.push("Extra delay speakers. Wind screens on all microphones.");
-      setup.push("Stage backdrop must be industrial-secured. Become sails in wind.");
-    }
-    if (condition === 'thunderstorm') {
-      warnings.push("MANDATORY EVACUATION: Stage/equipment = lightning targets.");
-      contingency.push("Have evacuation announcement ready. Crowd management plan for sudden weather.");
-    }
-  }
-
-  // ========================================================================
-  // TIMING RECOMMENDATIONS
-  // ========================================================================
-  
-  if (tempMax > 35) {
-    timing.push("Schedule event before 11am or after 5pm to avoid peak heat.");
-  }
-  if (tempMin < 5 && eventConfig.typicalDuration > 4) {
-    timing.push("Start by 2pm to capture warmth. End by 7pm before significant cooling.");
-  }
-  if (precipitationProbability > 60) {
-    timing.push("Monitor radar. Consider 1-2 hour delay if storm passing through.");
-  }
-  if (wind > 20 && timeOfDay === 'afternoon') {
-    timing.push("Afternoon winds typically strongest. Morning events often calmer.");
-  }
-  if (sunPos === 'sunset' && eventConfig.sensitivity > 7) {
-    timing.push("Schedule ceremony/photos during sunset for optimal lighting.");
-  }
+  const guestScore = getGuestComfortScore(data, eventType);
+  const foodSafety = getFoodSafetyAdvice(data);
+  const decor = getDecorationAdvice(data);
+  const photo = getPhotographyConditions(data);
+  const timing = getEventTimingOptimizer(data);
   
   // ========================================================================
-  // ASSEMBLE FINAL RESPONSE
+  // BUILD RESPONSE
   // ========================================================================
   
+  let response = "";
+  
+  // Header
   const intros = [
-    "🎪 Event weather check:",
-    "🎉 Outdoor event forecast:",
-    "📋 Venue conditions:",
-    "🎯 Event planning weather:",
-    "🌟 Zephye's event advisory:",
-    "🎊 Party weather analysis:",
-    "🎈 Celebration forecast:"
+    "EVENT WEATHER ASSESSMENT",
+    "OUTDOOR EVENT FORECAST",
+    "EVENT PLANNING WEATHER ANALYSIS",
+    "CELEBRATION WEATHER ADVISORY",
+    "VENUE CONDITIONS REPORT"
   ];
-
-  let response = `${random(intros)} ${city}\n\n`;
+  response += `=== ${random(intros)} ===\n`;
+  if (city) response += `Location: ${city}\n`;
+  response += `\n`;
   
-  // Verdict section
-  if (verdict.length > 0) {
-    response += `📌 OVERALL VERDICT:\n`;
-    verdict.forEach(v => response += `${v}\n`);
-    response += '\n';
-  }
+  // Current conditions
+  response += `CURRENT CONDITIONS:\n`;
+  response += `  Temperature: ${temp}°C (feels like ${Math.round(effectiveTemp)}°C)\n`;
+  response += `  Daily range: ${tempMin}°C to ${tempMax}°C\n`;
+  response += `  Humidity: ${humidity}% (${humidity > 70 ? 'HIGH' : humidity < 30 ? 'DRY' : 'MODERATE'})\n`;
+  response += `  Wind: ${wind} km/h (gusts to ${windGust || wind + 5} km/h)\n`;
+  response += `  Precipitation: ${precipitation || 0}mm (${precipitationProbability || 0}% chance)\n`;
+  response += `  UV Index: ${uvIndex} (${uvLevel})\n`;
+  if (aqi) response += `  Air Quality: ${aqi} (${aqiLevel})\n`;
+  if (visibility < 5) response += `  Visibility: ${visibility} km\n`;
+  response += `  Season: ${season} | Time of day: ${timeOfDay}\n`;
+  response += `  Sunrise: ${sunrise || 'N/A'} | Sunset: ${sunset || 'N/A'}\n`;
+  response += `\n`;
   
-  // Comfort Score
-  const guestScore = getGuestComfortScore(data);
-  response += `👥 GUEST COMFORT: ${guestScore.rating} (${guestScore.score}/100)\n`;
+  // Event info
+  response += `=== EVENT DETAILS ===\n`;
+  response += `  Event type: ${eventType.replace(/_/g, ' ').toUpperCase()}\n`;
+  response += `  Sensitivity: ${eventConfig.sensitivity}/10\n`;
+  response += `  Typical duration: ${eventConfig.typicalDuration} hours\n`;
+  response += `  Setup time needed: ${eventConfig.setupTime} hours\n`;
+  response += `  Guest size: ${eventConfig.guestCount}\n`;
+  response += `\n`;
+  
+  // Guest comfort score
+  response += `=== GUEST COMFORT SCORE ===\n`;
+  response += `  Score: ${guestScore.score}/100 (${guestScore.rating})\n`;
   if (guestScore.deductions.length > 0) {
-    response += `Factors: ${guestScore.deductions.join(', ')}\n`;
+    response += `  Factors affecting comfort:\n`;
+    guestScore.deductions.forEach(d => response += `    - ${d}\n`);
   }
-  response += '\n';
+  response += `\n`;
   
-  // Structure Safety
-  if (wind > 15 || precipitation > 0) {
-    response += `🏗️ STRUCTURE (${structureType.replace(/_/g, ' ')}):\n`;
-    response += `• Wind rating: ${structure.maxWindSpeed}km/h (current: ${wind}km/h)\n`;
-    response += `• Rain protection: ${structure.rainProtection}/10\n`;
-    response += `• Temperature control: ${structure.temperatureControl}/10\n`;
-    if (wind > structure.maxWindSpeed * 0.7) {
-      response += `• ⚠️ APPROACHING WIND LIMITS - monitor closely\n`;
-    }
-    if (wind > structure.maxWindSpeed) {
-      response += `• 🚫 WIND EXCEEDS STRUCTURE RATING - unsafe\n`;
-    }
-    response += '\n';
+  // Overall verdict
+  response += `=== OVERALL VERDICT ===\n`;
+  if (!guestScore.isSafe) {
+    response += `  CANCELLATION ADVISED: Conditions unsafe for this event.\n`;
+    response += `  ${eventType.replace(/_/g, ' ').toUpperCase()} in these conditions = significant risk.\n`;
+    response += `  Guest safety and event success cannot be guaranteed.\n`;
+    
+  } else if (guestScore.score > 80) {
+    response += `  PROCEED WITH CONFIDENCE. Weather is ideal for your event.\n`;
+    response += `  Excellent guest comfort. Minimal weather mitigation needed.\n`;
+    response += `  Focus on creating memorable moments.\n`;
+    
+  } else if (guestScore.score > 65) {
+    response += `  PROCEED WITH PREPARATION. Good conditions with minor adjustments.\n`;
+    response += `  Implement setup recommendations below. Have indoor backup ready.\n`;
+    
+  } else if (guestScore.score > 50) {
+    response += `  PROCEED WITH CAUTION. Challenging conditions require significant preparation.\n`;
+    response += `  Strongly recommend indoor backup plan. Guest comfort will be impacted.\n`;
+    
+  } else {
+    response += `  STRONGLY CONSIDER RESCHEDULING. Poor conditions will impact event quality.\n`;
+    response += `  If proceeding, implement ALL recommendations immediately.\n`;
+  }
+  response += `\n`;
+  
+  // Weather warnings
+  if (condition === 'thunderstorm') {
+    response += `=== THUNDERSTORM WARNING ===\n`;
+    response += `  CRITICAL: Lightning is imminent or occurring.\n`;
+    response += `  All outdoor activities must stop immediately.\n`;
+    response += `  Tents provide NO lightning protection.\n`;
+    response += `  30-30 rule: If thunder is heard, lightning is close enough to strike.\n`;
+    response += `  Wait 30 minutes after last thunder before resuming outdoor.\n`;
+    response += `\n`;
   }
   
-  // Setup Requirements
-  if (setup.length > 0) {
-    response += `🔧 SETUP REQUIREMENTS:\n`;
-    setup.forEach(s => response += `• ${s}\n`);
-    response += '\n';
+  // Temperature-specific advice
+  if (temp > 35) {
+    response += `=== EXTREME HEAT PLAN ===\n`;
+    response += `  HEAT EXHAUSTION RISK: Feels like ${Math.round(effectiveTemp)}°C\n`;
+    response += `  Required: Shade structures, misting fans, cold water stations\n`;
+    response += `  Schedule: Avoid 11am-4pm. Morning or evening only.\n`;
+    response += `  Clothing: Light, breathable fabrics advised for all guests\n`;
+    response += `  Hydration: Water stations every 50 feet\n`;
+    response += `  Medical: Heat stroke symptoms - headache, nausea, confusion\n`;
+    response += `  Elderly and children: Most vulnerable. Provide dedicated cooling area.\n`;
+    response += `\n`;
+    
+  } else if (temp < 0) {
+    response += `=== EXTREME COLD PLAN ===\n`;
+    response += `  HYPOTHERMIA RISK: Feels like ${Math.round(effectiveTemp)}°C\n`;
+    response += `  Required: Enclosed heated tent, patio heaters, warm drinks\n`;
+    response += `  Duration: Limit outdoor exposure to 15-20 minutes\n`;
+    response += `  Clothing: Warm layers, hats, gloves, insulated footwear\n`;
+    response += `  Facilities: Heated restroom trailers (not standard porta-potties)\n`;
+    response += `  Backup: Indoor shelter immediately available\n`;
+    response += `\n`;
   }
   
-  // Equipment Needed
-  if (equipmentNeeded.length > 0) {
-    response += `⚡ EQUIPMENT TO RENT:\n`;
-    equipmentNeeded.forEach(e => response += `• ${e}\n`);
-    response += '\n';
-  }
-  
-  // Guest Comfort
-  if (guestComfort.length > 0) {
-    response += `💆 GUEST EXPERIENCE:\n`;
-    guestComfort.forEach(g => response += `• ${g}\n`);
-    response += '\n';
-  }
-  
-  // Food Safety
-  if (foodSafety.length > 0) {
-    response += `🍽️ FOOD & BEVERAGE:\n`;
-    foodSafety.forEach(f => response += `• ${f}\n`);
-    response += '\n';
+  // Food safety
+  if (foodSafety.advice.length > 0) {
+    response += `=== FOOD SAFETY ===\n`;
+    response += `  Risk level: ${foodSafety.riskLevel.toUpperCase()}\n`;
+    foodSafety.advice.forEach(a => response += `${a}\n`);
+    response += `\n`;
   }
   
   // Decorations
-  if (decorAdvice.length > 0) {
-    response += `🎀 DECORATIONS & STYLING:\n`;
-    decorAdvice.forEach(d => response += `• ${d}\n`);
-    response += '\n';
+  if (decor.advice.length > 0) {
+    response += `=== DECORATIONS ===\n`;
+    response += `  Risk level: ${decor.riskLevel.toUpperCase()}\n`;
+    decor.advice.forEach(a => response += `${a}\n`);
+    response += `\n`;
   }
   
   // Photography
-  if (photoAdvice.length > 0) {
-    response += `📸 PHOTOGRAPHY CONDITIONS:\n`;
-    photoAdvice.forEach(p => response += `• ${p}\n`);
-    response += '\n';
+  if (photo.advice.length > 0) {
+    response += `=== PHOTOGRAPHY ===\n`;
+    response += `  Quality: ${photo.quality}/10\n`;
+    photo.advice.forEach(a => response += `${a}\n`);
+    photo.warnings.forEach(w => response += `  ${w}\n`);
+    response += `\n`;
   }
   
   // Timing
   if (timing.length > 0) {
-    response += `⏰ TIMING RECOMMENDATIONS:\n`;
-    timing.forEach(t => response += `• ${t}\n`);
-    response += '\n';
+    response += `=== TIMING RECOMMENDATIONS ===\n`;
+    timing.forEach(t => response += `${t}\n`);
+    response += `\n`;
   }
   
-  // Contingency Plans
-  if (contingency.length > 0) {
-    response += `🔄 CONTINGENCY PLANS:\n`;
-    contingency.forEach(c => response += `• ${c}\n`);
-    response += '\n';
+  // Structure recommendations
+  if (wind > 15 || precipitation > 0 || temp > 30 || temp < 5) {
+    response += `=== STRUCTURE RECOMMENDATIONS ===\n`;
+    if (temp > 30) {
+      response += `  • Air-conditioned tent or indoor venue recommended\n`;
+      response += `  • Shade structures: 1 per 20 guests minimum\n`;
+      response += `  • Light-colored tent fabric (reflects heat)\n`;
+    }
+    if (temp < 5) {
+      response += `  • Enclosed tent with heating (1 heater per 200 sq ft)\n`;
+      response += `  • Thermal flooring recommended\n`;
+      response += `  • Heat retention: close all tent sides\n`;
+    }
+    if (wind > 25) {
+      response += `  • Professional tent installation required (stakes + ballasts)\n`;
+      response += `  • No tent sides (reduce wind load)\n`;
+      response += `  • All furniture: heavy bases only\n`;
+    }
+    if (precipitation > 0) {
+      response += `  • Raised flooring essential for wet ground\n`;
+      response += `  • Covered walkways between structures\n`;
+      response += `  • Waterproof everything: electrical, AV, decor\n`;
+    }
+    response += `\n`;
   }
   
-  // Critical Warnings
-  if (warnings.length > 0) {
-    response += `🚨 CRITICAL WARNINGS:\n`;
-    warnings.forEach(w => response += `• ${w}\n`);
-    response += '\n';
+  // Emergency kit
+  if (guestScore.score < 60 || temp > 32 || temp < 0 || isRaining) {
+    response += `=== EMERGENCY PREPAREDNESS ===\n`;
+    response += `  • Designated weather watcher with radar access\n`;
+    response += `  • Emergency shelter plan (indoor location within 30 seconds)\n`;
+    response += `  • First aid kit (heat/cold specific supplies)\n`;
+    response += `  • Emergency contact numbers posted\n`;
+    response += `  • Extra water: 2 liters per guest minimum\n`;
+    response += `  • Towels and blankets available\n`;
+    response += `  • Communication plan for guests (SMS alert)\n`;
+    response += `\n`;
   }
   
-  // Temperature Summary
-  response += `🌡️ TEMPERATURE DETAILS:\n`;
-  response += `• Current: ${temp}°C (feels like ${effectiveTemp}°C)\n`;
-  response += `• Today's range: ${tempMin}°C to ${tempMax}°C\n`;
-  if (wind > 5) response += `• Wind chill: ${windChill}°C\n`;
-  if (temp > 25 && humidity > 50) response += `• Heat index: ${heatIndex}°C\n`;
-  response += '\n';
+  // Event-specific notes
+  if (eventConfig.special.length > 0) {
+    response += `=== EVENT-SPECIFIC NOTES ===\n`;
+    eventConfig.special.forEach(s => response += `  • ${s}\n`);
+    response += `\n`;
+  }
   
-  // Final Recommendation
-  response += `💡 FINAL RECOMMENDATION:\n`;
-  if (cancellationThreshold) {
-    response += `CANCEL or MOVE INDOORS. Conditions exceed safe thresholds for outdoor events.\n`;
-    response += `Guest safety and event success cannot be guaranteed in these conditions.\n`;
+  // Bottom line
+  response += `=== BOTTOM LINE ===\n`;
+  if (!guestScore.isSafe) {
+    response += `  CANCEL or RELOCATE. Conditions unacceptable for this event type.\n`;
+    response += `  Safety risk: ${guestScore.rating}. Liability is high.\n`;
+    response += `  Activate indoor backup plan immediately.\n`;
+    
   } else if (guestScore.score > 80) {
-    response += `PROCEED WITH CONFIDENCE. Weather is ideal for your event.\n`;
-    response += `Minimal weather mitigation needed. Focus on creating memorable moments!\n`;
+    response += `  GREAT WEATHER FOR YOUR EVENT. Enjoy the perfect conditions.\n`;
+    response += `  Minimal planning needed. Focus on details and enjoyment.\n`;
+    
   } else if (guestScore.score > 60) {
-    response += `PROCEED WITH PREPARATION. Good conditions with minor adjustments.\n`;
-    response += `Implement the setup recommendations above. Have indoor backup ready.\n`;
-  } else if (guestScore.score > 40) {
-    response += `PROCEED WITH CAUTION. Challenging conditions require significant preparation.\n`;
-    response += `Strongly recommend indoor backup plan. Guest comfort will be impacted.\n`;
+    response += `  GOOD WEATHER WITH MINOR PREPARATIONS. \n`;
+    response += `  Follow recommendations above. Have backup ready just in case.\n`;
+    response += `  Guests will be comfortable with proper amenities.\n`;
+    
   } else {
-    response += `STRONGLY CONSIDER RESCHEDULING. Poor conditions will significantly impact your event.\n`;
-    response += `If proceeding, implement ALL recommendations and have immediate indoor backup.\n`;
+    response += `  CHALLENGING WEATHER. Significant preparation required.\n`;
+    response += `  Strongly consider moving to indoor venue if possible.\n`;
+    response += `  If outdoor: implement ALL recommendations and safety measures.\n`;
   }
-
-  // Pro tip
+  
+  // Wisdom
   const proTips = [
-    "Always have 20% more tent space than you think. Guests cluster in bad weather.",
+    "Always have 20 percent more tent space than you think. Guests cluster in bad weather.",
     "Weather contingency plans should be decided 24 hours before, not day-of.",
     "Communicate weather expectations to guests 48 hours in advance.",
-    "Rent heaters/AC units early - they sell out on extreme weather days.",
+    "Rent heaters or AC units early - they sell out on extreme weather days.",
     "Professional event planners always have Plan B, C, and D for weather.",
-    "Tent flooring rental = single best investment for rainy day events.",
-    "Guest comfort = guest happiness = successful event. Don't skimp on weather prep."
+    "Tent flooring rental is the single best investment for rainy day events.",
+    "Guest comfort equals guest happiness equals successful event.",
+    "The best event photos often come from dramatic weather conditions.",
+    "A well-fed guest is a happy guest. Food safety is non-negotiable.",
+    "If you fail to plan, you plan to fail. Especially with weather."
   ];
-  response += `\n🎓 ${random(proTips)}`;
-
+  response += `\n--- PRO TIP ---\n${random(proTips)}`;
+  
   return response;
 };
 
@@ -1268,134 +1357,86 @@ export const getEventsAdvice = (data, question = '') => {
 // ============================================================================
 
 export const getEventTimingAdvice = (data) => {
-  if (!data) return "Loading...";
+  if (!data) return "Loading weather data...";
   
   const { temp, tempMax, tempMin, uvIndex, precipitationProbability, wind, condition, sunrise, sunset } = data;
+  const advice = getEventTimingOptimizer(data);
   
-  let response = "⏰ OPTIMAL EVENT TIMING:\n\n";
-  
-  // Temperature analysis
-  response += "🌡️ Temperature Window Analysis:\n";
-  if (tempMax > 35) {
-    response += `• AVOID 11am-5pm (above 35°C)\n`;
-    response += `• Best: 6am-10am (${tempMin}-${tempMin+8}°C) or 6pm-10pm (${tempMax-5}-${tempMin}°C)\n`;
-  } else if (tempMax > 30) {
-    response += `• Caution 12pm-4pm (above 30°C)\n`;
-    response += `• Best: morning (before 11am) or evening (after 5pm)\n`;
-  } else if (tempMin < 5) {
-    response += `• Best: 11am-3pm (warmest hours, ${tempMin+5}°C-${tempMax}°C)\n`;
-    response += `• Avoid: before 9am and after 6pm (below ${tempMin}°C)\n`;
-  } else {
-    response += `• All-day comfort. Any time slot works.\n`;
-  }
-  
-  // UV timing
-  response += "\n☀️ UV Intensity Schedule:\n";
-  if (uvIndex > 8) {
-    response += `• Peak UV 10am-3pm (UV ${uvIndex}) - avoid outdoor exposure\n`;
-    response += `• Low UV before 8am and after 5pm - safer for outdoor activities\n`;
-  }
-  
-  // Rain probability timing
-  if (precipitationProbability > 30) {
-    response += "\n🌧️ Precipitation Risk:\n";
-    response += `• ${precipitationProbability}% chance of rain\n`;
-    response += `• Consider flexible timing - start 1-2 hours earlier or later\n`;
-    response += `• Monitor radar for clearing windows\n`;
-  }
-  
-  // Wind patterns
-  if (wind > 15) {
-    response += "\n💨 Wind Patterns:\n";
-    response += `• Typically strongest 2pm-6pm\n`;
-    response += `• Calmer conditions usually in morning (6am-10am)\n`;
-    response += `• Evening winds often decrease after sunset\n`;
-  }
-  
-  // Light conditions
-  response += "\n💡 Lighting Conditions:\n";
-  response += `• Sunrise: ${sunrise} - Beautiful for morning ceremonies\n`;
-  response += `• Sunset: ${sunset} - Golden hour for photography\n`;
-  response += `• Total daylight: ${getDayLength(data)} hours\n`;
+  let response = "EVENT TIMING ANALYSIS:\n\n";
+  advice.forEach(a => response += `${a}\n`);
   
   return response;
 };
 
 export const getEventEquipmentAdvice = (data) => {
-  if (!data) return "Loading...";
+  if (!data) return "Loading weather data...";
   
   const { temp, wind, humidity, precipitation, condition } = data;
+  const advice = [];
   
-  let response = "⚡ RENTAL EQUIPMENT CHECKLIST:\n\n";
+  advice.push("EQUIPMENT RENTAL RECOMMENDATIONS:");
+  advice.push("");
   
-  // Heating needs
+  // Temperature-based equipment
   if (temp < 10) {
-    response += "🔥 HEATING:\n";
-    if (temp < 0) {
-      response += `• Industrial heaters (1 per 200 sq ft) - ${Math.ceil(1000/200)} for 1000 sq ft tent\n`;
-      response += `• Estimated temp rise: +15-20°C in enclosed tent\n`;
-    } else if (temp < 10) {
-      response += `• Patio heaters (1 per 20 guests) - ${Math.ceil(100/20)} for 100 guests\n`;
-      response += `• Estimated temp rise: +5-10°C in immediate area\n`;
+    const heaters = temp < 0 ? 'industrial' : 'patio';
+    const count = Math.ceil(100 / (temp < 0 ? 15 : 20));
+    advice.push("HEATING REQUIRED:");
+    advice.push(`  • ${heaters === 'industrial' ? 'Industrial heaters' : 'Patio heaters'}: ${count} units needed`);
+    advice.push(`  • Expected temp rise: ${temp < 0 ? '15-20' : '5-10'}°C`);
+    advice.push(`  • Estimated cost: $${count * (temp < 0 ? 300 : 150)}`);
+    advice.push(`  • Power: ${temp < 0 ? 'May need generator' : 'Standard outlets'}`);
+    
+  } else if (temp > 30) {
+    const coolers = humidity < 60 ? 'evaporative' : 'misting';
+    const count = Math.ceil(100 / (humidity < 60 ? 15 : 10));
+    advice.push("COOLING REQUIRED:");
+    advice.push(`  • ${coolers === 'evaporative' ? 'Evaporative coolers' : 'Misting fans'}: ${count} units needed`);
+    advice.push(`  • Expected temp drop: ${humidity < 60 ? '8-12' : '3-7'}°C`);
+    advice.push(`  • Estimated cost: $${count * (humidity < 60 ? 250 : 80)}`);
+    if (temp > 38) {
+      advice.push(`  • PORTABLE AC: 1 unit per 400 sq ft recommended`);
     }
-    response += `• Cost estimate: $150-300 per heater\n`;
-    response += `• Power: May need generator (each heater 1500-5000W)\n\n`;
-  }
-  
-  // Cooling needs
-  if (temp > 28) {
-    response += "❄️ COOLING:\n";
-    if (humidity < 60) {
-      response += `• Evaporative coolers - effective in dry heat\n`;
-      response += `• 1 unit per 500 sq ft - ${Math.ceil(1000/500)} for 1000 sq ft\n`;
-    } else {
-      response += `• Misting fans - less effective in humidity but still helpful\n`;
-      response += `• Portable AC units for enclosed tents (1 per 400 sq ft)\n`;
-    }
-    response += `• Cost estimate: $200-500 per cooling unit\n`;
-    response += `• Power: AC units need dedicated 20A circuits\n\n`;
   }
   
   // Rain equipment
   if (precipitation > 0) {
-    response += "☔ RAIN PROTECTION:\n";
-    response += `• Tent with sides (not just canopy top)\n`;
-    response += `• Raised flooring (essential for wet ground)\n`;
-    response += `• Walkway covers between structures\n`;
-    response += `• Umbrella stands (1 per 50 guests)\n`;
-    response += `• Towel service for wet guests\n`;
-    response += `• Plastic covers for AV equipment\n\n`;
+    advice.push("");
+    advice.push("RAIN PROTECTION:");
+    advice.push(`  • Tent with sides: ${Math.ceil(100/4)}x${Math.ceil(100/4)} ft minimum`);
+    advice.push(`  • Raised flooring: $${Math.ceil(100*100/10)} estimated`);
+    advice.push(`  • Umbrellas: ${Math.ceil(100/5)} needed for 100 guests`);
+    advice.push(`  • Walkway covers between structures`);
   }
   
   // Wind equipment
   if (wind > 20) {
-    response += "💨 WIND SECURITY:\n";
-    response += `• Tent stakes (3ft for soft ground) or ballast blocks\n`;
-    response += `• Sandbags (40lbs each, 4 per tent leg)\n`;
-    response += `• Tablecloth clips (4 per table)\n`;
-    response += `• Heavy bases for all signs, arches, decor\n`;
-    response += `• Wind screens for buffet/food stations\n\n`;
+    advice.push("");
+    advice.push("WIND PROTECTION:");
+    advice.push(`  • Heavy tent stakes or ballast blocks (500lbs+ per leg)`);
+    advice.push(`  • Sandbags: ${Math.ceil(100/4)} recommended`);
+    advice.push(`  • Tablecloth clips: ${Math.ceil(100/2)} for 100 guests`);
+    advice.push(`  • Wind screens for buffet and food stations`);
   }
   
   // Lighting
-  response += "💡 LIGHTING:\n";
-  response += `• String lights: 1 strand per 10 linear feet\n`;
-  response += `• Spotlights for key areas (stage, cake, bar)\n`;
-  response += `• Pathway lighting (1 per 10ft) for evening events\n`;
-  if (visibility < 5) {
-    response += `• EXTRA lighting needed - low visibility conditions\n`;
+  if (condition === 'fog' || visibility < 5) {
+    advice.push("");
+    advice.push("LIGHTING:");
+    advice.push("  • Extra pathway lighting (1 per 10ft)");
+    advice.push("  • Spotlights for key areas (stage, cake, bar)");
+    advice.push("  • All lighting must be IP65 rated for outdoor use");
   }
-  response += `• All outdoor lighting must be IP65 rated\n\n`;
   
   // Power
-  response += "⚡ POWER:\n";
-  response += `• Calculate total wattage: heaters/AC + lights + sound + catering\n`;
-  response += `• Generator: 20% above calculated need\n`;
-  response += `• Backup generator for critical equipment\n`;
-  response += `• GFCI protection for all outdoor circuits\n`;
-  response += `• Weather-protected power distribution boxes\n`;
+  advice.push("");
+  advice.push("POWER:");
+  advice.push("  • Generator: 20% above calculated load");
+  advice.push("  • GFCI protection for all outdoor circuits");
+  advice.push("  • Weather-protected power distribution boxes");
+  advice.push("  • Backup generator for critical equipment");
   
-  return response;
+  return advice.join('\n');
 };
 
 export default getEventsAdvice;
