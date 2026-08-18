@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { QUOTES } from './data/quotes.js'
 import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
@@ -30,6 +29,20 @@ const shareBackgrounds = [
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
 const OPENWEATHER_KEY = "576b156966c5789a1b3fd0074c8469f1"
+
+// Font options for random selection
+const FONT_FAMILIES = [
+  'Georgia, serif',
+  'Times New Roman, serif',
+  'Garamond, serif',
+  'Palatino, serif',
+  'Book Antiqua, serif',
+  'Didot, serif',
+  'Baskerville, serif',
+  'Caslon, serif'
+]
+
+const getRandomFont = () => FONT_FAMILIES[Math.floor(Math.random() * FONT_FAMILIES.length)]
 
 const LocationIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,143 +89,148 @@ const CloseIcon = () => (
 )
 
 // ============================================================================
-// SHARE MODAL — Image & Text Sharing for Quotes/Facts
+// SHARE MODAL
 // ============================================================================
 
-function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
+function ShareModal({ isOpen, onClose, content, author, type }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   
-  // Get random background
   const getRandomBackground = () => {
     return shareBackgrounds[Math.floor(Math.random() * shareBackgrounds.length)]
   }
   
   const [background] = useState(getRandomBackground())
+  const [fontFamily] = useState(getRandomFont())
 
-  const generateImageDataUrl = async (): Promise<string> => {
-    const canvas = document.createElement('canvas')
-    const size = 1080
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext('2d')!
+  const generateImageDataUrl = () => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const size = 1080
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')
 
-    // Load and draw background image
-    const bgImg = new Image()
-    bgImg.crossOrigin = 'anonymous'
-    bgImg.src = background
-    await new Promise((resolve, reject) => {
-      bgImg.onload = resolve
-      bgImg.onerror = reject
-    })
-    ctx.drawImage(bgImg, 0, 0, size, size)
+      const bgImg = new Image()
+      bgImg.crossOrigin = 'anonymous'
+      bgImg.src = background
+      
+      bgImg.onload = () => {
+        try {
+          // Draw background
+          ctx.drawImage(bgImg, 0, 0, size, size)
 
-    // Dark overlay for text readability
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
-    ctx.fillRect(0, 0, size, size)
+          // Dark overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+          ctx.fillRect(0, 0, size, size)
 
-    // Decorative border
-    const padding = size * 0.05
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
-    ctx.lineWidth = 2
-    ctx.strokeRect(padding, padding, size - padding * 2, size - padding * 2)
+          // Decorative border
+          const padding = size * 0.05
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
+          ctx.lineWidth = 2
+          ctx.strokeRect(padding, padding, size - padding * 2, size - padding * 2)
 
-    // Quote mark
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.3)'
-    ctx.font = 'bold 160px Georgia, serif'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'top'
-    ctx.fillText('"', padding * 2, padding * 2)
+          // Quote mark
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.25)'
+          ctx.font = 'bold 160px Georgia, serif'
+          ctx.textAlign = 'left'
+          ctx.textBaseline = 'top'
+          ctx.fillText('"', padding * 2, padding * 2)
 
-    // Main text
-    const maxWidth = size - padding * 6
-    const lineHeight = 72
-    let fontSize = 52
-    let lines: string[] = []
-    let currentLine = ''
+          // Main text
+          const maxWidth = size - padding * 6
+          const lineHeight = 72
+          let fontSize = 52
+          let lines = []
+          let currentLine = ''
 
-    // Split text into words
-    const words = content.split(' ')
-    
-    // Find optimal font size
-    while (fontSize > 28) {
-      ctx.font = `${fontSize}px Georgia, serif`
-      lines = []
-      currentLine = ''
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word
-        if (ctx.measureText(testLine).width > maxWidth) {
-          lines.push(currentLine)
-          currentLine = word
-        } else {
-          currentLine = testLine
+          const words = content.split(' ')
+          
+          while (fontSize > 28) {
+            ctx.font = `${fontSize}px ${fontFamily}`
+            lines = []
+            currentLine = ''
+            for (const word of words) {
+              const testLine = currentLine ? `${currentLine} ${word}` : word
+              if (ctx.measureText(testLine).width > maxWidth) {
+                lines.push(currentLine)
+                currentLine = word
+              } else {
+                currentLine = testLine
+              }
+            }
+            lines.push(currentLine)
+            if (lines.length <= 8) break
+            fontSize -= 4
+          }
+
+          ctx.fillStyle = '#ffffff'
+          ctx.font = `${fontSize}px ${fontFamily}`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+
+          const startY = size * 0.35
+          lines.forEach((line, i) => {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+            ctx.shadowBlur = 10
+            ctx.fillText(line, size / 2, startY + i * lineHeight)
+          })
+          ctx.shadowBlur = 0
+
+          // Divider line
+          const dividerY = startY + lines.length * lineHeight + 40
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.6)'
+          ctx.shadowColor = 'rgba(255, 215, 0, 0.2)'
+          ctx.shadowBlur = 10
+          ctx.fillRect(size / 2 - 80, dividerY, 160, 3)
+          ctx.shadowBlur = 0
+
+          // Author
+          if (author && author !== 'Fact') {
+            ctx.fillStyle = '#f0e6d3'
+            ctx.font = `bold 42px ${fontFamily}`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'top'
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+            ctx.shadowBlur = 10
+            ctx.fillText(`— ${author}`, size / 2, dividerY + 20)
+            ctx.shadowBlur = 0
+          }
+
+          // Type label
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+          ctx.font = '26px Arial, sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.fillText(type || 'Zephye', size / 2, size - 80)
+
+          // Watermark - Zephye
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'
+          ctx.font = 'bold 28px Arial, sans-serif'
+          ctx.textAlign = 'right'
+          ctx.textBaseline = 'bottom'
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+          ctx.shadowBlur = 5
+          ctx.fillText('Zephye', size - 40, size - 50)
+          ctx.shadowBlur = 0
+
+          // Small URL at bottom left
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
+          ctx.font = '16px Arial, sans-serif'
+          ctx.textAlign = 'left'
+          ctx.textBaseline = 'bottom'
+          ctx.fillText('zephye.app', 40, size - 50)
+
+          resolve(canvas.toDataURL('image/png', 1.0))
+        } catch (err) {
+          reject(err)
         }
       }
-      lines.push(currentLine)
-      if (lines.length <= 8) break
-      fontSize -= 4
-    }
-
-    // Draw text
-    ctx.fillStyle = '#ffffff'
-    ctx.font = `${fontSize}px Georgia, serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-
-    const startY = size * 0.35
-    lines.forEach((line, i) => {
-      // Add subtle text shadow
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-      ctx.shadowBlur = 10
-      ctx.fillText(line, size / 2, startY + i * lineHeight)
+      
+      bgImg.onerror = () => {
+        reject(new Error('Failed to load background image'))
+      }
     })
-    ctx.shadowBlur = 0
-
-    // Divider line
-    const dividerY = startY + lines.length * lineHeight + 40
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.6)'
-    ctx.shadowColor = 'rgba(255, 215, 0, 0.2)'
-    ctx.shadowBlur = 10
-    ctx.fillRect(size / 2 - 80, dividerY, 160, 3)
-    ctx.shadowBlur = 0
-
-    // Author/Reference
-    if (author && author !== 'Fact') {
-      ctx.fillStyle = '#f0e6d3'
-      ctx.font = 'bold 42px Georgia, serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'top'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-      ctx.shadowBlur = 10
-      ctx.fillText(`— ${author}`, size / 2, dividerY + 20)
-      ctx.shadowBlur = 0
-    }
-
-    // Type label
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
-    ctx.font = '26px Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'bottom'
-    ctx.fillText(type || 'Zephye', size / 2, size - padding * 2)
-
-    // Brand watermark - Zephye
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.25)'
-    ctx.font = 'bold 28px Inter, sans-serif'
-    ctx.textAlign = 'right'
-    ctx.textBaseline = 'bottom'
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
-    ctx.shadowBlur = 5
-    ctx.fillText('✨ Zephye', size - padding * 2, size - padding * 1.5)
-    ctx.shadowBlur = 0
-
-    // Small Zephye logo at bottom left
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
-    ctx.font = '16px Inter, sans-serif'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'bottom'
-    ctx.fillText('zephye.app', padding * 2, size - padding * 1.5)
-
-    return canvas.toDataURL('image/png', 1.0)
   }
 
   const handleCopyText = async () => {
@@ -224,7 +242,6 @@ function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Fallback
       const textarea = document.createElement('textarea')
       textarea.value = text
       document.body.appendChild(textarea)
@@ -245,24 +262,23 @@ function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
         ? content 
         : `"${content}" — ${author}`
 
-      // Try Web Share API with image
-      if (navigator.share && navigator.canShare) {
+      if (navigator.share) {
         try {
           const response = await fetch(imageDataUrl)
           const blob = await response.blob()
           const file = new File([blob], fileName, { type: 'image/png' })
-          const shareData: any = { 
+          const shareData = { 
             title: type || 'Quote', 
-            text: shareText 
+            text: shareText,
+            files: [file]
           }
-          if (navigator.canShare({ files: [file] })) {
-            shareData.files = [file]
+          if (navigator.canShare && navigator.canShare(shareData)) {
+            await navigator.share(shareData)
+            onClose()
+            return
           }
-          await navigator.share(shareData)
-          onClose()
-          return
         } catch (err) {
-          if ((err as Error).name !== 'AbortError') {
+          if (err.name !== 'AbortError') {
             console.warn('Share failed:', err)
           }
         }
@@ -275,7 +291,6 @@ function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      alert('Image downloaded! You can now share it manually.')
 
     } catch (error) {
       console.error('Error sharing image:', error)
@@ -296,13 +311,12 @@ function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
         onClose()
         return
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
+        if (err.name !== 'AbortError') {
           console.warn('Share failed:', err)
         }
       }
     }
     
-    // Fallback: copy to clipboard
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
@@ -321,223 +335,57 @@ function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
 
   if (!isOpen) return null
 
-  return createPortal(
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
+  return (
+    <div className="modal-overlay" onClick={onClose}>
       <div 
-        className="glass" 
+        className="glass share-modal"
         onClick={e => e.stopPropagation()}
-        style={{
-          padding: '24px',
-          maxWidth: '480px',
-          width: '95%',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          borderRadius: '20px',
-          background: 'rgba(15,23,42,0.95)',
-          backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          position: 'relative'
-        }}
       >
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            padding: '6px',
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            cursor: 'pointer',
-            color: 'rgba(255,255,255,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '32px',
-            height: '32px',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-            e.currentTarget.style.color = '#fff'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-            e.currentTarget.style.color = 'rgba(255,255,255,0.4)'
-          }}
-        >
+        <button className="share-modal-close" onClick={onClose}>
           <CloseIcon />
         </button>
 
-        <div style={{ marginBottom: '16px' }}>
-          <h3 style={{
-            fontSize: '16px',
-            fontWeight: '700',
-            color: '#f8fafc',
-            marginBottom: '12px',
-            textAlign: 'center'
-          }}>
-            Share {type || 'Quote'}
-          </h3>
-          
-          <div style={{
-            padding: '16px',
-            borderRadius: '12px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            marginBottom: '12px'
-          }}>
-            <p style={{
-              fontSize: '14px',
-              color: '#f8fafc',
-              lineHeight: '1.6',
-              fontStyle: 'italic'
-            }}>
-              "{content}"
-            </p>
-            {author && author !== 'Fact' && (
-              <p style={{
-                fontSize: '12px',
-                color: 'rgba(255,255,255,0.5)',
-                marginTop: '8px',
-                textAlign: 'right'
-              }}>
-                — {author}
-              </p>
-            )}
-          </div>
+        <div className="share-modal-header">
+          <h3>Share {type || 'Quote'}</h3>
+        </div>
+        
+        <div className="share-modal-preview">
+          <p className="share-modal-content">"{content}"</p>
+          {author && author !== 'Fact' && (
+            <p className="share-modal-author">— {author}</p>
+          )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="share-modal-actions">
           <button
+            className="share-btn-image"
             onClick={handleShareImage}
             disabled={isGenerating}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'rgba(56,189,248,0.15)',
-              color: '#7dd3fc',
-              fontWeight: '600',
-              fontSize: '14px',
-              border: '1px solid rgba(56,189,248,0.2)',
-              cursor: isGenerating ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              if (!isGenerating) {
-                e.currentTarget.style.background = 'rgba(56,189,248,0.25)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(56,189,248,0.15)'
-            }}
           >
-            {isGenerating ? (
-              <>
-                <span style={{ 
-                  display: 'inline-block',
-                  animation: 'spin 1s linear infinite'
-                }}>⟳</span>
-                Generating...
-              </>
-            ) : (
-              <>
-                <span>🖼️</span>
-                Share as Image
-              </>
-            )}
+            {isGenerating ? 'Generating...' : 'Share as Image'}
           </button>
 
           <button
+            className="share-btn-text"
             onClick={handleShareText}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'rgba(255,255,255,0.05)',
-              color: '#f8fafc',
-              fontWeight: '600',
-              fontSize: '14px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-            }}
           >
-            <span>📝</span>
             Share as Text
           </button>
 
           <button
+            className={`share-btn-copy ${copied ? 'copied' : ''}`}
             onClick={handleCopyText}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'rgba(255,255,255,0.03)',
-              color: copied ? '#22c55e' : 'rgba(255,255,255,0.6)',
-              fontWeight: '500',
-              fontSize: '13px',
-              border: copied ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,255,255,0.04)',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              if (!copied) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-            }}
           >
-            {copied ? (
-              <>
-                <span>✓</span>
-                Copied!
-              </>
-            ) : (
-              <>
-                <span>📋</span>
-                Copy to Clipboard
-              </>
-            )}
+            {copied ? 'Copied!' : 'Copy to Clipboard'}
           </button>
         </div>
-
-        <style>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
-    </div>,
-    document.body
+    </div>
   )
 }
 
 // ============================================================================
-// MAP MODAL — Shows when user switches to Map tab
+// MAP MODAL
 // ============================================================================
 
 function MapModal({ isOpen, onClose }) {
@@ -546,136 +394,30 @@ function MapModal({ isOpen, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="glass"
+        className="glass map-modal"
         onClick={e => e.stopPropagation()}
-        style={{
-          padding: '28px 24px 24px',
-          maxWidth: '420px',
-          width: '90%',
-          borderRadius: '20px',
-          background: 'rgba(15,23,42,0.94)',
-          backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
-          position: 'relative',
-          textAlign: 'center'
-        }}
       >
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            padding: '6px',
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            cursor: 'pointer',
-            color: 'rgba(255,255,255,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '32px',
-            height: '32px',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-            e.currentTarget.style.color = '#fff'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-            e.currentTarget.style.color = 'rgba(255,255,255,0.4)'
-          }}
-        >
+        <button className="map-modal-close" onClick={onClose}>
           <CloseIcon />
         </button>
 
-        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗺️</div>
-        <h3 style={{
-          fontSize: '18px',
-          fontWeight: '700',
-          color: '#f8fafc',
-          marginBottom: '6px'
-        }}>
-          Map Features
-        </h3>
-        <div style={{
-          display: 'inline-block',
-          padding: '4px 12px',
-          borderRadius: '20px',
-          fontSize: '11px',
-          fontWeight: '600',
-          background: 'rgba(56,189,248,0.15)',
-          color: '#7dd3fc',
-          border: '1px solid rgba(56,189,248,0.2)',
-          marginBottom: '14px'
-        }}>
-          ⚡ Undergoing Upgrade
-        </div>
-        <p style={{
-          fontSize: '13px',
-          color: 'rgba(255,255,255,0.5)',
-          lineHeight: '1.6',
-          marginBottom: '16px'
-        }}>
+        <div className="map-modal-icon">🗺️</div>
+        <h3 className="map-modal-title">Map Features</h3>
+        <div className="map-modal-badge">⚡ Undergoing Upgrade</div>
+        <p className="map-modal-description">
           Some map features are being enhanced. Core functionality is still available.
         </p>
-        <div style={{
-          height: '1px',
-          background: 'rgba(255,255,255,0.06)',
-          marginBottom: '14px'
-        }} />
-        <div style={{
-          textAlign: 'left',
-          fontSize: '12px',
-          color: 'rgba(255,255,255,0.4)'
-        }}>
-          <p style={{ fontWeight: '600', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
-            📌 How to use:
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>👆</span>
-              <span>Single tap — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Weather data</span></span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>👆👆</span>
-              <span>Double tap — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Pollen data</span></span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>👆⏱️</span>
-              <span>Long press / Right click — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Route calculation</span></span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>🚦</span>
-              <span>Traffic tab — <span style={{ color: 'rgba(255,255,255,0.5)' }}>Live traffic + incidents</span></span>
-            </div>
+        <div className="map-modal-divider" />
+        <div className="map-modal-helpers">
+          <p className="map-modal-helpers-title">📌 How to use:</p>
+          <div className="map-modal-helpers-list">
+            <div><span>👆</span><span>Single tap — <span>Weather data</span></span></div>
+            <div><span>👆👆</span><span>Double tap — <span>Pollen data</span></span></div>
+            <div><span>👆⏱️</span><span>Long press / Right click — <span>Route calculation</span></span></div>
+            <div><span>🚦</span><span>Traffic tab — <span>Live traffic + incidents</span></span></div>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          style={{
-            width: '100%',
-            padding: '10px',
-            borderRadius: '12px',
-            background: 'rgba(56,189,248,0.15)',
-            color: '#7dd3fc',
-            fontWeight: '600',
-            fontSize: '14px',
-            border: '1px solid rgba(56,189,248,0.2)',
-            cursor: 'pointer',
-            marginTop: '16px',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(56,189,248,0.25)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(56,189,248,0.15)'
-          }}
-        >
+        <button className="map-modal-btn" onClick={onClose}>
           Got it
         </button>
       </div>
@@ -729,7 +471,7 @@ function WeatherIcon({ code }) {
 }
 
 // ============================================================================
-// HOURLY MODAL — PROPERLY DESIGNED
+// HOURLY MODAL
 // ============================================================================
 
 function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
@@ -764,41 +506,13 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="glass"
+        className="glass hourly-modal"
         onClick={e => e.stopPropagation()}
-        style={{
-          padding: '24px',
-          maxWidth: '640px',
-          width: '95%',
-          maxHeight: '85vh',
-          overflow: 'auto',
-          borderRadius: '20px',
-          background: 'rgba(15,23,42,0.92)',
-          backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.06)'
-        }}
       >
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '16px',
-          paddingBottom: '14px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
-        }}>
+        <div className="hourly-modal-header">
           <div>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#f8fafc',
-              marginBottom: '2px'
-            }}>
-              Hourly Forecast
-            </h3>
-            <p style={{
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.4)'
-            }}>
+            <h3>Hourly Forecast</h3>
+            <p>
               {locationName || 'Your location'} •{' '}
               {new Date(hourlyData.time[0]).toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -807,36 +521,12 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
               })}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '6px',
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              cursor: 'pointer',
-              color: 'rgba(255,255,255,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '34px',
-              height: '34px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-              e.currentTarget.style.color = '#fff'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-              e.currentTarget.style.color = 'rgba(255,255,255,0.5)'
-            }}
-          >
+          <button className="hourly-modal-close" onClick={onClose}>
             <CloseIcon />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div className="hourly-modal-list">
           {hourlyData.time.slice(0, 24).map((time, i) => {
             const temp = hourlyData.temperature_2m?.[i]
             const feelsLike = hourlyData.apparent_temperature?.[i]
@@ -853,116 +543,38 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
             return (
               <div
                 key={time}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                  borderRadius: '12px',
-                  background: isCurrentHour
-                    ? 'rgba(56,189,248,0.08)'
-                    : 'rgba(255,255,255,0.02)',
-                  border: isCurrentHour
-                    ? '1px solid rgba(56,189,248,0.15)'
-                    : '1px solid rgba(255,255,255,0.04)',
-                  gap: '10px',
-                  transition: 'all 0.2s'
-                }}
+                className={`hourly-item ${isCurrentHour ? 'current' : ''}`}
               >
-                <div style={{ minWidth: '65px' }}>
-                  <div style={{
-                    fontSize: '13px',
-                    fontWeight: isCurrentHour ? '700' : '500',
-                    color: isCurrentHour ? '#7dd3fc' : '#f8fafc'
-                  }}>
+                <div className="hourly-time">
+                  <div>
                     {new Date(time).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       hour12: true
                     })}
                   </div>
-                  {isCurrentHour && (
-                    <div style={{
-                      fontSize: '8px',
-                      color: 'rgba(56,189,248,0.5)',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Now
-                    </div>
-                  )}
+                  {isCurrentHour && <div className="hourly-now">Now</div>}
                 </div>
 
-                <div style={{ fontSize: '24px', minWidth: '36px', textAlign: 'center' }}>
-                  {getIcon(code)}
-                </div>
+                <div className="hourly-icon">{getIcon(code)}</div>
 
-                <div style={{ minWidth: '48px', textAlign: 'center' }}>
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    color: '#f8fafc'
-                  }}>
-                    {Math.round(temp)}°
-                  </div>
+                <div className="hourly-temp">
+                  <div>{Math.round(temp)}°</div>
                   {feelsLike && Math.round(feelsLike) !== Math.round(temp) && (
-                    <div style={{
-                      fontSize: '9px',
-                      color: 'rgba(255,255,255,0.3)'
-                    }}>
-                      feels {Math.round(feelsLike)}°
-                    </div>
+                    <div className="hourly-feels">feels {Math.round(feelsLike)}°</div>
                   )}
                 </div>
 
-                <div style={{
-                  flex: 1,
-                  fontSize: '12px',
-                  color: 'rgba(255,255,255,0.6)',
-                  minWidth: '70px',
-                  textAlign: 'left'
-                }}>
+                <div className="hourly-condition">
                   {getConditionName(code)}
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  flexWrap: 'wrap',
-                  fontSize: '10px',
-                  color: 'rgba(255,255,255,0.4)',
-                  justifyContent: 'flex-end',
-                  minWidth: '100px'
-                }}>
-                  {precip > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      🌧️ {Math.round(precip)}%
-                    </span>
-                  )}
-                  {rain > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      💧 {Math.round(rain * 10) / 10}mm
-                    </span>
-                  )}
-                  {wind > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      💨 {Math.round(wind)} km/h
-                    </span>
-                  )}
-                  {gust > 15 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#fbbf24' }}>
-                      ⚡{Math.round(gust)}
-                    </span>
-                  )}
-                  {humidity > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      💧 {Math.round(humidity)}%
-                    </span>
-                  )}
-                  {pressure > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      📊 {Math.round(pressure)} hPa
-                    </span>
-                  )}
+                <div className="hourly-details">
+                  {precip > 0 && <span>🌧️ {Math.round(precip)}%</span>}
+                  {rain > 0 && <span>💧 {Math.round(rain * 10) / 10}mm</span>}
+                  {wind > 0 && <span>💨 {Math.round(wind)} km/h</span>}
+                  {gust > 15 && <span className="hourly-gust">⚡{Math.round(gust)}</span>}
+                  {humidity > 0 && <span>💧 {Math.round(humidity)}%</span>}
+                  {pressure > 0 && <span>📊 {Math.round(pressure)} hPa</span>}
                 </div>
               </div>
             )
@@ -1463,25 +1075,95 @@ function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
   const [currentFact, setCurrentFact] = useState(null)
   const [loading, setLoading] = useState(false)
   const [lastFetch, setLastFetch] = useState(0)
+  
   useEffect(() => { fetchQuote(); fetchFact() }, [])
   useEffect(() => { fetchQuote() }, [quoteCategory])
   useEffect(() => { fetchFact() }, [factCategory])
+  
   const fetchQuote = () => {
-    if (Date.now() - lastFetch < 5000) return; setLastFetch(Date.now()); setLoading(true)
-    let pool = quoteCategory === 'All' ? getAllQuotesPool() : (QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || [])
-    setCurrentQuote(pool[Math.floor(Math.random() * pool.length)]); setLoading(false)
-  }
-  const fetchFact = async () => {
+    if (Date.now() - lastFetch < 5000) return; 
+    setLastFetch(Date.now()); 
     setLoading(true)
-    try { const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en'); if (!res.ok) throw new Error(); setCurrentFact({ text: (await res.json()).text }) }
-    catch { try { const res2 = await fetch('https://numbersapi.com/random/trivia?json'); if (!res2.ok) throw new Error(); setCurrentFact({ text: (await res2.json()).text }) } catch { let pool = factCategory === 'All' ? Object.values(LOCAL_FACTS).flat() : (LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science); setCurrentFact(pool[Math.floor(Math.random() * pool.length)]) } }
+    let pool = quoteCategory === 'All' ? getAllQuotesPool() : (QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || [])
+    setCurrentQuote(pool[Math.floor(Math.random() * pool.length)]); 
     setLoading(false)
   }
-  return (<>
-    {quoteOfDay && (<div className="glass mb-4" style={{padding:'20px',borderRadius:'20px',border:'2px solid var(--accent)',background:'rgba(56,189,248,0.05)'}}><div className="flex justify-between items-start mb-2"><p className="text-sm font-bold text-accent flex items-center gap-2"><span>🌟</span> Quote of the Day</p></div><p className="text-lg font-bold mb-3">{quoteOfDay.content}</p><p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button></div></div>)}
-    <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Explore Quotes</p><button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>{loading?'Loading...':'New Quote'}</button></div><div className="sub-tabs mb-4">{QUOTE_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${quoteCategory===cat?'active':''}`} onClick={()=>setQuoteCategory(cat)}>{cat}</button>)}</div>{currentQuote && <div className="list-item"><p className="font-bold mb-4">{currentQuote.content}</p><p className="text-sm text-muted mb-4">-- {currentQuote.author}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button></div></div>}</div>
-    <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Did You Know?</p><button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>{loading?'Loading...':'New Fact'}</button></div><div className="sub-tabs mb-4">{FACT_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>)}</div>{currentFact && <div className="list-item"><p className="font-bold mb-4">{currentFact.text}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareFact(currentFact.text)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button></div></div>}</div>
-  </>)
+  
+  const fetchFact = async () => {
+    setLoading(true)
+    try { 
+      const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en'); 
+      if (!res.ok) throw new Error(); 
+      setCurrentFact({ text: (await res.json()).text }) 
+    } catch { 
+      try { 
+        const res2 = await fetch('https://numbersapi.com/random/trivia?json'); 
+        if (!res2.ok) throw new Error(); 
+        setCurrentFact({ text: (await res2.json()).text }) 
+      } catch { 
+        let pool = factCategory === 'All' ? Object.values(LOCAL_FACTS).flat() : (LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science); 
+        setCurrentFact(pool[Math.floor(Math.random() * pool.length)]) 
+      } 
+    }
+    setLoading(false)
+  }
+  
+  return (
+    <>
+      {quoteOfDay && (
+        <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px',border:'2px solid var(--accent)',background:'rgba(56,189,248,0.05)'}}>
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-sm font-bold text-accent flex items-center gap-2"><span>🌟</span> Quote of the Day</p>
+          </div>
+          <p className="text-lg font-bold mb-3">{quoteOfDay.content}</p>
+          <p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p>
+          <div className="flex gap-2">
+            <button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button>
+            <button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button>
+          </div>
+        </div>
+      )}
+      
+      <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}>
+        <div className="flex justify-between items-center mb-4">
+          <p className="font-bold">Explore Quotes</p>
+          <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>{loading?'Loading...':'New Quote'}</button>
+        </div>
+        <div className="sub-tabs mb-4">
+          {QUOTE_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${quoteCategory===cat?'active':''}`} onClick={()=>setQuoteCategory(cat)}>{cat}</button>)}
+        </div>
+        {currentQuote && (
+          <div className="list-item">
+            <p className="font-bold mb-4">{currentQuote.content}</p>
+            <p className="text-sm text-muted mb-4">-- {currentQuote.author}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
+              <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}>
+        <div className="flex justify-between items-center mb-4">
+          <p className="font-bold">Did You Know?</p>
+          <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>{loading?'Loading...':'New Fact'}</button>
+        </div>
+        <div className="sub-tabs mb-4">
+          {FACT_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>)}
+        </div>
+        {currentFact && (
+          <div className="list-item">
+            <p className="font-bold mb-4">{currentFact.text}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-sm" onClick={() => shareFact(currentFact.text)}>Share</button>
+              <button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
 }
 
 // ============================================================================
@@ -1492,10 +1174,69 @@ function SavedTab({ showToast, shareQuote, shareFact }) {
   const [savedQuotes, setSavedQuotes] = useState([])
   const [savedFacts, setSavedFacts] = useState([])
   const [activeSubTab, setActiveSubTab] = useState('quotes')
-  useEffect(() => { setSavedQuotes(JSON.parse(localStorage.getItem('zephye_saved_quotes')||'[]')); setSavedFacts(JSON.parse(localStorage.getItem('zephye_saved_facts')||'[]')) }, [])
-  const deleteQuote = (id) => { const u = savedQuotes.filter(q => q.id!==id); localStorage.setItem('zephye_saved_quotes',JSON.stringify(u)); setSavedQuotes(u); showToast('Quote deleted') }
-  const deleteFact = (id) => { const u = savedFacts.filter(f => f.id!==id); localStorage.setItem('zephye_saved_facts',JSON.stringify(u)); setSavedFacts(u); showToast('Fact deleted') }
-  return (<div className="glass" style={{padding:'20px',borderRadius:'20px'}}><div className="sub-tabs mb-4"><button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>Quotes ({savedQuotes.length})</button><button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>Facts ({savedFacts.length})</button></div>{activeSubTab==='quotes'&&(savedQuotes.length===0?<p className="text-center text-muted py-8">No saved quotes yet.</p>:savedQuotes.map(q=>(<div key={q.id} className="list-item"><p className="font-bold mb-2">{q.quote_text}</p><p className="text-sm text-muted mb-3">-- {q.quote_author}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text,q.quote_author)}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteQuote(q.id)}>Delete</button></div></div>)))}{activeSubTab==='facts'&&(savedFacts.length===0?<p className="text-center text-muted py-8">No saved facts yet.</p>:savedFacts.map(f=>(<div key={f.id} className="list-item"><p className="font-bold mb-3">{f.fact_text}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareFact(f.fact_text)}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteFact(f.id)}>Delete</button></div></div>)))}</div>)
+  
+  useEffect(() => { 
+    setSavedQuotes(JSON.parse(localStorage.getItem('zephye_saved_quotes')||'[]')); 
+    setSavedFacts(JSON.parse(localStorage.getItem('zephye_saved_facts')||'[]')) 
+  }, [])
+  
+  const deleteQuote = (id) => { 
+    const u = savedQuotes.filter(q => q.id!==id); 
+    localStorage.setItem('zephye_saved_quotes',JSON.stringify(u)); 
+    setSavedQuotes(u); 
+    showToast('Quote deleted') 
+  }
+  
+  const deleteFact = (id) => { 
+    const u = savedFacts.filter(f => f.id!==id); 
+    localStorage.setItem('zephye_saved_facts',JSON.stringify(u)); 
+    setSavedFacts(u); 
+    showToast('Fact deleted') 
+  }
+  
+  return (
+    <div className="glass" style={{padding:'20px',borderRadius:'20px'}}>
+      <div className="sub-tabs mb-4">
+        <button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>Quotes ({savedQuotes.length})</button>
+        <button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>Facts ({savedFacts.length})</button>
+      </div>
+      
+      {activeSubTab==='quotes' && (
+        savedQuotes.length===0 ? 
+        <p className="text-center text-muted py-8">No saved quotes yet.</p> :
+        savedQuotes.map(q => (
+          <div key={q.id} className="list-item">
+            <p className="font-bold mb-2">{q.quote_text}</p>
+            <p className="text-sm text-muted mb-3">-- {q.quote_author}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text,q.quote_author)}>Share</button>
+              <button className="btn-ghost text-xs" onClick={()=>deleteQuote(q.id)}>Delete</button>
+            </div>
+          </div>
+        ))
+      )}
+      
+      {activeSubTab==='facts' && (
+        savedFacts.length===0 ? 
+        <p className="text-center text-muted py-8">No saved facts yet.</p> :
+        savedFacts.map(f => (
+          <div key={f.id} className="list-item">
+            <p className="font-bold mb-3">{f.fact_text}</p>
+            <div className="flex gap-2">
+              <button className="btn-share text-xs" onClick={()=>shareFact(f.fact_text)}>Share</button>
+              <button className="btn-ghost text-xs" onClick={()=>deleteFact(f.id)}>Delete</button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  )
 }
 
-export default function App() { return (<AudioProvider><AppContent /></AudioProvider>) }
+export default function App() { 
+  return (
+    <AudioProvider>
+      <AppContent />
+    </AudioProvider>
+  )
+}
