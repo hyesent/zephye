@@ -117,27 +117,21 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
       
       bgImg.onload = () => {
         try {
-          // Draw background
           ctx.drawImage(bgImg, 0, 0, size, size)
-
-          // Dark overlay - slightly lighter for better visibility
           ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
           ctx.fillRect(0, 0, size, size)
 
-          // Decorative border - gold
           const padding = size * 0.05
           ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)'
           ctx.lineWidth = 3
           ctx.strokeRect(padding, padding, size - padding * 2, size - padding * 2)
 
-          // Quote mark - larger and more visible
           ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'
           ctx.font = 'bold 180px Georgia, serif'
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
           ctx.fillText('"', padding * 2, padding * 1.5)
 
-          // Main text
           const maxWidth = size - padding * 6
           const lineHeight = 78
           let fontSize = 56
@@ -177,7 +171,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
           })
           ctx.shadowBlur = 0
 
-          // Divider line - more visible gold
           const dividerY = startY + lines.length * lineHeight + 50
           ctx.fillStyle = 'rgba(255, 215, 0, 0.5)'
           ctx.shadowColor = 'rgba(255, 215, 0, 0.2)'
@@ -185,7 +178,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
           ctx.fillRect(size / 2 - 100, dividerY, 200, 3)
           ctx.shadowBlur = 0
 
-          // Author - more visible
           if (author && author !== 'Fact') {
             ctx.fillStyle = '#f0e6d3'
             ctx.font = `bold 44px ${fontFamily}`
@@ -197,14 +189,12 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
             ctx.shadowBlur = 0
           }
 
-          // Type label
           ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
           ctx.font = '24px Arial, sans-serif'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'bottom'
           ctx.fillText(type || 'Zephye', size / 2, size - 90)
 
-          // Watermark - Zephye (more visible)
           ctx.fillStyle = 'rgba(255, 215, 0, 0.35)'
           ctx.font = 'bold 32px Arial, sans-serif'
           ctx.textAlign = 'right'
@@ -214,7 +204,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
           ctx.fillText('✦ Zephye', size - padding * 2, size - padding * 1.5)
           ctx.shadowBlur = 0
 
-          // Small URL at bottom left
           ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'
           ctx.font = '18px Arial, sans-serif'
           ctx.textAlign = 'left'
@@ -253,7 +242,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
     }
   }
 
-  // PURE SHARE - only shares, no fallback to download
   const handleShareImage = async () => {
     if (!navigator.share) {
       alert('Web Share API is not supported on this device. Please use the "Download Image" button instead.')
@@ -293,7 +281,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
     }
   }
 
-  // PURE DOWNLOAD - only downloads, no sharing
   const handleDownloadImage = async () => {
     setIsGenerating(true)
     try {
@@ -376,7 +363,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
             onClick={handleShareImage}
             disabled={isGenerating}
           >
-            {isGenerating ? 'Generating...' : '📤 Share as Image'}
+            {isGenerating ? 'Generating...' : 'Share as Image'}
           </button>
 
           <button
@@ -384,21 +371,21 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
             onClick={handleDownloadImage}
             disabled={isGenerating}
           >
-            {isGenerating ? 'Generating...' : '💾 Download Image'}
+            {isGenerating ? 'Generating...' : 'Download Image'}
           </button>
 
           <button
             className="share-btn-text"
             onClick={handleShareText}
           >
-            📝 Share as Text
+            Share as Text
           </button>
 
           <button
             className={`share-btn-copy ${copied ? 'copied' : ''}`}
             onClick={handleCopyText}
           >
-            {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
+            {copied ? 'Copied!' : 'Copy to Clipboard'}
           </button>
         </div>
       </div>
@@ -1068,18 +1055,68 @@ function AppContent() {
             </div>
             <div className="flex gap-2 flex-wrap">
               {stormInfo && <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>{stormInfo.level}</div>}
-              {aqiInfo && (<div style={{position:'relative'}}>
-                <button className="status-badge" style={{background:aqiInfo.color+'33',borderColor:aqiInfo.color,color:aqiInfo.color,cursor:'pointer'}} onClick={() => setShowAirDropdown(!showAirDropdown)}>Air: {aqiInfo.label} ▼</button>
-                {showAirDropdown && (<div className="glass" style={{position:'absolute',top:'110%',left:0,minWidth:'300px',padding:'16px',zIndex:999,borderRadius:'16px'}}>
-                  <p className="font-bold mb-3">Weather Details</p>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">AQI</span><span className="font-bold" style={{color:aqiInfo.color}}>{aqi?.us_aqi??'--'}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Wind</span><span className="font-bold">{Math.round(ws)} km/h {getWindDirection(wd)}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Humidity</span><span className="font-bold">{hum}%</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Pressure</span><span className="font-bold">{pres} hPa</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-muted">Visibility</span><span className="font-bold">{(vis/1000).toFixed(1)} km</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-muted">UV Index</span><span className="font-bold">{uv}</span></div>
-                </div>)}
-              </div>)}
+              {aqiInfo && (
+                <div style={{position:'relative', zIndex: 9999}}>
+                  <button 
+                    className="status-badge" 
+                    style={{
+                      background: aqiInfo.color + '33',
+                      borderColor: aqiInfo.color,
+                      color: aqiInfo.color,
+                      cursor: 'pointer',
+                      position: 'relative',
+                      zIndex: 9999
+                    }} 
+                    onClick={() => setShowAirDropdown(!showAirDropdown)}
+                  >
+                    Air: {aqiInfo.label} ▼
+                  </button>
+                  {showAirDropdown && (
+                    <div 
+                      className="glass" 
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        left: 0,
+                        minWidth: '300px',
+                        padding: '16px',
+                        zIndex: 99999,
+                        borderRadius: '16px',
+                        background: 'rgba(15, 23, 42, 0.98)',
+                        backdropFilter: 'blur(24px)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: '0 16px 64px rgba(0, 0, 0, 0.6)'
+                      }}
+                    >
+                      <p className="font-bold mb-3">Weather Details</p>
+                      <div className="flex justify-between mb-2 text-sm">
+                        <span className="text-muted">AQI</span>
+                        <span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span>
+                      </div>
+                      <div className="flex justify-between mb-2 text-sm">
+                        <span className="text-muted">Wind</span>
+                        <span className="font-bold">{Math.round(ws)} km/h {getWindDirection(wd)}</span>
+                      </div>
+                      <div className="flex justify-between mb-2 text-sm">
+                        <span className="text-muted">Humidity</span>
+                        <span className="font-bold">{hum}%</span>
+                      </div>
+                      <div className="flex justify-between mb-2 text-sm">
+                        <span className="text-muted">Pressure</span>
+                        <span className="font-bold">{pres} hPa</span>
+                      </div>
+                      <div className="flex justify-between mb-2 text-sm">
+                        <span className="text-muted">Visibility</span>
+                        <span className="font-bold">{(vis / 1000).toFixed(1)} km</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted">UV Index</span>
+                        <span className="font-bold">{uv}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <WeatherManTab weather={weather} location={location} todayStats={todayStats} aqi={aqi} onRefresh={() => fetchWeatherData(location.lat, location.lon)} />
