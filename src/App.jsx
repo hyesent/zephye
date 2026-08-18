@@ -95,7 +95,6 @@ const CloseIcon = () => (
 function ShareModal({ isOpen, onClose, content, author, type }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [selectedBgIndex, setSelectedBgIndex] = useState(0)
   
   const getRandomBackground = () => {
     return Math.floor(Math.random() * shareBackgrounds.length)
@@ -254,7 +253,13 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
     }
   }
 
+  // PURE SHARE - only shares, no fallback to download
   const handleShareImage = async () => {
+    if (!navigator.share) {
+      alert('Web Share API is not supported on this device. Please use the "Download Image" button instead.')
+      return
+    }
+    
     setIsGenerating(true)
     try {
       const imageDataUrl = await generateImageDataUrl()
@@ -263,44 +268,32 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
         ? content 
         : `"${content}" — ${author}`
 
-      if (navigator.share) {
-        try {
-          const response = await fetch(imageDataUrl)
-          const blob = await response.blob()
-          const file = new File([blob], fileName, { type: 'image/png' })
-          const shareData = { 
-            title: type || 'Quote', 
-            text: shareText,
-            files: [file]
-          }
-          if (navigator.canShare && navigator.canShare(shareData)) {
-            await navigator.share(shareData)
-            onClose()
-            return
-          }
-        } catch (err) {
-          if (err.name !== 'AbortError') {
-            console.warn('Share failed:', err)
-          }
-        }
+      const response = await fetch(imageDataUrl)
+      const blob = await response.blob()
+      const file = new File([blob], fileName, { type: 'image/png' })
+      const shareData = { 
+        title: type || 'Quote', 
+        text: shareText,
+        files: [file]
       }
-
-      // Fallback: Download image
-      const link = document.createElement('a')
-      link.download = fileName
-      link.href = imageDataUrl
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-    } catch (error) {
-      console.error('Error sharing image:', error)
-      handleShareText()
+      
+      if (navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData)
+        onClose()
+      } else {
+        alert('Cannot share image on this device. Please use "Download Image" instead.')
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Share failed:', err)
+        alert('Failed to share image. Please use "Download Image" instead.')
+      }
     } finally {
       setIsGenerating(false)
     }
   }
 
+  // PURE DOWNLOAD - only downloads, no sharing
   const handleDownloadImage = async () => {
     setIsGenerating(true)
     try {
@@ -383,7 +376,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
             onClick={handleShareImage}
             disabled={isGenerating}
           >
-            {isGenerating ? 'Generating...' : 'Share as Image'}
+            {isGenerating ? 'Generating...' : '📤 Share as Image'}
           </button>
 
           <button
@@ -391,21 +384,21 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
             onClick={handleDownloadImage}
             disabled={isGenerating}
           >
-            {isGenerating ? 'Generating...' : 'Download Image'}
+            {isGenerating ? 'Generating...' : '💾 Download Image'}
           </button>
 
           <button
             className="share-btn-text"
             onClick={handleShareText}
           >
-            Share as Text
+            📝 Share as Text
           </button>
 
           <button
             className={`share-btn-copy ${copied ? 'copied' : ''}`}
             onClick={handleCopyText}
           >
-            {copied ? 'Copied!' : 'Copy to Clipboard'}
+            {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
           </button>
         </div>
       </div>
@@ -724,7 +717,6 @@ function AppContent() {
     setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code } : loc))
     setSearchResults([])
     setEditCity('')
-    // Update the location name display
     const loc = savedLocations.find(l => l.id === locId)
     if (loc) {
       showToast(`Location updated to ${place.name}`)
