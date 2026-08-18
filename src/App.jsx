@@ -95,12 +95,13 @@ const CloseIcon = () => (
 function ShareModal({ isOpen, onClose, content, author, type }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [selectedBgIndex, setSelectedBgIndex] = useState(0)
   
   const getRandomBackground = () => {
-    return shareBackgrounds[Math.floor(Math.random() * shareBackgrounds.length)]
+    return Math.floor(Math.random() * shareBackgrounds.length)
   }
   
-  const [background] = useState(getRandomBackground())
+  const [backgroundIndex] = useState(getRandomBackground)
   const [fontFamily] = useState(getRandomFont())
 
   const generateImageDataUrl = () => {
@@ -113,34 +114,34 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
 
       const bgImg = new Image()
       bgImg.crossOrigin = 'anonymous'
-      bgImg.src = background
+      bgImg.src = shareBackgrounds[backgroundIndex]
       
       bgImg.onload = () => {
         try {
           // Draw background
           ctx.drawImage(bgImg, 0, 0, size, size)
 
-          // Dark overlay
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+          // Dark overlay - slightly lighter for better visibility
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
           ctx.fillRect(0, 0, size, size)
 
-          // Decorative border
+          // Decorative border - gold
           const padding = size * 0.05
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
-          ctx.lineWidth = 2
+          ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)'
+          ctx.lineWidth = 3
           ctx.strokeRect(padding, padding, size - padding * 2, size - padding * 2)
 
-          // Quote mark
-          ctx.fillStyle = 'rgba(255, 215, 0, 0.25)'
-          ctx.font = 'bold 160px Georgia, serif'
+          // Quote mark - larger and more visible
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'
+          ctx.font = 'bold 180px Georgia, serif'
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
-          ctx.fillText('"', padding * 2, padding * 2)
+          ctx.fillText('"', padding * 2, padding * 1.5)
 
           // Main text
           const maxWidth = size - padding * 6
-          const lineHeight = 72
-          let fontSize = 52
+          const lineHeight = 78
+          let fontSize = 56
           let lines = []
           let currentLine = ''
 
@@ -169,57 +170,57 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
 
-          const startY = size * 0.35
+          const startY = size * 0.32
           lines.forEach((line, i) => {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-            ctx.shadowBlur = 10
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+            ctx.shadowBlur = 15
             ctx.fillText(line, size / 2, startY + i * lineHeight)
           })
           ctx.shadowBlur = 0
 
-          // Divider line
-          const dividerY = startY + lines.length * lineHeight + 40
-          ctx.fillStyle = 'rgba(255, 215, 0, 0.6)'
+          // Divider line - more visible gold
+          const dividerY = startY + lines.length * lineHeight + 50
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.5)'
           ctx.shadowColor = 'rgba(255, 215, 0, 0.2)'
-          ctx.shadowBlur = 10
-          ctx.fillRect(size / 2 - 80, dividerY, 160, 3)
+          ctx.shadowBlur = 15
+          ctx.fillRect(size / 2 - 100, dividerY, 200, 3)
           ctx.shadowBlur = 0
 
-          // Author
+          // Author - more visible
           if (author && author !== 'Fact') {
             ctx.fillStyle = '#f0e6d3'
-            ctx.font = `bold 42px ${fontFamily}`
+            ctx.font = `bold 44px ${fontFamily}`
             ctx.textAlign = 'center'
             ctx.textBaseline = 'top'
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-            ctx.shadowBlur = 10
-            ctx.fillText(`— ${author}`, size / 2, dividerY + 20)
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+            ctx.shadowBlur = 15
+            ctx.fillText(`— ${author}`, size / 2, dividerY + 25)
             ctx.shadowBlur = 0
           }
 
           // Type label
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
-          ctx.font = '26px Arial, sans-serif'
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
+          ctx.font = '24px Arial, sans-serif'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'bottom'
-          ctx.fillText(type || 'Zephye', size / 2, size - 80)
+          ctx.fillText(type || 'Zephye', size / 2, size - 90)
 
-          // Watermark - Zephye
-          ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'
-          ctx.font = 'bold 28px Arial, sans-serif'
+          // Watermark - Zephye (more visible)
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.35)'
+          ctx.font = 'bold 32px Arial, sans-serif'
           ctx.textAlign = 'right'
           ctx.textBaseline = 'bottom'
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
-          ctx.shadowBlur = 5
-          ctx.fillText('Zephye', size - 40, size - 50)
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
+          ctx.shadowBlur = 10
+          ctx.fillText('✦ Zephye', size - padding * 2, size - padding * 1.5)
           ctx.shadowBlur = 0
 
           // Small URL at bottom left
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
-          ctx.font = '16px Arial, sans-serif'
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.12)'
+          ctx.font = '18px Arial, sans-serif'
           ctx.textAlign = 'left'
           ctx.textBaseline = 'bottom'
-          ctx.fillText('zephye.app', 40, size - 50)
+          ctx.fillText('zephye.app', padding * 2, size - padding * 1.5)
 
           resolve(canvas.toDataURL('image/png', 1.0))
         } catch (err) {
@@ -300,6 +301,26 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
     }
   }
 
+  const handleDownloadImage = async () => {
+    setIsGenerating(true)
+    try {
+      const imageDataUrl = await generateImageDataUrl()
+      const fileName = `${(author || 'quote').replace(/\s/g, '_')}.png`
+      
+      const link = document.createElement('a')
+      link.download = fileName
+      link.href = imageDataUrl
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error downloading image:', error)
+      alert('Failed to download image')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const handleShareText = async () => {
     const text = type === 'Fact' 
       ? `${content}\n\n— via Zephye` 
@@ -363,6 +384,14 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
             disabled={isGenerating}
           >
             {isGenerating ? 'Generating...' : 'Share as Image'}
+          </button>
+
+          <button
+            className="share-btn-download"
+            onClick={handleDownloadImage}
+            disabled={isGenerating}
+          >
+            {isGenerating ? 'Generating...' : 'Download Image'}
           </button>
 
           <button
@@ -695,11 +724,30 @@ function AppContent() {
     setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code } : loc))
     setSearchResults([])
     setEditCity('')
+    // Update the location name display
+    const loc = savedLocations.find(l => l.id === locId)
+    if (loc) {
+      showToast(`Location updated to ${place.name}`)
+    }
   }
 
-  const updateLocationLabel = (locId, label) => { setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, label: label || 'Untitled Location' } : loc)) }
-  const saveLocationEdits = () => { setEditingLocId(null); setEditLabel(''); setEditCity(''); setSearchResults([]); showToast('Location updated') }
-  const deleteLocation = (locId) => { setSavedLocations(prev => prev.filter(loc => loc.id !== locId)); if (editingLocId === locId) setEditingLocId(null); showToast('Location removed') }
+  const updateLocationLabel = (locId, label) => { 
+    setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, label: label || 'Untitled Location' } : loc))
+  }
+  
+  const saveLocationEdits = () => { 
+    setEditingLocId(null); 
+    setEditLabel(''); 
+    setEditCity(''); 
+    setSearchResults([]); 
+    showToast('Location updated') 
+  }
+  
+  const deleteLocation = (locId) => { 
+    setSavedLocations(prev => prev.filter(loc => loc.id !== locId)); 
+    if (editingLocId === locId) setEditingLocId(null); 
+    showToast('Location removed') 
+  }
 
   const switchToSavedLocation = (savedLoc) => {
     if (!previousLocation) setPreviousLocation({ lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code, isManual: isManualLocation })
@@ -897,32 +945,102 @@ function AppContent() {
               <h3 className="font-bold text-lg">My Locations</h3>
               <button onClick={() => setShowSavedPanel(false)} className="btn-ghost" style={{fontSize:'24px',lineHeight:1}}>&times;</button>
             </div>
-            <div className="mb-4 p-3 rounded-xl" style={{background:'rgba(56,189,248,0.08)',border:'1px solid rgba(56,189,248,0.2)'}}>
-              <div className="flex justify-between items-center">
-                <div><p className="text-xs text-muted font-medium mb-1">CURRENT LOCATION</p><p className="font-bold text-sm">{location.name}</p><p className="text-xs text-muted">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</p></div>
-                <button className="btn-primary text-xs flex items-center gap-1" onClick={saveCurrentLocation}><AddIcon />Save</button>
+            <div className="current-location-card">
+              <div className="loc-info">
+                <div className="loc-label">CURRENT LOCATION</div>
+                <div className="loc-name">{location.name}</div>
+                <div className="loc-coords">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</div>
               </div>
+              <button className="save-btn" onClick={saveCurrentLocation}>
+                <AddIcon /> Save
+              </button>
             </div>
             {savedLocations.length === 0 ? (
-              <div className="text-center py-8"><p className="text-muted mb-3">No saved locations yet</p><button onClick={addNewLocation} className="btn-primary">Add Location</button></div>
+              <div className="saved-locations-empty">
+                <div className="empty-icon">📍</div>
+                <div className="empty-title">No saved locations yet</div>
+                <div className="empty-subtitle">Save your favorite places for quick access</div>
+                <button onClick={addNewLocation} className="btn-primary" style={{marginTop:'12px'}}>Add Location</button>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="saved-locations-container">
                 {savedLocations.map(loc => (
-                  <div key={loc.id} className="p-3 rounded-xl" style={{background: editingLocId === loc.id ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.03)', border: editingLocId === loc.id ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent'}}>
+                  <div key={loc.id} className={`saved-location-card ${editingLocId === loc.id ? 'editing' : ''}`}>
                     {editingLocId === loc.id ? (
-                      <div className="space-y-3">
-                        <div><label className="text-xs text-muted block mb-1">Name</label><input type="text" value={editLabel} onChange={e => setEditLabel(e.target.value)} onBlur={() => updateLocationLabel(loc.id, editLabel)} placeholder="Home, Work, etc..." className="w-full text-sm" autoFocus /></div>
-                        <div><label className="text-xs text-muted block mb-1">Search place</label><div className="flex gap-2"><input type="text" value={editCity} onChange={e => { setEditCity(e.target.value); searchPlaceForLocation(e.target.value) }} placeholder="Search city..." className="text-sm flex-1" /></div>
-                          {isSearching && <p className="text-xs text-muted">Searching...</p>}
-                          {searchResults.length > 0 && (<div className="mt-2 max-h-28 overflow-y-auto space-y-1 rounded-lg" style={{background:'rgba(0,0,0,0.3)'}}>{searchResults.map(place => (<button key={place.id} onClick={() => selectPlaceForLocation(loc.id, place)} className="w-full text-left p-2 text-xs hover:bg-white/10" style={{color:'var(--text)'}}>{place.name}</button>))}</div>)}
+                      <div className="saved-location-edit-form">
+                        <div className="form-group">
+                          <label>Name</label>
+                          <input 
+                            type="text" 
+                            value={editLabel} 
+                            onChange={e => setEditLabel(e.target.value)} 
+                            placeholder="Home, Work, etc..." 
+                            autoFocus 
+                          />
                         </div>
-                        <div className="text-xs text-muted">{loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}</div>
-                        <div className="flex gap-2"><button onClick={() => saveLocationEdits(loc.id)} className="btn-primary text-xs flex-1">Done</button><button onClick={() => deleteLocation(loc.id)} className="btn-ghost text-xs" style={{color:'#ef4444'}}><DeleteIcon /></button></div>
+                        <div className="form-group">
+                          <label>Search place</label>
+                          <div className="location-search-container">
+                            <input 
+                              type="text" 
+                              value={editCity} 
+                              onChange={e => { 
+                                setEditCity(e.target.value); 
+                                searchPlaceForLocation(e.target.value) 
+                              }} 
+                              placeholder="Search city..." 
+                            />
+                            {isSearching && (
+                              <div className="location-search-suggestions">
+                                <div className="searching-text">Searching...</div>
+                              </div>
+                            )}
+                            {searchResults.length > 0 && (
+                              <div className="location-search-suggestions">
+                                {searchResults.map(place => (
+                                  <button 
+                                    key={place.id} 
+                                    className="suggestion-item"
+                                    onClick={() => selectPlaceForLocation(loc.id, place)}
+                                  >
+                                    <span className="suggestion-icon">📍</span>
+                                    <span className="suggestion-name">{place.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label>Coordinates</label>
+                          <div style={{fontSize:'12px', color:'var(--text-muted)'}}>
+                            {loc.lat.toFixed(4)}, {loc.lon.toFixed(4)}
+                          </div>
+                        </div>
+                        <div className="edit-actions">
+                          <button className="save-btn" onClick={saveLocationEdits}>Done</button>
+                          <button className="cancel-btn" onClick={() => { setEditingLocId(null); setSearchResults([]); }}>Cancel</button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex justify-between items-start">
-                        <button onClick={() => switchToSavedLocation(loc)} className="text-left flex-1 hover:opacity-80"><p className="font-bold text-sm">{loc.label || 'Untitled Location'}</p><p className="text-xs text-muted mt-1">{loc.name}</p></button>
-                        <button onClick={() => { setEditingLocId(loc.id); setEditLabel(loc.label || ''); setEditCity(''); setSearchResults([]) }} className="btn-ghost" title="Edit"><EditIcon /></button>
+                      <div className="saved-location-info">
+                        <div className="loc-details" onClick={() => switchToSavedLocation(loc)}>
+                          <div className="loc-label">{loc.label || 'Untitled Location'}</div>
+                          <div className="loc-name">{loc.name}</div>
+                        </div>
+                        <div className="loc-actions">
+                          <button className="edit-btn" onClick={() => { 
+                            setEditingLocId(loc.id); 
+                            setEditLabel(loc.label || ''); 
+                            setEditCity(''); 
+                            setSearchResults([]); 
+                          }}>
+                            <EditIcon />
+                          </button>
+                          <button className="delete-btn" onClick={() => deleteLocation(loc.id)}>
+                            <DeleteIcon />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -930,7 +1048,9 @@ function AppContent() {
               </div>
             )}
             {savedLocations.length > 0 && !editingLocId && (
-              <button onClick={addNewLocation} className="w-full mt-4 p-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2" style={{border:'1px dashed rgba(255,255,255,0.15)'}}><AddIcon />Add Another Location</button>
+              <button className="add-location-btn" onClick={addNewLocation}>
+                <AddIcon /> Add Another Location
+              </button>
             )}
           </div>
         </div>
@@ -1116,7 +1236,7 @@ function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
             <p className="text-sm font-bold text-accent flex items-center gap-2"><span>🌟</span> Quote of the Day</p>
           </div>
           <p className="text-lg font-bold mb-3">{quoteOfDay.content}</p>
-          <p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p>
+          <p className="text-sm text-muted mb-4">— {quoteOfDay.author}</p>
           <div className="flex gap-2">
             <button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button>
             <button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button>
@@ -1135,7 +1255,7 @@ function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
         {currentQuote && (
           <div className="list-item">
             <p className="font-bold mb-4">{currentQuote.content}</p>
-            <p className="text-sm text-muted mb-4">-- {currentQuote.author}</p>
+            <p className="text-sm text-muted mb-4">— {currentQuote.author}</p>
             <div className="flex gap-2">
               <button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button>
               <button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button>
@@ -1207,9 +1327,9 @@ function SavedTab({ showToast, shareQuote, shareFact }) {
         savedQuotes.map(q => (
           <div key={q.id} className="list-item">
             <p className="font-bold mb-2">{q.quote_text}</p>
-            <p className="text-sm text-muted mb-3">-- {q.quote_author}</p>
+            <p className="text-sm text-muted mb-3">— {q.quote_author}</p>
             <div className="flex gap-2">
-              <button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text,q.quote_author)}>Share</button>
+              <button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text, q.quote_author)}>Share</button>
               <button className="btn-ghost text-xs" onClick={()=>deleteQuote(q.id)}>Delete</button>
             </div>
           </div>
