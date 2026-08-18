@@ -419,7 +419,7 @@ body {
   color: #f8fafc;
 }
 
-.hourly-time .current .hourly-time > div:first-child {
+.hourly-item.current .hourly-time > div:first-child {
   font-weight: 700;
   color: #7dd3fc;
 }
@@ -699,7 +699,7 @@ button {
    INPUTS
    ============================================================================ */
 
-input {
+input, textarea {
   width: 100%;
   padding: 12px 16px;
   border-radius: 12px;
@@ -712,13 +712,352 @@ input {
   pointer-events: auto;
 }
 
-input::placeholder {
+input::placeholder, textarea::placeholder {
   color: var(--text-muted);
 }
 
-input:focus {
+input:focus, textarea:focus {
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================================
+   SAVED LOCATIONS - COMPLETE STYLES
+   ============================================================================ */
+
+.saved-locations-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saved-location-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s;
+}
+
+.saved-location-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.saved-location-card.editing {
+  background: rgba(56, 189, 248, 0.06);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.saved-location-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.saved-location-info .loc-details {
+  flex: 1;
+}
+
+.saved-location-info .loc-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.saved-location-info .loc-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.saved-location-info .loc-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.saved-location-info .loc-actions button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.saved-location-info .loc-actions button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.saved-location-info .loc-actions .edit-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.saved-location-info .loc-actions .delete-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.saved-location-edit-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.saved-location-edit-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saved-location-edit-form .form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.saved-location-edit-form .form-group input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.saved-location-edit-form .form-group input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.saved-location-edit-form .form-group input::placeholder {
+  color: var(--text-muted);
+}
+
+.saved-location-edit-form .edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.saved-location-edit-form .edit-actions button {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saved-location-edit-form .edit-actions .save-btn {
+  background: var(--accent);
+  color: #0f172a;
+  flex: 1;
+}
+
+.saved-location-edit-form .edit-actions .save-btn:hover {
+  opacity: 0.85;
+}
+
+.saved-location-edit-form .edit-actions .cancel-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  padding: 8px 20px;
+}
+
+.saved-location-edit-form .edit-actions .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Location Search Suggestions */
+.location-search-container {
+  position: relative;
+}
+
+.location-search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-top: 4px;
+  z-index: 50;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.location-search-suggestions .suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.location-search-suggestions .suggestion-item:hover {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.location-search-suggestions .suggestion-item .suggestion-icon {
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+.location-search-suggestions .suggestion-item .suggestion-name {
+  flex: 1;
+}
+
+.location-search-suggestions .suggestion-item .suggestion-code {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.location-search-suggestions .searching-text {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.location-search-suggestions .no-results {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Current Location Card */
+.current-location-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.current-location-card .loc-info {
+  flex: 1;
+}
+
+.current-location-card .loc-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.current-location-card .loc-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.current-location-card .loc-coords {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.current-location-card .save-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.current-location-card .save-btn:hover {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* Add Location Button */
+.add-location-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.add-location-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Saved Locations Empty State */
+.saved-locations-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.saved-locations-empty .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.saved-locations-empty .empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.saved-locations-empty .empty-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 /* ============================================================================
@@ -914,6 +1253,10 @@ input:focus {
 .border-b         { border-bottom-width: 1px; }
 .border-white\/10 { border-color: rgba(255, 255, 255, 0.1); }
 .last\:border-0:last-child { border-bottom: 0; }
+.space-y-2 > * + * { margin-top: 8px; }
+.space-y-3 > * + * { margin-top: 12px; }
+.w-full { width: 100%; }
+.flex-1 { flex: 1; }
 
 /* ============================================================================
    RESPONSIVE
@@ -969,11 +1312,6 @@ input:focus {
     min-width: unset;
   }
 
-  .hourly-modal-content {
-    padding: 16px;
-    max-width: 100%;
-  }
-
   .hourly-item {
     flex-wrap: wrap;
     padding: 10px 12px;
@@ -985,14 +1323,36 @@ input:focus {
     gap: 8px;
   }
 
-  .saved-location-item {
+  .current-location-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .current-location-card .save-btn {
+    justify-content: center;
+  }
+
+  .saved-location-info {
     flex-wrap: wrap;
     gap: 8px;
   }
 
-  .saved-location-item .loc-actions {
+  .saved-location-info .loc-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .saved-location-edit-form .edit-actions {
+    flex-direction: column;
+  }
+
+  .saved-location-edit-form .edit-actions .cancel-btn {
+    padding: 8px;
+  }
+
+  .location-search-suggestions {
+    max-height: 140px;
   }
 }
 
@@ -1246,180 +1606,6 @@ input:focus {
 .legend-dot.low     { background: #22c55e; }
 
 /* ============================================================================
-   SAVED LOCATIONS
-   ============================================================================ */
-
-.saved-locations-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.saved-location-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.saved-location-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.saved-location-item .loc-info {
-  flex: 1;
-}
-
-.saved-location-item .loc-label {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.saved-location-item .loc-name {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.saved-location-item .loc-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.saved-location-item .loc-actions button {
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.saved-location-item .loc-actions button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-}
-
-.saved-location-item .loc-actions .delete-btn:hover {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.saved-location-edit {
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(56, 189, 248, 0.05);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-.saved-location-edit input {
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  margin-bottom: 8px;
-}
-
-.saved-location-edit input:focus {
-  border-color: var(--accent);
-}
-
-.saved-location-edit .edit-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.saved-location-edit .edit-actions button {
-  padding: 6px 14px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.saved-location-edit .edit-actions .save-btn {
-  background: var(--accent);
-  color: #0f172a;
-}
-
-.saved-location-edit .edit-actions .save-btn:hover {
-  opacity: 0.85;
-}
-
-.saved-location-edit .edit-actions .cancel-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
-}
-
-.saved-location-edit .edit-actions .cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.current-location-card {
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.current-location-card .loc-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 600;
-}
-
-.current-location-card .loc-name {
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.current-location-card .loc-coords {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.current-location-card .save-btn {
-  padding: 6px 14px;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #0f172a;
-  font-size: 12px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.current-location-card .save-btn:hover {
-  opacity: 0.85;
-}
-
-/* ============================================================================
    SVG RAIN ANIMATIONS
    ============================================================================ */
 
@@ -1455,52 +1641,6 @@ input:focus {
   animation: thunderFlash 4s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
-}
-
-/* ============================================================================
-   ADD LOCATION BUTTON
-   ============================================================================ */
-
-.add-location-btn {
-  width: 100%;
-  margin-top: 16px;
-  padding: 10px;
-  border-radius: 12px;
-  background: transparent;
-  border: 1px dashed rgba(255, 255, 255, 0.15);
-  color: var(--text-muted);
-  font-size: 13px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.add-location-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-}
-
-/* ============================================================================
-   SPACE UTILITY
-   ============================================================================ */
-
-.space-y-2 > * + * {
-  margin-top: 8px;
-}
-
-.space-y-3 > * + * {
-  margin-top: 12px;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.flex-1 {
-  flex: 1;
 }
 
 /* ============================================================================
