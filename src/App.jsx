@@ -1038,135 +1038,147 @@ function AppContent() {
       <ZephyeFullScreen isOpen={tab === 'ai'} onClose={() => setTab('weather')} weather={weather} location={location} todayStats={todayStats} aqi={aqi} userName={localStorage.getItem('weatherman_name')} lang={getLang(location?.country_code)} greeting="Hey" voiceToUse={voiceToUse} />
       
       <div className="container" style={{display:'flex',flexDirection:'column',gap:'16px'}}>
-        {tab === 'weather' && (<>
-          <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
-            <div className="flex items-start justify-between mb-4">
-              <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
-                <div className="text-xs text-muted mb-1 flex items-center gap-1"><LocationIcon />Location</div>
-                <div className="text-lg font-bold">{location.name}</div>
-                <div className="text-xs text-muted mt-1">{new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
-              </button>
-              <div className="text-right"><WeatherIcon code={wc} /><h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1></div>
-            </div>
-            <div className="flex gap-2 flex-wrap mb-3">
-              <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}><LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}</button>
-              {previousLocation && <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}><BackIcon />Back to my location</button>}
-              {savedLocations.slice(0, 3).map(loc => <button key={loc.id} onClick={() => switchToSavedLocation(loc)} className="btn-ghost text-xs" style={{padding:'4px 10px',background:'rgba(255,255,255,0.08)',color:'var(--text)',border:'1px solid var(--glass-border)'}} title={loc.name}>{loc.label || 'Untitled'}</button>)}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {stormInfo && <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>{stormInfo.level}</div>}
-              {aqiInfo && (
-                <div style={{position:'relative', zIndex: 9999}}>
-                  <button 
-                    className="status-badge" 
-                    style={{
-                      background: aqiInfo.color + '33',
-                      borderColor: aqiInfo.color,
-                      color: aqiInfo.color,
-                      cursor: 'pointer',
-                      position: 'relative',
-                      zIndex: 9999
-                    }} 
-                    onClick={() => setShowAirDropdown(!showAirDropdown)}
-                  >
-                    Air: {aqiInfo.label} ▼
-                  </button>
-                  {showAirDropdown && (
-                    <div 
-                      className="glass" 
+        {tab === 'weather' && (
+          <>
+            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+              <div className="flex items-start justify-between mb-4">
+                <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
+                  <div className="text-xs text-muted mb-1 flex items-center gap-1"><LocationIcon />Location</div>
+                  <div className="text-lg font-bold">{location.name}</div>
+                  <div className="text-xs text-muted mt-1">{new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+                </button>
+                <div className="text-right"><WeatherIcon code={wc} /><h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1></div>
+              </div>
+              <div className="flex gap-2 flex-wrap mb-3">
+                <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}><LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}</button>
+                {previousLocation && <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}><BackIcon />Back to my location</button>}
+                {savedLocations.slice(0, 3).map(loc => <button key={loc.id} onClick={() => switchToSavedLocation(loc)} className="btn-ghost text-xs" style={{padding:'4px 10px',background:'rgba(255,255,255,0.08)',color:'var(--text)',border:'1px solid var(--glass-border)'}} title={loc.name}>{loc.label || 'Untitled'}</button>)}
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {stormInfo && <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>{stormInfo.level}</div>}
+                {aqiInfo && (
+                  <div style={{position:'relative', zIndex: 9999}}>
+                    <button 
+                      className="status-badge" 
                       style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 8px)',
-                        left: 0,
-                        minWidth: '300px',
-                        padding: '16px',
-                        zIndex: 99999,
-                        borderRadius: '16px',
-                        background: 'rgba(15, 23, 42, 0.98)',
-                        backdropFilter: 'blur(24px)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        boxShadow: '0 16px 64px rgba(0, 0, 0, 0.6)'
-                      }}
+                        background: aqiInfo.color + '33',
+                        borderColor: aqiInfo.color,
+                        color: aqiInfo.color,
+                        cursor: 'pointer',
+                        position: 'relative',
+                        zIndex: 9999
+                      }} 
+                      onClick={() => setShowAirDropdown(!showAirDropdown)}
                     >
-                      <p className="font-bold mb-3">Weather Details</p>
-                      <div className="flex justify-between mb-2 text-sm">
-                        <span className="text-muted">AQI</span>
-                        <span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span>
+                      Air: {aqiInfo.label} ▼
+                    </button>
+                    {showAirDropdown && (
+                      <div 
+                        className="glass" 
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 8px)',
+                          left: 0,
+                          minWidth: '300px',
+                          padding: '16px',
+                          zIndex: 99999,
+                          borderRadius: '16px',
+                          background: 'rgba(15, 23, 42, 0.98)',
+                          backdropFilter: 'blur(24px)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 16px 64px rgba(0, 0, 0, 0.6)'
+                        }}
+                      >
+                        <p className="font-bold mb-3">Weather Details</p>
+                        <div className="flex justify-between mb-2 text-sm">
+                          <span className="text-muted">AQI</span>
+                          <span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span>
+                        </div>
+                        <div className="flex justify-between mb-2 text-sm">
+                          <span className="text-muted">Wind</span>
+                          <span className="font-bold">{Math.round(ws)} km/h {getWindDirection(wd)}</span>
+                        </div>
+                        <div className="flex justify-between mb-2 text-sm">
+                          <span className="text-muted">Humidity</span>
+                          <span className="font-bold">{hum}%</span>
+                        </div>
+                        <div className="flex justify-between mb-2 text-sm">
+                          <span className="text-muted">Pressure</span>
+                          <span className="font-bold">{pres} hPa</span>
+                        </div>
+                        <div className="flex justify-between mb-2 text-sm">
+                          <span className="text-muted">Visibility</span>
+                          <span className="font-bold">{(vis / 1000).toFixed(1)} km</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted">UV Index</span>
+                          <span className="font-bold">{uv}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between mb-2 text-sm">
-                        <span className="text-muted">Wind</span>
-                        <span className="font-bold">{Math.round(ws)} km/h {getWindDirection(wd)}</span>
-                      </div>
-                      <div className="flex justify-between mb-2 text-sm">
-                        <span className="text-muted">Humidity</span>
-                        <span className="font-bold">{hum}%</span>
-                      </div>
-                      <div className="flex justify-between mb-2 text-sm">
-                        <span className="text-muted">Pressure</span>
-                        <span className="font-bold">{pres} hPa</span>
-                      </div>
-                      <div className="flex justify-between mb-2 text-sm">
-                        <span className="text-muted">Visibility</span>
-                        <span className="font-bold">{(vis / 1000).toFixed(1)} km</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted">UV Index</span>
-                        <span className="font-bold">{uv}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <WeatherManTab weather={weather} location={location} todayStats={todayStats} aqi={aqi} onRefresh={() => fetchWeatherData(location.lat, location.lon)} />
-          
-          <div className="glass" style={{padding:'20px',borderRadius:'20px'}}>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-sm font-bold">Hourly Forecast</p>
-              <button 
-                className="btn-ghost text-xs" 
-                onClick={() => setShowHourlyModal(true)}
-                style={{ padding: '4px 12px' }}
-              >
-                View All →
-              </button>
+            
+            {/* WeatherManTab - added with proper z-index */}
+            <div style={{position:'relative', zIndex: 2}}>
+              <WeatherManTab 
+                weather={weather} 
+                location={location} 
+                todayStats={todayStats} 
+                aqi={aqi} 
+                onRefresh={() => fetchWeatherData(location.lat, location.lon)} 
+              />
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType:'x mandatory'}}>
-              {weather?.hourly?.time?.slice(0,12).map((time, i) => (
-                <div 
-                  key={time} 
-                  className="glass text-center p-3 rounded-2xl flex-shrink-0" 
-                  style={{
-                    minWidth:'72px',
-                    scrollSnapAlign:'start',
-                    background:'rgba(255,255,255,0.05)',
-                    cursor: 'pointer'
-                  }}
+            
+            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-bold">Hourly Forecast</p>
+                <button 
+                  className="btn-ghost text-xs" 
                   onClick={() => setShowHourlyModal(true)}
+                  style={{ padding: '4px 12px' }}
                 >
-                  <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}</p>
-                  <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code?.[i] || 0)}</p>
-                  <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m?.[i] || 0)}°</p>
-                  {weather.hourly.precipitation_probability?.[i] > 20 && (
-                    <p className="text-[10px] text-accent">{Math.round(weather.hourly.precipitation_probability[i])}%</p>
-                  )}
+                  View All →
+                </button>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType:'x mandatory'}}>
+                {weather?.hourly?.time?.slice(0,12).map((time, i) => (
+                  <div 
+                    key={time} 
+                    className="glass text-center p-3 rounded-2xl flex-shrink-0" 
+                    style={{
+                      minWidth:'72px',
+                      scrollSnapAlign:'start',
+                      background:'rgba(255,255,255,0.05)',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setShowHourlyModal(true)}
+                  >
+                    <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}</p>
+                    <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code?.[i] || 0)}</p>
+                    <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m?.[i] || 0)}°</p>
+                    {weather.hourly.precipitation_probability?.[i] > 20 && (
+                      <p className="text-[10px] text-accent">{Math.round(weather.hourly.precipitation_probability[i])}%</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+              <p className="text-sm font-bold mb-3">7-Day Forecast</p>
+              {weather?.daily?.time?.slice(0,7).map((day, i) => (
+                <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
+                  <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en',{weekday:'short'})}</span>
+                  <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
+                  <div className="flex gap-3 text-sm"><span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span><span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span></div>
                 </div>
               ))}
             </div>
-          </div>
-          
-          <div className="glass" style={{padding:'20px',borderRadius:'20px'}}>
-            <p className="text-sm font-bold mb-3">7-Day Forecast</p>
-            {weather?.daily?.time?.slice(0,7).map((day, i) => (
-              <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
-                <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en',{weekday:'short'})}</span>
-                <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
-                <div className="flex gap-3 text-sm"><span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span><span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span></div>
-              </div>
-            ))}
-          </div>
-        </>)}
+          </>
+        )}
         
         {tab === 'map' && (
           <MapTab 
