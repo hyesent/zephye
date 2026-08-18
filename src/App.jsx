@@ -44,6 +44,298 @@ const FONT_FAMILIES = [
 
 const getRandomFont = () => FONT_FAMILIES[Math.floor(Math.random() * FONT_FAMILIES.length)]
 
+// ============================================================================
+// WEATHER SVG ICONS
+// ============================================================================
+
+const WeatherSunSVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="25" fill="#FBBF24" className={animated ? 'sun-pulse' : ''}>
+      <animate attributeName="r" values="25;28;25" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="1;0.8;1" dur="2s" repeatCount="indefinite" />
+    </circle>
+    {[...Array(8)].map((_, i) => (
+      <g key={i} style={{ transform: `rotate(${i * 45}deg)`, transformOrigin: '50px 50px' }}>
+        <line x1="50" y1="12" x2="50" y2="5" stroke="#FBBF24" strokeWidth="3" strokeLinecap="round">
+          <animate attributeName="y2" values="5;8;5" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+        </line>
+      </g>
+    ))}
+    <circle cx="50" cy="50" r="25" fill="none" stroke="#FBBF24" strokeWidth="2" opacity="0.2">
+      <animate attributeName="r" values="25;35;25" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.2;0;0.2" dur="3s" repeatCount="indefinite" />
+    </circle>
+  </svg>
+)
+
+const WeatherCloudSVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g className={animated ? 'cloud-float' : ''}>
+      <animateTransform attributeName="transform" type="translate" values="0,0;3,0;0,0" dur="4s" repeatCount="indefinite" />
+      <ellipse cx="35" cy="55" rx="20" ry="15" fill="#94A3B8" opacity="0.8" />
+      <ellipse cx="55" cy="50" rx="25" ry="18" fill="#94A3B8" />
+      <ellipse cx="45" cy="42" rx="18" ry="15" fill="#CBD5E1" />
+      <ellipse cx="65" cy="45" rx="15" ry="12" fill="#CBD5E1" opacity="0.7" />
+    </g>
+  </svg>
+)
+
+const WeatherRainSVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g className={animated ? 'cloud-float' : ''}>
+      <animateTransform attributeName="transform" type="translate" values="0,0;2,0;0,0" dur="4s" repeatCount="indefinite" />
+      <ellipse cx="35" cy="50" rx="20" ry="15" fill="#64748B" opacity="0.8" />
+      <ellipse cx="55" cy="45" rx="25" ry="18" fill="#64748B" />
+      <ellipse cx="45" cy="37" rx="18" ry="15" fill="#94A3B8" />
+      <ellipse cx="65" cy="40" rx="15" ry="12" fill="#94A3B8" opacity="0.7" />
+    </g>
+    {[...Array(6)].map((_, i) => (
+      <g key={i}>
+        <line 
+          x1={25 + i * 10} 
+          y1="65" 
+          x2={20 + i * 10} 
+          y2="85" 
+          stroke="#60A5FA" 
+          strokeWidth="2" 
+          strokeLinecap="round"
+        >
+          <animate attributeName="y1" values="65;75;65" dur="0.8s" repeatCount="indefinite" begin={`${i * 0.15}s`} />
+          <animate attributeName="y2" values="85;95;85" dur="0.8s" repeatCount="indefinite" begin={`${i * 0.15}s`} />
+          <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite" begin={`${i * 0.15}s`} />
+        </line>
+      </g>
+    ))}
+  </svg>
+)
+
+const WeatherThunderSVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g className={animated ? 'cloud-float' : ''}>
+      <animateTransform attributeName="transform" type="translate" values="0,0;2,0;0,0" dur="4s" repeatCount="indefinite" />
+      <ellipse cx="35" cy="45" rx="20" ry="15" fill="#475569" opacity="0.8" />
+      <ellipse cx="55" cy="40" rx="25" ry="18" fill="#475569" />
+      <ellipse cx="45" cy="32" rx="18" ry="15" fill="#64748B" />
+      <ellipse cx="65" cy="35" rx="15" ry="12" fill="#64748B" opacity="0.7" />
+    </g>
+    <path d="M50 55 L43 68 L50 65 L45 78" stroke="#FBBF24" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" begin="0s" />
+      <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" begin="1.5s" />
+    </path>
+    <circle cx="50" cy="50" r="15" fill="#FBBF24" opacity="0.15">
+      <animate attributeName="opacity" values="0;0.3;0" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="r" values="10;20;10" dur="3s" repeatCount="indefinite" />
+    </circle>
+  </svg>
+)
+
+const WeatherSnowSVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g className={animated ? 'cloud-float' : ''}>
+      <animateTransform attributeName="transform" type="translate" values="0,0;2,0;0,0" dur="4s" repeatCount="indefinite" />
+      <ellipse cx="35" cy="50" rx="20" ry="15" fill="#94A3B8" opacity="0.8" />
+      <ellipse cx="55" cy="45" rx="25" ry="18" fill="#94A3B8" />
+      <ellipse cx="45" cy="37" rx="18" ry="15" fill="#CBD5E1" />
+      <ellipse cx="65" cy="40" rx="15" ry="12" fill="#CBD5E1" opacity="0.7" />
+    </g>
+    {[...Array(8)].map((_, i) => {
+      const x = 25 + (i % 4) * 14
+      const y = 65 + Math.floor(i / 4) * 20
+      return (
+        <g key={i}>
+          <circle cx={x} cy={y} r="3" fill="#E2E8F0">
+            <animate attributeName="cy" values={`${y};${y + 20};${y}`} dur="2s" repeatCount="indefinite" begin={`${i * 0.15}s`} />
+            <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite" begin={`${i * 0.15}s`} />
+          </circle>
+          <circle cx={x - 5} cy={y - 5} r="1.5" fill="#E2E8F0" opacity="0.5">
+            <animate attributeName="cy" values={`${y - 5};${y + 15};${y - 5}`} dur="2.5s" repeatCount="indefinite" begin={`${i * 0.2}s`} />
+          </circle>
+        </g>
+      )
+    })}
+  </svg>
+)
+
+const WeatherFogSVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="30" cy="50" rx="25" ry="12" fill="#94A3B8" opacity="0.3">
+      <animate attributeName="cx" values="30;35;30" dur="3s" repeatCount="indefinite" />
+    </ellipse>
+    <ellipse cx="55" cy="45" rx="30" ry="10" fill="#94A3B8" opacity="0.25">
+      <animate attributeName="cx" values="55;50;55" dur="4s" repeatCount="indefinite" />
+    </ellipse>
+    <ellipse cx="40" cy="58" rx="28" ry="10" fill="#94A3B8" opacity="0.2">
+      <animate attributeName="cx" values="40;45;40" dur="3.5s" repeatCount="indefinite" />
+    </ellipse>
+    <ellipse cx="60" cy="55" rx="20" ry="8" fill="#94A3B8" opacity="0.2">
+      <animate attributeName="cx" values="60;55;60" dur="4.5s" repeatCount="indefinite" />
+    </ellipse>
+    <ellipse cx="25" cy="40" rx="20" ry="8" fill="#94A3B8" opacity="0.15">
+      <animate attributeName="cx" values="25;30;25" dur="5s" repeatCount="indefinite" />
+    </ellipse>
+  </svg>
+)
+
+const WeatherPartlyCloudySVG = ({ size = 40, animated = true }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="30" cy="35" r="18" fill="#FBBF24">
+      <animate attributeName="r" values="18;20;18" dur="2s" repeatCount="indefinite" />
+    </circle>
+    {[...Array(6)].map((_, i) => (
+      <g key={i} style={{ transform: `rotate(${i * 60}deg)`, transformOrigin: '30px 35px' }}>
+        <line x1="30" y1="12" x2="30" y2="7" stroke="#FBBF24" strokeWidth="2.5" strokeLinecap="round" opacity="0.6">
+          <animate attributeName="y2" values="7;9;7" dur="2s" repeatCount="indefinite" />
+        </line>
+      </g>
+    ))}
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="0,0;2,0;0,0" dur="4s" repeatCount="indefinite" />
+      <ellipse cx="55" cy="50" rx="22" ry="16" fill="#94A3B8" />
+      <ellipse cx="45" cy="42" rx="16" ry="14" fill="#CBD5E1" />
+      <ellipse cx="65" cy="45" rx="14" ry="11" fill="#CBD5E1" opacity="0.7" />
+    </g>
+  </svg>
+)
+
+// Map weather codes to SVG components
+const getWeatherSVG = (code, size = 40) => {
+  if (code === 0 || code === 1) return <WeatherSunSVG size={size} />
+  if (code === 2) return <WeatherPartlyCloudySVG size={size} />
+  if (code === 3) return <WeatherCloudSVG size={size} />
+  if (code >= 95) return <WeatherThunderSVG size={size} />
+  if (code >= 51 && code <= 82) return <WeatherRainSVG size={size} />
+  if (code >= 71 && code <= 77) return <WeatherSnowSVG size={size} />
+  if (code === 45 || code === 48) return <WeatherFogSVG size={size} />
+  return <WeatherCloudSVG size={size} />
+}
+
+// ============================================================================
+// WEATHER BACKGROUND SVG (Full screen animated background)
+// ============================================================================
+
+const WeatherBackground = ({ code }) => {
+  const getBackgroundStyles = () => {
+    if (code === 0 || code === 1) {
+      return {
+        gradient: 'linear-gradient(180deg, #0a1a2e 0%, #1a3a6e 50%, #0f172a 100%)',
+        overlay: 'rgba(255, 200, 50, 0.05)'
+      }
+    }
+    if (code === 2) {
+      return {
+        gradient: 'linear-gradient(180deg, #0a1a2e 0%, #2a3a5e 50%, #0f172a 100%)',
+        overlay: 'rgba(255, 255, 255, 0.03)'
+      }
+    }
+    if (code === 3) {
+      return {
+        gradient: 'linear-gradient(180deg, #0a0a1a 0%, #1a2a3e 50%, #0f172a 100%)',
+        overlay: 'rgba(255, 255, 255, 0.02)'
+      }
+    }
+    if (code >= 95) {
+      return {
+        gradient: 'linear-gradient(180deg, #0a0a1a 0%, #1a0a2a 50%, #0f172a 100%)',
+        overlay: 'rgba(255, 200, 50, 0.03)'
+      }
+    }
+    if (code >= 51 && code <= 82) {
+      return {
+        gradient: 'linear-gradient(180deg, #0a0a1a 0%, #0a1a2a 50%, #0f172a 100%)',
+        overlay: 'rgba(100, 150, 255, 0.03)'
+      }
+    }
+    return {
+      gradient: 'linear-gradient(180deg, #0a1a2e 0%, #0f172a 100%)',
+      overlay: 'rgba(255, 255, 255, 0.02)'
+    }
+  }
+
+  const styles = getBackgroundStyles()
+
+  return (
+    <div className="weather-bg-container" style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 0,
+      background: styles.gradient,
+      overflow: 'hidden',
+      pointerEvents: 'none'
+    }}>
+      {/* Animated particles/rays */}
+      {code === 0 || code === 1 ? (
+        // Sun rays
+        <div style={{ position: 'absolute', inset: 0 }}>
+          {[...Array(12)].map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '4px',
+              height: `${40 + Math.random() * 60}%`,
+              background: 'rgba(255, 200, 50, 0.03)',
+              transformOrigin: 'center center',
+              transform: `translate(-50%, -50%) rotate(${i * 30}deg)`,
+              borderRadius: '2px',
+              animation: `pulseRay ${3 + Math.random() * 2}s ease-in-out infinite`,
+              animationDelay: `${i * 0.3}s`
+            }} />
+          ))}
+        </div>
+      ) : code >= 95 ? (
+        // Thunder - random flashes
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(255, 255, 255, 0.3)',
+            animation: 'thunderFlash 4s ease-in-out infinite',
+            pointerEvents: 'none'
+          }} />
+        </div>
+      ) : code >= 51 && code <= 82 ? (
+        // Rain drops
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          {[...Array(30)].map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 20}%`,
+              width: '2px',
+              height: `${10 + Math.random() * 20}px`,
+              background: 'rgba(100, 150, 255, 0.15)',
+              borderRadius: '0 0 2px 2px',
+              animation: `rainDrop ${0.8 + Math.random() * 0.6}s linear infinite`,
+              animationDelay: `${Math.random() * 2}s`,
+              opacity: 0.3 + Math.random() * 0.5
+            }} />
+          ))}
+        </div>
+      ) : null}
+      
+      <style>{`
+        @keyframes pulseRay {
+          0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) rotate(var(--rot)) scale(1); }
+          50% { opacity: 0.8; transform: translate(-50%, -50%) rotate(var(--rot)) scale(1.1); }
+        }
+        @keyframes thunderFlash {
+          0%, 90%, 100% { opacity: 0; }
+          92%, 94% { opacity: 0.8; }
+          96% { opacity: 0.3; }
+          98% { opacity: 0.9; }
+        }
+        @keyframes rainDrop {
+          0% { transform: translateY(-10px); opacity: 0; }
+          10% { opacity: 0.6; }
+          90% { opacity: 0.6; }
+          100% { transform: translateY(100vh); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 const LocationIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -471,12 +763,9 @@ const LOCAL_FACTS = {
 }
 
 function WeatherIcon({ code }) {
-  if (code === 0 || code === 1) return <div className="weather-icon sunny-icon"><div className="sun">☀️</div><div className="sun-rays"></div></div>
-  if (code >= 95) return <div className="weather-icon storm-icon"><div className="cloud">⛈️</div><div className="lightning">⚡</div><div className="rain-drop rain-1"></div><div className="rain-drop rain-2"></div><div className="rain-drop rain-3"></div></div>
-  if (code >= 51 && code <= 82) return <div className="weather-icon rainy-icon"><div className="cloud">🌧️</div><div className="rain-drop rain-1"></div><div className="rain-drop rain-2"></div><div className="rain-drop rain-3"></div><div className="rain-drop rain-4"></div></div>
-  if (code === 2) return <div className="weather-icon">🌤️</div>
-  if (code === 3) return <div className="weather-icon">☁️</div>
-  return <div className="weather-icon">⛅</div>
+  return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    {getWeatherSVG(code, 50)}
+  </div>
 }
 
 // ============================================================================
@@ -484,20 +773,11 @@ function WeatherIcon({ code }) {
 // ============================================================================
 
 function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
+  const [selectedHour, setSelectedHour] = useState(null)
+
   if (!isOpen || !hourlyData) return null
 
-  const getIcon = (code) => {
-    const map = {
-      0: '☀️', 1: '☀️', 2: '⛅', 3: '☁️',
-      45: '🌫️', 48: '🌫️',
-      51: '🌦️', 53: '🌦️', 55: '🌦️',
-      61: '🌧️', 63: '🌧️', 65: '🌧️',
-      71: '❄️', 73: '❄️', 75: '❄️',
-      80: '🌧️', 81: '🌧️', 82: '🌧️',
-      95: '⛈️', 96: '⛈️', 99: '⛈️'
-    }
-    return map[code] || '🌤️'
-  }
+  const getIcon = (code) => getWeatherSVG(code, 36)
 
   const getConditionName = (code) => {
     const map = {
@@ -510,6 +790,10 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
       95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Heavy Thunderstorm'
     }
     return map[code] || 'Unknown'
+  }
+
+  const handleHourClick = (index) => {
+    setSelectedHour(selectedHour === index ? null : index)
   }
 
   return (
@@ -548,13 +832,35 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
             const gust = hourlyData.wind_gusts_10m?.[i]
 
             const isCurrentHour = i === 0
+            const isSelected = selectedHour === i
 
             return (
               <div
                 key={time}
-                className={`hourly-item ${isCurrentHour ? 'current' : ''}`}
+                className={`hourly-item ${isCurrentHour ? 'current' : ''} ${isSelected ? 'selected' : ''}`}
+                onClick={() => handleHourClick(i)}
+                style={{
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
               >
-                <div className="hourly-time">
+                {/* Background SVG when selected */}
+                {isSelected && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    opacity: 0.15,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none'
+                  }}>
+                    {getWeatherSVG(code, 120)}
+                  </div>
+                )}
+                
+                <div className="hourly-time" style={{ position: 'relative', zIndex: 1 }}>
                   <div>
                     {new Date(time).toLocaleTimeString('en-US', {
                       hour: 'numeric',
@@ -564,20 +870,22 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
                   {isCurrentHour && <div className="hourly-now">Now</div>}
                 </div>
 
-                <div className="hourly-icon">{getIcon(code)}</div>
+                <div className="hourly-icon" style={{ position: 'relative', zIndex: 1 }}>
+                  {getWeatherSVG(code, 32)}
+                </div>
 
-                <div className="hourly-temp">
+                <div className="hourly-temp" style={{ position: 'relative', zIndex: 1 }}>
                   <div>{Math.round(temp)}°</div>
                   {feelsLike && Math.round(feelsLike) !== Math.round(temp) && (
                     <div className="hourly-feels">feels {Math.round(feelsLike)}°</div>
                   )}
                 </div>
 
-                <div className="hourly-condition">
+                <div className="hourly-condition" style={{ position: 'relative', zIndex: 1 }}>
                   {getConditionName(code)}
                 </div>
 
-                <div className="hourly-details">
+                <div className="hourly-details" style={{ position: 'relative', zIndex: 1 }}>
                   {precip > 0 && <span>🌧️ {Math.round(precip)}%</span>}
                   {rain > 0 && <span>💧 {Math.round(rain * 10) / 10}mm</span>}
                   {wind > 0 && <span>💨 {Math.round(wind)} km/h</span>}
@@ -882,12 +1190,22 @@ function AppContent() {
   const stormInfo = getStormLevel(wc, ws)
 
   if (isLoading && !weather) return (
-    <div className="app"><div className="weather-bg cloudy"></div><div className="container" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}><div className="glass" style={{padding:'40px',borderRadius:'20px',textAlign:'center'}}><div className="text-4xl mb-4">🌤️</div><p className="text-xl font-bold">Loading Zephye...</p></div></div></div>
+    <div className="app">
+      <WeatherBackground code={0} />
+      <div className="container" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',position:'relative',zIndex:1}}>
+        <div className="glass" style={{padding:'40px',borderRadius:'20px',textAlign:'center'}}>
+          <div style={{display:'flex',justifyContent:'center',marginBottom:'16px'}}>
+            <WeatherSunSVG size={60} />
+          </div>
+          <p className="text-xl font-bold">Loading Zephye...</p>
+        </div>
+      </div>
+    </div>
   )
 
   return (
     <div className="app">
-      <div className={`weather-bg ${getWeatherClass(wc)}`}></div>
+      <WeatherBackground code={wc} />
       {toast && <div className="toast">{toast}</div>}
       
       <MapModal 
@@ -1037,7 +1355,7 @@ function AppContent() {
 
       <ZephyeFullScreen isOpen={tab === 'ai'} onClose={() => setTab('weather')} weather={weather} location={location} todayStats={todayStats} aqi={aqi} userName={localStorage.getItem('weatherman_name')} lang={getLang(location?.country_code)} greeting="Hey" voiceToUse={voiceToUse} />
       
-      <div className="container" style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+      <div className="container" style={{display:'flex',flexDirection:'column',gap:'16px',position:'relative',zIndex:1}}>
         {tab === 'weather' && (
           <>
             {/* Weather Card - Dynamic z-index when dropdown is open */}
@@ -1057,7 +1375,12 @@ function AppContent() {
                   <div className="text-lg font-bold">{location.name}</div>
                   <div className="text-xs text-muted mt-1">{new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
                 </button>
-                <div className="text-right"><WeatherIcon code={wc} /><h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1></div>
+                <div className="text-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {getWeatherSVG(wc, 60)}
+                  </div>
+                  <h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1>
+                </div>
               </div>
               <div className="flex gap-2 flex-wrap mb-3">
                 <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}><LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}</button>
@@ -1166,7 +1489,9 @@ function AppContent() {
                     onClick={() => setShowHourlyModal(true)}
                   >
                     <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}</p>
-                    <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code?.[i] || 0)}</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                      {getWeatherSVG(weather.hourly.weather_code?.[i] || 0, 32)}
+                    </div>
                     <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m?.[i] || 0)}°</p>
                     {weather.hourly.precipitation_probability?.[i] > 20 && (
                       <p className="text-[10px] text-accent">{Math.round(weather.hourly.precipitation_probability[i])}%</p>
@@ -1182,7 +1507,9 @@ function AppContent() {
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
                 <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
                   <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en',{weekday:'short'})}</span>
-                  <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {getWeatherSVG(weather.daily.weather_code[i], 32)}
+                  </div>
                   <div className="flex gap-3 text-sm"><span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span><span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span></div>
                 </div>
               ))}
