@@ -1,10 +1,31 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { QUOTES } from './data/quotes.js'
 import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
 import ZephyeFullScreen from './ZephyeFullScreen.jsx'
 import MapTab from './MapTab.jsx'
 import { getLang, getVoiceForLocation } from './zephyeHelpers'
+
+// Import share backgrounds
+import shareBg1 from './assets/images/share 1.jpg'
+import shareBg2 from './assets/images/share 2.jpg'
+import shareBg3 from './assets/images/share 3.jpg'
+import shareBg4 from './assets/images/share 4.jpg'
+import shareBg5 from './assets/images/share 5.jpg'
+import shareBg6 from './assets/images/share 6.jpg'
+import shareBg7 from './assets/images/share 7.jpg'
+import shareBg8 from './assets/images/share 8.jpg'
+import shareBg9 from './assets/images/share 9.jpg'
+import shareBg10 from './assets/images/share 10.jpg'
+import shareBg11 from './assets/images/share 11.jpg'
+import shareBg12 from './assets/images/share 12.jpg'
+import shareBg13 from './assets/images/share 13.jpg'
+
+const shareBackgrounds = [
+  shareBg1, shareBg2, shareBg3, shareBg4, shareBg5, shareBg6, shareBg7,
+  shareBg8, shareBg9, shareBg10, shareBg11, shareBg12, shareBg13
+]
 
 const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
@@ -55,31 +76,269 @@ const CloseIcon = () => (
 )
 
 // ============================================================================
-// MAP MODAL — Shows when user switches to Map tab
+// SHARE MODAL — Image & Text Sharing for Quotes/Facts
 // ============================================================================
 
-function MapModal({ isOpen, onClose }) {
+function ShareModal({ isOpen, onClose, content, author, type, onShare }) {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [copied, setCopied] = useState(false)
+  
+  // Get random background
+  const getRandomBackground = () => {
+    return shareBackgrounds[Math.floor(Math.random() * shareBackgrounds.length)]
+  }
+  
+  const [background] = useState(getRandomBackground())
+
+  const generateImageDataUrl = async (): Promise<string> => {
+    const canvas = document.createElement('canvas')
+    const size = 1080
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')!
+
+    // Load and draw background image
+    const bgImg = new Image()
+    bgImg.crossOrigin = 'anonymous'
+    bgImg.src = background
+    await new Promise((resolve, reject) => {
+      bgImg.onload = resolve
+      bgImg.onerror = reject
+    })
+    ctx.drawImage(bgImg, 0, 0, size, size)
+
+    // Dark overlay for text readability
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+    ctx.fillRect(0, 0, size, size)
+
+    // Decorative border
+    const padding = size * 0.05
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(padding, padding, size - padding * 2, size - padding * 2)
+
+    // Quote mark
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.3)'
+    ctx.font = 'bold 160px Georgia, serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.fillText('"', padding * 2, padding * 2)
+
+    // Main text
+    const maxWidth = size - padding * 6
+    const lineHeight = 72
+    let fontSize = 52
+    let lines: string[] = []
+    let currentLine = ''
+
+    // Split text into words
+    const words = content.split(' ')
+    
+    // Find optimal font size
+    while (fontSize > 28) {
+      ctx.font = `${fontSize}px Georgia, serif`
+      lines = []
+      currentLine = ''
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        if (ctx.measureText(testLine).width > maxWidth) {
+          lines.push(currentLine)
+          currentLine = word
+        } else {
+          currentLine = testLine
+        }
+      }
+      lines.push(currentLine)
+      if (lines.length <= 8) break
+      fontSize -= 4
+    }
+
+    // Draw text
+    ctx.fillStyle = '#ffffff'
+    ctx.font = `${fontSize}px Georgia, serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    const startY = size * 0.35
+    lines.forEach((line, i) => {
+      // Add subtle text shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+      ctx.shadowBlur = 10
+      ctx.fillText(line, size / 2, startY + i * lineHeight)
+    })
+    ctx.shadowBlur = 0
+
+    // Divider line
+    const dividerY = startY + lines.length * lineHeight + 40
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.6)'
+    ctx.shadowColor = 'rgba(255, 215, 0, 0.2)'
+    ctx.shadowBlur = 10
+    ctx.fillRect(size / 2 - 80, dividerY, 160, 3)
+    ctx.shadowBlur = 0
+
+    // Author/Reference
+    if (author && author !== 'Fact') {
+      ctx.fillStyle = '#f0e6d3'
+      ctx.font = 'bold 42px Georgia, serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+      ctx.shadowBlur = 10
+      ctx.fillText(`— ${author}`, size / 2, dividerY + 20)
+      ctx.shadowBlur = 0
+    }
+
+    // Type label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
+    ctx.font = '26px Inter, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'bottom'
+    ctx.fillText(type || 'Zephye', size / 2, size - padding * 2)
+
+    // Brand watermark - Zephye
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.25)'
+    ctx.font = 'bold 28px Inter, sans-serif'
+    ctx.textAlign = 'right'
+    ctx.textBaseline = 'bottom'
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+    ctx.shadowBlur = 5
+    ctx.fillText('✨ Zephye', size - padding * 2, size - padding * 1.5)
+    ctx.shadowBlur = 0
+
+    // Small Zephye logo at bottom left
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
+    ctx.font = '16px Inter, sans-serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'bottom'
+    ctx.fillText('zephye.app', padding * 2, size - padding * 1.5)
+
+    return canvas.toDataURL('image/png', 1.0)
+  }
+
+  const handleCopyText = async () => {
+    const text = type === 'Fact' 
+      ? `${content}\n\n— via Zephye` 
+      : `"${content}" — ${author}\n\n— via Zephye`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handleShareImage = async () => {
+    setIsGenerating(true)
+    try {
+      const imageDataUrl = await generateImageDataUrl()
+      const fileName = `${(author || 'quote').replace(/\s/g, '_')}.png`
+      const shareText = type === 'Fact' 
+        ? content 
+        : `"${content}" — ${author}`
+
+      // Try Web Share API with image
+      if (navigator.share && navigator.canShare) {
+        try {
+          const response = await fetch(imageDataUrl)
+          const blob = await response.blob()
+          const file = new File([blob], fileName, { type: 'image/png' })
+          const shareData: any = { 
+            title: type || 'Quote', 
+            text: shareText 
+          }
+          if (navigator.canShare({ files: [file] })) {
+            shareData.files = [file]
+          }
+          await navigator.share(shareData)
+          onClose()
+          return
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') {
+            console.warn('Share failed:', err)
+          }
+        }
+      }
+
+      // Fallback: Download image
+      const link = document.createElement('a')
+      link.download = fileName
+      link.href = imageDataUrl
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      alert('Image downloaded! You can now share it manually.')
+
+    } catch (error) {
+      console.error('Error sharing image:', error)
+      handleShareText()
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleShareText = async () => {
+    const text = type === 'Fact' 
+      ? `${content}\n\n— via Zephye` 
+      : `"${content}" — ${author}\n\n— via Zephye`
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({ text })
+        onClose()
+        return
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.warn('Share failed:', err)
+        }
+      }
+    }
+    
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
   if (!isOpen) return null
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="glass"
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
+      <div 
+        className="glass" 
         onClick={e => e.stopPropagation()}
         style={{
-          padding: '28px 24px 24px',
-          maxWidth: '420px',
-          width: '90%',
+          padding: '24px',
+          maxWidth: '480px',
+          width: '95%',
+          maxHeight: '90vh',
+          overflow: 'auto',
           borderRadius: '20px',
-          background: 'rgba(15,23,42,0.94)',
+          background: 'rgba(15,23,42,0.95)',
           backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
-          position: 'relative',
-          textAlign: 'center'
+          border: '1px solid rgba(255,255,255,0.06)',
+          position: 'relative'
         }}
       >
-        {/* Close button (X) */}
         <button
           onClick={onClose}
           style={{
@@ -111,10 +370,229 @@ function MapModal({ isOpen, onClose }) {
           <CloseIcon />
         </button>
 
-        {/* Icon */}
-        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗺️</div>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '700',
+            color: '#f8fafc',
+            marginBottom: '12px',
+            textAlign: 'center'
+          }}>
+            Share {type || 'Quote'}
+          </h3>
+          
+          <div style={{
+            padding: '16px',
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            marginBottom: '12px'
+          }}>
+            <p style={{
+              fontSize: '14px',
+              color: '#f8fafc',
+              lineHeight: '1.6',
+              fontStyle: 'italic'
+            }}>
+              "{content}"
+            </p>
+            {author && author !== 'Fact' && (
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(255,255,255,0.5)',
+                marginTop: '8px',
+                textAlign: 'right'
+              }}>
+                — {author}
+              </p>
+            )}
+          </div>
+        </div>
 
-        {/* Title */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button
+            onClick={handleShareImage}
+            disabled={isGenerating}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'rgba(56,189,248,0.15)',
+              color: '#7dd3fc',
+              fontWeight: '600',
+              fontSize: '14px',
+              border: '1px solid rgba(56,189,248,0.2)',
+              cursor: isGenerating ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (!isGenerating) {
+                e.currentTarget.style.background = 'rgba(56,189,248,0.25)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(56,189,248,0.15)'
+            }}
+          >
+            {isGenerating ? (
+              <>
+                <span style={{ 
+                  display: 'inline-block',
+                  animation: 'spin 1s linear infinite'
+                }}>⟳</span>
+                Generating...
+              </>
+            ) : (
+              <>
+                <span>🖼️</span>
+                Share as Image
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleShareText}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)',
+              color: '#f8fafc',
+              fontWeight: '600',
+              fontSize: '14px',
+              border: '1px solid rgba(255,255,255,0.08)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+            }}
+          >
+            <span>📝</span>
+            Share as Text
+          </button>
+
+          <button
+            onClick={handleCopyText}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.03)',
+              color: copied ? '#22c55e' : 'rgba(255,255,255,0.6)',
+              fontWeight: '500',
+              fontSize: '13px',
+              border: copied ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,255,255,0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (!copied) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+            }}
+          >
+            {copied ? (
+              <>
+                <span>✓</span>
+                Copied!
+              </>
+            ) : (
+              <>
+                <span>📋</span>
+                Copy to Clipboard
+              </>
+            )}
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+// ============================================================================
+// MAP MODAL — Shows when user switches to Map tab
+// ============================================================================
+
+function MapModal({ isOpen, onClose }) {
+  if (!isOpen) return null
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="glass"
+        onClick={e => e.stopPropagation()}
+        style={{
+          padding: '28px 24px 24px',
+          maxWidth: '420px',
+          width: '90%',
+          borderRadius: '20px',
+          background: 'rgba(15,23,42,0.94)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
+          position: 'relative',
+          textAlign: 'center'
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            padding: '6px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            cursor: 'pointer',
+            color: 'rgba(255,255,255,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+            e.currentTarget.style.color = '#fff'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+            e.currentTarget.style.color = 'rgba(255,255,255,0.4)'
+          }}
+        >
+          <CloseIcon />
+        </button>
+
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗺️</div>
         <h3 style={{
           fontSize: '18px',
           fontWeight: '700',
@@ -123,8 +601,6 @@ function MapModal({ isOpen, onClose }) {
         }}>
           Map Features
         </h3>
-
-        {/* Status Badge */}
         <div style={{
           display: 'inline-block',
           padding: '4px 12px',
@@ -138,8 +614,6 @@ function MapModal({ isOpen, onClose }) {
         }}>
           ⚡ Undergoing Upgrade
         </div>
-
-        {/* Description */}
         <p style={{
           fontSize: '13px',
           color: 'rgba(255,255,255,0.5)',
@@ -148,15 +622,11 @@ function MapModal({ isOpen, onClose }) {
         }}>
           Some map features are being enhanced. Core functionality is still available.
         </p>
-
-        {/* Divider */}
         <div style={{
           height: '1px',
           background: 'rgba(255,255,255,0.06)',
           marginBottom: '14px'
         }} />
-
-        {/* Gesture Helpers */}
         <div style={{
           textAlign: 'left',
           fontSize: '12px',
@@ -184,8 +654,6 @@ function MapModal({ isOpen, onClose }) {
             </div>
           </div>
         </div>
-
-        {/* OK Button */}
         <button
           onClick={onClose}
           style={{
@@ -310,7 +778,6 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
           border: '1px solid rgba(255,255,255,0.06)'
         }}
       >
-        {/* Header */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -369,7 +836,6 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
           </button>
         </div>
 
-        {/* Hourly List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {hourlyData.time.slice(0, 24).map((time, i) => {
             const temp = hourlyData.temperature_2m?.[i]
@@ -402,7 +868,6 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
                   transition: 'all 0.2s'
                 }}
               >
-                {/* Time */}
                 <div style={{ minWidth: '65px' }}>
                   <div style={{
                     fontSize: '13px',
@@ -427,12 +892,10 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
                   )}
                 </div>
 
-                {/* Icon */}
                 <div style={{ fontSize: '24px', minWidth: '36px', textAlign: 'center' }}>
                   {getIcon(code)}
                 </div>
 
-                {/* Temp */}
                 <div style={{ minWidth: '48px', textAlign: 'center' }}>
                   <div style={{
                     fontSize: '16px',
@@ -451,7 +914,6 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
                   )}
                 </div>
 
-                {/* Condition */}
                 <div style={{
                   flex: 1,
                   fontSize: '12px',
@@ -462,7 +924,6 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
                   {getConditionName(code)}
                 </div>
 
-                {/* Details */}
                 <div style={{
                   display: 'flex',
                   gap: '8px',
@@ -544,12 +1005,10 @@ function AppContent() {
   const [voiceToUse, setVoiceToUse] = useState('en-US-JennyNeural')
   const [showHourlyModal, setShowHourlyModal] = useState(false)
   const [showMapModal, setShowMapModal] = useState(false)
-
-  // ─── Show map modal when tab switches to 'map' ──────────────────────────
+  const [shareModal, setShareModal] = useState({ isOpen: false, content: '', author: '', type: '' })
 
   useEffect(() => {
     if (tab === 'map') {
-      // Check if user has seen the map modal before
       const hasSeenMapModal = localStorage.getItem('zephye_seen_map_modal')
       if (!hasSeenMapModal) {
         setShowMapModal(true)
@@ -579,6 +1038,24 @@ function AppContent() {
   useEffect(() => { if (!hasWelcomed && weather && !isLoading) { setTimeout(() => showToast('Welcome to Zephye'), 1000); setHasWelcomed(true) } }, [weather, isLoading])
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  const shareQuote = (text, author) => {
+    setShareModal({
+      isOpen: true,
+      content: text,
+      author: author || 'Unknown',
+      type: 'Quote'
+    })
+  }
+
+  const shareFact = (text) => {
+    setShareModal({
+      isOpen: true,
+      content: text,
+      author: 'Fact',
+      type: 'Fact'
+    })
+  }
 
   const addNewLocation = () => {
     const newLoc = { id: Date.now(), label: '', lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code }
@@ -749,11 +1226,6 @@ function AppContent() {
     localStorage.setItem('zephye_saved_facts', JSON.stringify(saved)); showToast('Fact saved')
   }
 
-  const shareQuote = async (text, author) => {
-    const st = `"${text}" - ${author}\n\nvia Zephye`
-    if (navigator.share) { try { await navigator.share({ text: st }) } catch {} } else { navigator.clipboard.writeText(st); showToast('Copied') }
-  }
-
   const getWeatherClass = (c) => c === 0 || c === 1 ? 'sunny' : c >= 95 ? 'thunder' : c >= 51 && c <= 82 ? 'rainy' : 'cloudy'
   const getWeatherIcon = (c) => c === 0 ? '☀️' : c === 1 ? '🌤️' : c === 2 ? '⛅' : c === 3 ? '☁️' : c >= 95 ? '⛈️' : c >= 51 ? '🌧️' : '☁️'
   const getStormLevel = (c, w) => c >= 95 ? { level: 'Severe Thunderstorm', color: '#dc2626' } : c >= 65 || w > 50 ? { level: 'Heavy Storm', color: '#f97316' } : c >= 61 || w > 30 ? { level: 'Moderate Rain', color: '#eab308' } : c >= 51 ? { level: 'Light Rain', color: '#22c55e' } : null
@@ -779,10 +1251,17 @@ function AppContent() {
       <div className={`weather-bg ${getWeatherClass(wc)}`}></div>
       {toast && <div className="toast">{toast}</div>}
       
-      {/* ─── Map Modal ────────────────────────────────────────────────────── */}
       <MapModal 
         isOpen={showMapModal} 
         onClose={() => setShowMapModal(false)} 
+      />
+
+      <ShareModal
+        isOpen={shareModal.isOpen}
+        onClose={() => setShareModal({ isOpen: false, content: '', author: '', type: '' })}
+        content={shareModal.content}
+        author={shareModal.author}
+        type={shareModal.type}
       />
 
       {showLocationModal && (
@@ -936,8 +1415,22 @@ function AppContent() {
           />
         )}
         
-        {tab === 'quotes' && <QuotesTab saveQuote={saveQuote} shareQuote={shareQuote} saveFact={saveFact} quoteOfDay={quoteOfDay} />}
-        {tab === 'saved' && <SavedTab showToast={showToast} shareQuote={shareQuote} />}
+        {tab === 'quotes' && (
+          <QuotesTab 
+            saveQuote={saveQuote} 
+            shareQuote={shareQuote}
+            shareFact={shareFact}
+            saveFact={saveFact} 
+            quoteOfDay={quoteOfDay} 
+          />
+        )}
+        {tab === 'saved' && (
+          <SavedTab 
+            showToast={showToast} 
+            shareQuote={shareQuote}
+            shareFact={shareFact}
+          />
+        )}
         <div className="text-center mt-4 mb-4"><p className="text-sm text-muted">hyesent.dev</p></div>
       </div>
       
@@ -963,7 +1456,7 @@ function AppContent() {
 // QUOTES TAB
 // ============================================================================
 
-function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
+function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
   const [quoteCategory, setQuoteCategory] = useState('All')
   const [factCategory, setFactCategory] = useState('All')
   const [currentQuote, setCurrentQuote] = useState(null)
@@ -987,7 +1480,7 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
   return (<>
     {quoteOfDay && (<div className="glass mb-4" style={{padding:'20px',borderRadius:'20px',border:'2px solid var(--accent)',background:'rgba(56,189,248,0.05)'}}><div className="flex justify-between items-start mb-2"><p className="text-sm font-bold text-accent flex items-center gap-2"><span>🌟</span> Quote of the Day</p></div><p className="text-lg font-bold mb-3">{quoteOfDay.content}</p><p className="text-sm text-muted mb-4">-- {quoteOfDay.author}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(quoteOfDay.content, quoteOfDay.author)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveQuote(quoteOfDay)}>Save</button></div></div>)}
     <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Explore Quotes</p><button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>{loading?'Loading...':'New Quote'}</button></div><div className="sub-tabs mb-4">{QUOTE_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${quoteCategory===cat?'active':''}`} onClick={()=>setQuoteCategory(cat)}>{cat}</button>)}</div>{currentQuote && <div className="list-item"><p className="font-bold mb-4">{currentQuote.content}</p><p className="text-sm text-muted mb-4">-- {currentQuote.author}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(currentQuote.content, currentQuote.author)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveQuote(currentQuote)}>Save</button></div></div>}</div>
-    <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Did You Know?</p><button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>{loading?'Loading...':'New Fact'}</button></div><div className="sub-tabs mb-4">{FACT_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>)}</div>{currentFact && <div className="list-item"><p className="font-bold mb-4">{currentFact.text}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareQuote(currentFact.text, 'Fact')}>Share</button><button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button></div></div>}</div>
+    <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}><div className="flex justify-between items-center mb-4"><p className="font-bold">Did You Know?</p><button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>{loading?'Loading...':'New Fact'}</button></div><div className="sub-tabs mb-4">{FACT_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>)}</div>{currentFact && <div className="list-item"><p className="font-bold mb-4">{currentFact.text}</p><div className="flex gap-2"><button className="btn-share text-sm" onClick={() => shareFact(currentFact.text)}>Share</button><button className="btn-ghost text-sm" onClick={() => saveFact(currentFact)}>Save</button></div></div>}</div>
   </>)
 }
 
@@ -995,14 +1488,14 @@ function QuotesTab({ saveQuote, shareQuote, saveFact, quoteOfDay }) {
 // SAVED TAB
 // ============================================================================
 
-function SavedTab({ showToast, shareQuote }) {
+function SavedTab({ showToast, shareQuote, shareFact }) {
   const [savedQuotes, setSavedQuotes] = useState([])
   const [savedFacts, setSavedFacts] = useState([])
   const [activeSubTab, setActiveSubTab] = useState('quotes')
   useEffect(() => { setSavedQuotes(JSON.parse(localStorage.getItem('zephye_saved_quotes')||'[]')); setSavedFacts(JSON.parse(localStorage.getItem('zephye_saved_facts')||'[]')) }, [])
   const deleteQuote = (id) => { const u = savedQuotes.filter(q => q.id!==id); localStorage.setItem('zephye_saved_quotes',JSON.stringify(u)); setSavedQuotes(u); showToast('Quote deleted') }
   const deleteFact = (id) => { const u = savedFacts.filter(f => f.id!==id); localStorage.setItem('zephye_saved_facts',JSON.stringify(u)); setSavedFacts(u); showToast('Fact deleted') }
-  return (<div className="glass" style={{padding:'20px',borderRadius:'20px'}}><div className="sub-tabs mb-4"><button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>Quotes ({savedQuotes.length})</button><button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>Facts ({savedFacts.length})</button></div>{activeSubTab==='quotes'&&(savedQuotes.length===0?<p className="text-center text-muted py-8">No saved quotes yet.</p>:savedQuotes.map(q=>(<div key={q.id} className="list-item"><p className="font-bold mb-2">{q.quote_text}</p><p className="text-sm text-muted mb-3">-- {q.quote_author}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text,q.quote_author)}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteQuote(q.id)}>Delete</button></div></div>)))}{activeSubTab==='facts'&&(savedFacts.length===0?<p className="text-center text-muted py-8">No saved facts yet.</p>:savedFacts.map(f=>(<div key={f.id} className="list-item"><p className="font-bold mb-3">{f.fact_text}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareQuote(f.fact_text,'Fact')}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteFact(f.id)}>Delete</button></div></div>)))}</div>)
+  return (<div className="glass" style={{padding:'20px',borderRadius:'20px'}}><div className="sub-tabs mb-4"><button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>Quotes ({savedQuotes.length})</button><button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>Facts ({savedFacts.length})</button></div>{activeSubTab==='quotes'&&(savedQuotes.length===0?<p className="text-center text-muted py-8">No saved quotes yet.</p>:savedQuotes.map(q=>(<div key={q.id} className="list-item"><p className="font-bold mb-2">{q.quote_text}</p><p className="text-sm text-muted mb-3">-- {q.quote_author}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareQuote(q.quote_text,q.quote_author)}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteQuote(q.id)}>Delete</button></div></div>)))}{activeSubTab==='facts'&&(savedFacts.length===0?<p className="text-center text-muted py-8">No saved facts yet.</p>:savedFacts.map(f=>(<div key={f.id} className="list-item"><p className="font-bold mb-3">{f.fact_text}</p><div className="flex gap-2"><button className="btn-share text-xs" onClick={()=>shareFact(f.fact_text)}>Share</button><button className="btn-ghost text-xs" onClick={()=>deleteFact(f.id)}>Delete</button></div></div>)))}</div>)
 }
 
 export default function App() { return (<AudioProvider><AppContent /></AudioProvider>) }
