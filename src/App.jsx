@@ -1040,7 +1040,17 @@ function AppContent() {
       <div className="container" style={{display:'flex',flexDirection:'column',gap:'16px'}}>
         {tab === 'weather' && (
           <>
-            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+            {/* Weather Card - Dynamic z-index when dropdown is open */}
+            <div 
+              className="glass" 
+              style={{
+                padding:'20px',
+                borderRadius:'20px',
+                position:'relative',
+                zIndex: showAirDropdown ? 100 : 2,
+                overflow: 'visible'
+              }}
+            >
               <div className="flex items-start justify-between mb-4">
                 <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
                   <div className="text-xs text-muted mb-1 flex items-center gap-1"><LocationIcon />Location</div>
@@ -1054,19 +1064,17 @@ function AppContent() {
                 {previousLocation && <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}><BackIcon />Back to my location</button>}
                 {savedLocations.slice(0, 3).map(loc => <button key={loc.id} onClick={() => switchToSavedLocation(loc)} className="btn-ghost text-xs" style={{padding:'4px 10px',background:'rgba(255,255,255,0.08)',color:'var(--text)',border:'1px solid var(--glass-border)'}} title={loc.name}>{loc.label || 'Untitled'}</button>)}
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap" style={{ overflow: 'visible' }}>
                 {stormInfo && <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>{stormInfo.level}</div>}
                 {aqiInfo && (
-                  <div style={{position:'relative', zIndex: 9999}}>
+                  <div style={{position:'relative', overflow: 'visible', zIndex: 9999}}>
                     <button 
                       className="status-badge" 
                       style={{
                         background: aqiInfo.color + '33',
                         borderColor: aqiInfo.color,
                         color: aqiInfo.color,
-                        cursor: 'pointer',
-                        position: 'relative',
-                        zIndex: 9999
+                        cursor: 'pointer'
                       }} 
                       onClick={() => setShowAirDropdown(!showAirDropdown)}
                     >
@@ -1121,8 +1129,8 @@ function AppContent() {
               </div>
             </div>
             
-            {/* WeatherManTab - added with proper z-index */}
-            <div style={{position:'relative', zIndex: 2}}>
+            {/* WeatherManTab - positioned below weather card with lower z-index */}
+            <div style={{ position: 'relative', zIndex: 1, overflow: 'visible' }}>
               <WeatherManTab 
                 weather={weather} 
                 location={location} 
@@ -1132,7 +1140,8 @@ function AppContent() {
               />
             </div>
             
-            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+            {/* Hourly Forecast Card */}
+            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2,overflow:'visible'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">Hourly Forecast</p>
                 <button 
@@ -1167,7 +1176,8 @@ function AppContent() {
               </div>
             </div>
             
-            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2}}>
+            {/* Daily Forecast Card */}
+            <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2,overflow:'visible'}}>
               <p className="text-sm font-bold mb-3">7-Day Forecast</p>
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
                 <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
