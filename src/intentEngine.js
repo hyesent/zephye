@@ -239,7 +239,7 @@ const INTENT_MAP = [
   {
     id: 'clothing',
     name: 'Clothing',
-    priority: 2,
+    priority: 1,
     section: 'Clothing',
     fn: getClothingAdvice,
     keys: [
@@ -289,7 +289,7 @@ const INTENT_MAP = [
   {
     id: 'route',
     name: 'Route',
-    priority: 2,
+    priority: 1,
     section: 'Route',
     fn: getRouteAdvice,
     keys: [
@@ -368,7 +368,7 @@ const INTENT_MAP = [
   {
     id: 'driving',
     name: 'Driving',
-    priority: 3,
+    priority: 2,
     section: 'Driving',
     fn: getDrivingAdvice,
     keys: [
@@ -407,7 +407,7 @@ const INTENT_MAP = [
   {
     id: 'health',
     name: 'Health',
-    priority: 3,
+    priority: 2,
     section: 'Health',
     fn: getHealthAdvice,
     keys: [
@@ -464,7 +464,7 @@ const INTENT_MAP = [
   {
     id: 'lifestyle',
     name: 'Lifestyle',
-    priority: 3,
+    priority: 2,
     section: 'Lifestyle',
     fn: getLifestyleAdvice,
     keys: [
@@ -624,7 +624,7 @@ const INTENT_MAP = [
   {
     id: 'events',
     name: 'Events',
-    priority: 3,
+    priority: 2,
     section: 'Events',
     fn: getEventsAdvice,
     keys: [
@@ -680,7 +680,7 @@ const INTENT_MAP = [
   {
     id: 'pets',
     name: 'Pets',
-    priority: 3,
+    priority: 2,
     section: 'Pets',
     fn: getPetsAdvice,
     keys: [
@@ -804,7 +804,7 @@ const INTENT_MAP = [
   {
     id: 'energy',
     name: 'EnergyHome',
-    priority: 3,
+    priority: 2,
     section: 'Energy',
     fn: getEnergyHomeAdvice,
     keys: [
@@ -853,7 +853,7 @@ const INTENT_MAP = [
   {
     id: 'traveling',
     name: 'Traveling',
-    priority: 3,
+    priority: 2,
     section: 'Travel',
     fn: getTravelingAdvice,
     keys: [
