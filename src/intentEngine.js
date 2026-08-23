@@ -80,7 +80,7 @@ const INTENT_MAP = [
       'early afternoon', 'late afternoon', 'mid afternoon',
       'early evening', 'late evening'
     ],
-    contextBoost: ['weather', 'forecast', 'temperature', 'rain', 'snow', 'sunny', 'cloudy', 'windy', 'humid', 'storm'],
+    contextBoost: ['weather', 'forecast', 'temperature', 'rain', 'snow', 'sunny', 'cloudy', 'windy', 'humid', 'storm', 'cold', 'hot', 'warm'],
     exclude: ['crop', 'plant', 'farm', 'sport', 'run', 'walk', 'dog', 'pet', 'skin', 'hair', 'travel', 'flight', 'photo', 'camera', 'wedding', 'party', 'event']
   },
   {
