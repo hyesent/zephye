@@ -4,9 +4,10 @@ import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
 import ZephyeFullScreen from './ZephyeFullScreen.jsx'
 import MapTab from './MapTab.jsx'
+import WeatherShareModal from './components/WeatherShareModal'
 import { getLang, getVoiceForLocation } from './zephyeHelpers'
+import { LanguageProvider, useLanguage, useTranslation } from './utils/translation'
 
-// Import share backgrounds
 import shareBg1 from './assets/images/share 1.jpg'
 import shareBg2 from './assets/images/share 2.jpg'
 import shareBg3 from './assets/images/share 3.jpg'
@@ -30,7 +31,6 @@ const QUOTE_CATEGORIES = ['All', 'Motivational', 'Success', 'Wisdom', 'Love']
 const FACT_CATEGORIES = ['All', 'Science', 'History', 'Animals', 'Space']
 const OPENWEATHER_KEY = "576b156966c5789a1b3fd0074c8469f1"
 
-// Font options for random selection
 const FONT_FAMILIES = [
   'Georgia, serif',
   'Times New Roman, serif',
@@ -88,18 +88,23 @@ const CloseIcon = () => (
   </svg>
 )
 
+const ShareWeatherIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+    <polyline points="16 6 12 2 8 6"/>
+    <line x1="12" y1="2" x2="12" y2="15"/>
+  </svg>
+)
+
 // ============================================================================
-// SHARE MODAL
+// SHARE MODAL (Quote/Fact)
 // ============================================================================
 
 function ShareModal({ isOpen, onClose, content, author, type }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
-  
-  const getRandomBackground = () => {
-    return Math.floor(Math.random() * shareBackgrounds.length)
-  }
-  
+
+  const getRandomBackground = () => Math.floor(Math.random() * shareBackgrounds.length)
   const [backgroundIndex] = useState(getRandomBackground)
   const [fontFamily] = useState(getRandomFont())
 
@@ -114,7 +119,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
       const bgImg = new Image()
       bgImg.crossOrigin = 'anonymous'
       bgImg.src = shareBackgrounds[backgroundIndex]
-      
+
       bgImg.onload = () => {
         try {
           ctx.drawImage(bgImg, 0, 0, size, size)
@@ -137,9 +142,8 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
           let fontSize = 56
           let lines = []
           let currentLine = ''
-
           const words = content.split(' ')
-          
+
           while (fontSize > 28) {
             ctx.font = `${fontSize}px ${fontFamily}`
             lines = []
@@ -208,14 +212,14 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
           ctx.font = '18px Arial, sans-serif'
           ctx.textAlign = 'left'
           ctx.textBaseline = 'bottom'
-          ctx.fillText('zephye.app', padding * 2, size - padding * 1.5)
+          ctx.fillText('zephye.vercel.app', padding * 2, size - padding * 1.5)
 
           resolve(canvas.toDataURL('image/png', 1.0))
         } catch (err) {
           reject(err)
         }
       }
-      
+
       bgImg.onerror = () => {
         reject(new Error('Failed to load background image'))
       }
@@ -223,9 +227,9 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
   }
 
   const handleCopyText = async () => {
-    const text = type === 'Fact' 
-      ? `${content}\n\n— via Zephye` 
-      : `"${content}" — ${author}\n\n— via Zephye`
+    const text = type === 'Fact'
+      ? `${content}\n\n— via Zephye — zephye.vercel.app`
+      : `"${content}" — ${author}\n\n— via Zephye — zephye.vercel.app`
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
@@ -247,24 +251,18 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
       alert('Web Share API is not supported on this device. Please use the "Download Image" button instead.')
       return
     }
-    
+
     setIsGenerating(true)
     try {
       const imageDataUrl = await generateImageDataUrl()
       const fileName = `${(author || 'quote').replace(/\s/g, '_')}.png`
-      const shareText = type === 'Fact' 
-        ? content 
-        : `"${content}" — ${author}`
+      const shareText = type === 'Fact' ? content : `"${content}" — ${author}`
 
       const response = await fetch(imageDataUrl)
       const blob = await response.blob()
       const file = new File([blob], fileName, { type: 'image/png' })
-      const shareData = { 
-        title: type || 'Quote', 
-        text: shareText,
-        files: [file]
-      }
-      
+      const shareData = { title: type || 'Quote', text: shareText, files: [file] }
+
       if (navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData)
         onClose()
@@ -286,7 +284,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
     try {
       const imageDataUrl = await generateImageDataUrl()
       const fileName = `${(author || 'quote').replace(/\s/g, '_')}.png`
-      
+
       const link = document.createElement('a')
       link.download = fileName
       link.href = imageDataUrl
@@ -302,10 +300,10 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
   }
 
   const handleShareText = async () => {
-    const text = type === 'Fact' 
-      ? `${content}\n\n— via Zephye` 
-      : `"${content}" — ${author}\n\n— via Zephye`
-    
+    const text = type === 'Fact'
+      ? `${content}\n\n— via Zephye — zephye.vercel.app`
+      : `"${content}" — ${author}\n\n— via Zephye — zephye.vercel.app`
+
     if (navigator.share) {
       try {
         await navigator.share({ text })
@@ -317,7 +315,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
         }
       }
     }
-    
+
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
@@ -338,10 +336,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div 
-        className="glass share-modal"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="glass share-modal" onClick={e => e.stopPropagation()}>
         <button className="share-modal-close" onClick={onClose}>
           <CloseIcon />
         </button>
@@ -349,7 +344,7 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
         <div className="share-modal-header">
           <h3>Share {type || 'Quote'}</h3>
         </div>
-        
+
         <div className="share-modal-preview">
           <p className="share-modal-content">"{content}"</p>
           {author && author !== 'Fact' && (
@@ -358,33 +353,16 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
         </div>
 
         <div className="share-modal-actions">
-          <button
-            className="share-btn-image"
-            onClick={handleShareImage}
-            disabled={isGenerating}
-          >
+          <button className="share-btn-image" onClick={handleShareImage} disabled={isGenerating}>
             {isGenerating ? 'Generating...' : 'Share as Image'}
           </button>
-
-          <button
-            className="share-btn-download"
-            onClick={handleDownloadImage}
-            disabled={isGenerating}
-          >
+          <button className="share-btn-download" onClick={handleDownloadImage} disabled={isGenerating}>
             {isGenerating ? 'Generating...' : 'Download Image'}
           </button>
-
-          <button
-            className="share-btn-text"
-            onClick={handleShareText}
-          >
+          <button className="share-btn-text" onClick={handleShareText}>
             Share as Text
           </button>
-
-          <button
-            className={`share-btn-copy ${copied ? 'copied' : ''}`}
-            onClick={handleCopyText}
-          >
+          <button className={`share-btn-copy ${copied ? 'copied' : ''}`} onClick={handleCopyText}>
             {copied ? 'Copied!' : 'Copy to Clipboard'}
           </button>
         </div>
@@ -402,10 +380,7 @@ function MapModal({ isOpen, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="glass map-modal"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="glass map-modal" onClick={e => e.stopPropagation()}>
         <button className="map-modal-close" onClick={onClose}>
           <CloseIcon />
         </button>
@@ -514,10 +489,7 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="glass hourly-modal"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="glass hourly-modal" onClick={e => e.stopPropagation()}>
         <div className="hourly-modal-header">
           <div>
             <h3>Hourly Forecast</h3>
@@ -546,37 +518,22 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
             const humidity = hourlyData.relative_humidity_2m?.[i]
             const pressure = hourlyData.pressure_msl?.[i]
             const gust = hourlyData.wind_gusts_10m?.[i]
-
             const isCurrentHour = i === 0
 
             return (
-              <div
-                key={time}
-                className={`hourly-item ${isCurrentHour ? 'current' : ''}`}
-              >
+              <div key={time} className={`hourly-item ${isCurrentHour ? 'current' : ''}`}>
                 <div className="hourly-time">
-                  <div>
-                    {new Date(time).toLocaleTimeString('en-US', {
-                      hour: 'numeric',
-                      hour12: true
-                    })}
-                  </div>
+                  <div>{new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</div>
                   {isCurrentHour && <div className="hourly-now">Now</div>}
                 </div>
-
                 <div className="hourly-icon">{getIcon(code)}</div>
-
                 <div className="hourly-temp">
                   <div>{Math.round(temp)}°</div>
                   {feelsLike && Math.round(feelsLike) !== Math.round(temp) && (
                     <div className="hourly-feels">feels {Math.round(feelsLike)}°</div>
                   )}
                 </div>
-
-                <div className="hourly-condition">
-                  {getConditionName(code)}
-                </div>
-
+                <div className="hourly-condition">{getConditionName(code)}</div>
                 <div className="hourly-details">
                   {precip > 0 && <span>🌧️ {Math.round(precip)}%</span>}
                   {rain > 0 && <span>💧 {Math.round(rain * 10) / 10}mm</span>}
@@ -595,10 +552,13 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
 }
 
 // ============================================================================
-// APP CONTENT
+// APP CONTENT INNER (has access to uiLanguage)
 // ============================================================================
 
-function AppContent() {
+function AppContentInner({ homeLocation, setHomeLocation }) {
+  const { uiLanguage } = useLanguage()
+  const { t } = useTranslation(uiLanguage, homeLocation?.country_code)
+
   const [tab, setTab] = useState('weather')
   const [weather, setWeather] = useState(null)
   const [aqi, setAqi] = useState(null)
@@ -619,14 +579,33 @@ function AppContent() {
   const [editingLocId, setEditingLocId] = useState(null)
   const [editLabel, setEditLabel] = useState('')
   const [editCity, setEditCity] = useState('')
+  const [editMode, setEditMode] = useState('manual')
+  const [editGPSLoading, setEditGPSLoading] = useState(false)
+  const [editGPSError, setEditGPSError] = useState(null)
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
-  const [todayStats, setTodayStats] = useState({ sunHours: 0, rainHours: 0, thunderHours: 0, maxRainProb: 0, rainPeriods: [], sunrise: '--:--', sunset: '--:--', feelsLike: 0, windGust: 0, pressureTrend: '→' })
+  const [todayStats, setTodayStats] = useState({
+    sunHours: 0, rainHours: 0, thunderHours: 0, maxRainProb: 0,
+    rainPeriods: [], sunrise: '--:--', sunset: '--:--',
+    feelsLike: 0, windGust: 0, pressureTrend: '→'
+  })
   const [hasWelcomed, setHasWelcomed] = useState(false)
   const [voiceToUse, setVoiceToUse] = useState('en-US-JennyNeural')
   const [showHourlyModal, setShowHourlyModal] = useState(false)
   const [showMapModal, setShowMapModal] = useState(false)
   const [shareModal, setShareModal] = useState({ isOpen: false, content: '', author: '', type: '' })
+  const [weatherShare, setWeatherShare] = useState({ isOpen: false, type: 'current' })
+
+  // ─── Auto-create Home on first location detection ─────────────────
+  useEffect(() => {
+    if (!homeLocation && location && location.name && location.name !== 'Lagos, Nigeria' && location.country_code) {
+      const home = { ...location, label: 'Home', id: Date.now() }
+      setHomeLocation(home)
+      localStorage.setItem('zephye_home_location', JSON.stringify(home))
+      const exists = savedLocations.find(loc => loc.label === 'Home')
+      if (!exists) setSavedLocations(prev => [home, ...prev])
+    }
+  }, [location, homeLocation, savedLocations, setHomeLocation])
 
   useEffect(() => {
     if (tab === 'map') {
@@ -647,43 +626,58 @@ function AppContent() {
   }, [location?.country_code])
 
   useEffect(() => {
-    fetch('https://hyezen.onrender.com/api/ping', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ timestamp: Date.now(), user: localStorage.getItem('weatherman_name') || 'anonymous', location: location.name }) }).catch(() => {})
+    fetch('https://hyezen.onrender.com/api/ping', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        timestamp: Date.now(),
+        user: localStorage.getItem('weatherman_name') || 'anonymous',
+        location: location.name
+      })
+    }).catch(() => {})
+
     const savedLoc = localStorage.getItem('zephye_location')
     const savedManual = localStorage.getItem('zephye_isManual')
     if (savedLoc && savedManual === 'true') {
-      try { const loc = JSON.parse(savedLoc); setLocation(loc); setIsManualLocation(true); fetchWeatherData(loc.lat, loc.lon) } catch { initLocation() }
+      try {
+        const loc = JSON.parse(savedLoc)
+        setLocation(loc)
+        setIsManualLocation(true)
+        fetchWeatherData(loc.lat, loc.lon)
+      } catch { initLocation() }
     } else { initLocation() }
     fetchQuoteOfDay()
   }, [])
 
-  useEffect(() => { if (!hasWelcomed && weather && !isLoading) { setTimeout(() => showToast('Welcome to Zephye'), 1000); setHasWelcomed(true) } }, [weather, isLoading])
+  useEffect(() => {
+    if (!hasWelcomed && weather && !isLoading) {
+      setTimeout(() => showToast(t('toasts.welcome')), 1000)
+      setHasWelcomed(true)
+    }
+  }, [weather, isLoading])
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
   const shareQuote = (text, author) => {
-    setShareModal({
-      isOpen: true,
-      content: text,
-      author: author || 'Unknown',
-      type: 'Quote'
-    })
+    setShareModal({ isOpen: true, content: text, author: author || 'Unknown', type: 'Quote' })
   }
 
   const shareFact = (text) => {
-    setShareModal({
-      isOpen: true,
-      content: text,
-      author: 'Fact',
-      type: 'Fact'
-    })
+    setShareModal({ isOpen: true, content: text, author: 'Fact', type: 'Fact' })
   }
 
   const addNewLocation = () => {
-    const newLoc = { id: Date.now(), label: '', lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code }
+    const newLoc = {
+      id: Date.now(), label: '',
+      lat: location.lat, lon: location.lon,
+      name: location.name, country_code: location.country_code
+    }
     setSavedLocations(prev => [...prev, newLoc])
     setEditingLocId(newLoc.id)
     setEditLabel('')
     setEditCity('')
+    setEditMode('manual')
+    setEditGPSError(null)
     setSearchResults([])
   }
 
@@ -694,68 +688,170 @@ function AppContent() {
       const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
       const data = await res.json()
       if (data.results && data.results.length > 0) {
-        setSearchResults(data.results.map(r => ({ id: r.id, name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`, lat: r.latitude, lon: r.longitude, country_code: r.country_code?.toUpperCase() || 'US' })))
+        setSearchResults(data.results.map(r => ({
+          id: r.id,
+          name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
+          lat: r.latitude, lon: r.longitude,
+          country_code: r.country_code?.toUpperCase() || 'US'
+        })))
       } else { setSearchResults([]) }
     } catch { setSearchResults([]) }
     setIsSearching(false)
   }
 
   const selectPlaceForLocation = (locId, place) => {
-    setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code } : loc))
+    setSavedLocations(prev => prev.map(loc =>
+      loc.id === locId
+        ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code }
+        : loc
+    ))
     setSearchResults([])
     setEditCity('')
-    const loc = savedLocations.find(l => l.id === locId)
-    if (loc) {
-      showToast(`Location updated to ${place.name}`)
-    }
+    showToast(`Location updated to ${place.name}`)
   }
 
-  const updateLocationLabel = (locId, label) => { 
-    setSavedLocations(prev => prev.map(loc => loc.id === locId ? { ...loc, label: label || 'Untitled Location' } : loc))
+  const updateLocationLabel = (locId, label) => {
+    setSavedLocations(prev => prev.map(loc =>
+      loc.id === locId ? { ...loc, label: label || 'Untitled Location' } : loc
+    ))
   }
-  
-  const saveLocationEdits = () => { 
-    setEditingLocId(null); 
-    setEditLabel(''); 
-    setEditCity(''); 
-    setSearchResults([]); 
-    showToast('Location updated') 
+
+  const saveLocationEdits = () => {
+    setEditingLocId(null)
+    setEditLabel('')
+    setEditCity('')
+    setSearchResults([])
+    setEditGPSError(null)
+    showToast(t('toasts.locationUpdated'))
   }
-  
-  const deleteLocation = (locId) => { 
-    setSavedLocations(prev => prev.filter(loc => loc.id !== locId)); 
-    if (editingLocId === locId) setEditingLocId(null); 
-    showToast('Location removed') 
+
+  const deleteLocation = (locId) => {
+    setSavedLocations(prev => prev.filter(loc => loc.id !== locId))
+    if (editingLocId === locId) setEditingLocId(null)
+    showToast(t('toasts.locationRemoved'))
   }
 
   const switchToSavedLocation = (savedLoc) => {
-    if (!previousLocation) setPreviousLocation({ lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code, isManual: isManualLocation })
+    if (!previousLocation) {
+      setPreviousLocation({
+        lat: location.lat, lon: location.lon, name: location.name,
+        country_code: location.country_code, isManual: isManualLocation
+      })
+    }
     const nl = { lat: savedLoc.lat, lon: savedLoc.lon, name: savedLoc.name, country_code: savedLoc.country_code }
-    setLocation(nl); setIsManualLocation(true)
-    localStorage.setItem('zephye_location', JSON.stringify(nl)); localStorage.setItem('zephye_isManual', 'true')
-    fetchWeatherData(savedLoc.lat, savedLoc.lon); setShowSavedPanel(false)
+    setLocation(nl)
+    setIsManualLocation(true)
+    localStorage.setItem('zephye_location', JSON.stringify(nl))
+    localStorage.setItem('zephye_isManual', 'true')
+    fetchWeatherData(savedLoc.lat, savedLoc.lon)
+    setShowSavedPanel(false)
     showToast(`Showing weather for ${savedLoc.label || savedLoc.name}`)
   }
 
   const goBackToOriginalLocation = () => {
     if (!previousLocation) return
-    const ol = { lat: previousLocation.lat, lon: previousLocation.lon, name: previousLocation.name, country_code: previousLocation.country_code }
-    setLocation(ol); setIsManualLocation(previousLocation.isManual || false)
-    if (previousLocation.isManual) { localStorage.setItem('zephye_location', JSON.stringify(ol)); localStorage.setItem('zephye_isManual', 'true') }
-    else { localStorage.removeItem('zephye_location'); localStorage.removeItem('zephye_isManual') }
-    fetchWeatherData(ol.lat, ol.lon); setPreviousLocation(null)
+    const ol = {
+      lat: previousLocation.lat, lon: previousLocation.lon,
+      name: previousLocation.name, country_code: previousLocation.country_code
+    }
+    setLocation(ol)
+    setIsManualLocation(previousLocation.isManual || false)
+    if (previousLocation.isManual) {
+      localStorage.setItem('zephye_location', JSON.stringify(ol))
+      localStorage.setItem('zephye_isManual', 'true')
+    } else {
+      localStorage.removeItem('zephye_location')
+      localStorage.removeItem('zephye_isManual')
+    }
+    fetchWeatherData(ol.lat, ol.lon)
+    setPreviousLocation(null)
     showToast('Back to original location')
   }
 
+  // 🔥 Duplicate-aware save (Home → Home 2 → Home 3...)
   const saveCurrentLocation = () => {
-    if (savedLocations.find(loc => Math.abs(loc.lat - location.lat) < 0.01 && Math.abs(loc.lon - location.lon) < 0.01)) { showToast('Already saved'); return }
-    const nl = { id: Date.now(), label: '', lat: location.lat, lon: location.lon, name: location.name, country_code: location.country_code }
-    setSavedLocations(prev => [...prev, nl]); setEditingLocId(nl.id); setEditLabel(''); setEditCity(''); setSearchResults([])
-    showToast('Location saved. Edit label to name it.')
+    const exists = savedLocations.find(loc =>
+      Math.abs(loc.lat - location.lat) < 0.01 &&
+      Math.abs(loc.lon - location.lon) < 0.01
+    )
+
+    if (exists) {
+      const base = exists.label || exists.name || 'Location'
+      const existingLabels = savedLocations.map(l => l.label).filter(Boolean)
+      let count = 2
+      while (existingLabels.includes(`${base} ${count}`)) count++
+      const finalLabel = `${base} ${count}`
+
+      const newLoc = {
+        id: Date.now(), label: finalLabel,
+        lat: location.lat, lon: location.lon,
+        name: location.name, country_code: location.country_code
+      }
+      setSavedLocations(prev => [...prev, newLoc])
+      setEditingLocId(newLoc.id)
+      setEditLabel(finalLabel)
+      setEditCity('')
+      setEditMode('manual')
+      showToast(`Saved as "${finalLabel}"`)
+      return
+    }
+
+    const nl = {
+      id: Date.now(), label: '',
+      lat: location.lat, lon: location.lon,
+      name: location.name, country_code: location.country_code
+    }
+    setSavedLocations(prev => [...prev, nl])
+    setEditingLocId(nl.id)
+    setEditLabel('')
+    setEditCity('')
+    setEditMode('manual')
+    setSearchResults([])
+    showToast(t('toasts.locationSaved') || 'Location saved. Edit label to name it.')
+  }
+
+  // 🔥 GPS capture for edit form
+  const captureCurrentGPSForEdit = () => {
+    if (!navigator.geolocation) {
+      setEditGPSError('GPS not supported')
+      return
+    }
+    setEditGPSLoading(true)
+    setEditGPSError(null)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`,
+            { headers: { 'User-Agent': 'Zephye-App/1.0' } }
+          )
+          const data = await res.json()
+          const lga = data.address.county?.replace(' Local Government Area','') || data.address.town || data.address.city || data.address.village || 'Current Location'
+          const name = `${lga}, ${data.address.state || 'State'}, ${data.address.country || 'Country'}`
+          const cc = data.address.country_code?.toUpperCase() || 'US'
+          setSavedLocations(prev => prev.map(loc =>
+            loc.id === editingLocId ? { ...loc, lat, lon, name, country_code: cc } : loc
+          ))
+        } catch {
+          setSavedLocations(prev => prev.map(loc =>
+            loc.id === editingLocId ? { ...loc, lat, lon, name: 'Current Location', country_code: 'US' } : loc
+          ))
+        }
+        setEditGPSLoading(false)
+      },
+      () => {
+        setEditGPSError(t('toasts.gpsUnavailable') || 'Location unavailable. Try again or use Manual.')
+        setEditGPSLoading(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
   }
 
   const fetchQuoteOfDay = () => {
-    const pool = getAllQuotesPool(); const today = new Date().toISOString().split('T')[0]
+    const pool = getAllQuotesPool()
+    const today = new Date().toISOString().split('T')[0]
     const dn = Math.floor((new Date(today).getTime() - new Date('2024-01-01').getTime()) / 86400000)
     setQuoteOfDay(pool[dn % pool.length])
   }
@@ -765,15 +861,25 @@ function AppContent() {
     let sunHours = 0, rainHours = 0, thunderHours = 0, maxRainProb = 0, currentRainPeriod = null
     const rainPeriods = []
     hourly.time.slice(0, 24).forEach((time, i) => {
-      const code = hourly.weather_code?.[i] || 0, prob = hourly.precipitation_probability?.[i] || 0, precip = hourly.precipitation?.[i] || 0
+      const code = hourly.weather_code?.[i] || 0
+      const prob = hourly.precipitation_probability?.[i] || 0
+      const precip = hourly.precipitation?.[i] || 0
       if (code === 0 || code === 1) sunHours++
       if (prob > 30 || precip > 0.1) {
-        rainHours++; const hour = new Date(time).getHours()
+        rainHours++
+        const hour = new Date(time).getHours()
         if (!currentRainPeriod) currentRainPeriod = { start: hour, end: hour }
         else if (hour === currentRainPeriod.end + 1) currentRainPeriod.end = hour
-        else { rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`); currentRainPeriod = { start: hour, end: hour } }
-      } else if (currentRainPeriod) { rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`); currentRainPeriod = null }
-      if (code >= 95) thunderHours++; if (prob > maxRainProb) maxRainProb = prob
+        else {
+          rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
+          currentRainPeriod = { start: hour, end: hour }
+        }
+      } else if (currentRainPeriod) {
+        rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
+        currentRainPeriod = null
+      }
+      if (code >= 95) thunderHours++
+      if (prob > maxRainProb) maxRainProb = prob
     })
     if (currentRainPeriod) rainPeriods.push(`${currentRainPeriod.start}:00-${currentRainPeriod.end + 1}:00`)
     setTodayStats({
@@ -788,46 +894,81 @@ function AppContent() {
 
   const initLocation = async () => {
     if (!navigator.geolocation) { fetchWeatherData(6.5244, 3.3792); return }
-    try { const p = await navigator.permissions.query({ name: 'geolocation' }); if (p.state === 'granted' || p.state === 'prompt') getCurrentLocation(); else fetchWeatherData(6.5244, 3.3792) } catch { getCurrentLocation() }
+    try {
+      const p = await navigator.permissions.query({ name: 'geolocation' })
+      if (p.state === 'granted' || p.state === 'prompt') getCurrentLocation()
+      else fetchWeatherData(6.5244, 3.3792)
+    } catch { getCurrentLocation() }
   }
 
   const getCurrentLocation = () => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => { reverseGeocode(pos.coords.latitude, pos.coords.longitude); fetchWeatherData(pos.coords.latitude, pos.coords.longitude); setIsManualLocation(false); localStorage.removeItem('zephye_location'); localStorage.removeItem('zephye_isManual') },
-      () => { showToast('Location denied'); fetchWeatherData(6.5244, 3.3792) },
+      (pos) => {
+        reverseGeocode(pos.coords.latitude, pos.coords.longitude)
+        fetchWeatherData(pos.coords.latitude, pos.coords.longitude)
+        setIsManualLocation(false)
+        localStorage.removeItem('zephye_location')
+        localStorage.removeItem('zephye_isManual')
+      },
+      () => {
+        showToast(t('toasts.locationDenied') || 'Location denied')
+        fetchWeatherData(6.5244, 3.3792)
+      },
       { enableHighAccuracy: true, timeout: 10000 }
     )
   }
 
   const reverseGeocode = async (lat, lon) => {
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`, { headers: { 'User-Agent': 'Zephye-App/1.0' } })
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`,
+        { headers: { 'User-Agent': 'Zephye-App/1.0' } }
+      )
       const data = await res.json()
       const lga = data.address.county?.replace(' Local Government Area','') || data.address.town || data.address.city || data.address.village || 'Current Location'
-      setLocation({ lat, lon, name: `${lga}, ${data.address.state || 'State'}, ${data.address.country || 'Country'}`, country_code: data.address.country_code?.toUpperCase() || 'US' })
-      setIsManualLocation(false); localStorage.removeItem('zephye_location'); localStorage.removeItem('zephye_isManual')
-    } catch { setLocation({ lat, lon, name: 'Current Location', country_code: 'US' }) }
+      setLocation({
+        lat, lon,
+        name: `${lga}, ${data.address.state || 'State'}, ${data.address.country || 'Country'}`,
+        country_code: data.address.country_code?.toUpperCase() || 'US'
+      })
+      setIsManualLocation(false)
+      localStorage.removeItem('zephye_location')
+      localStorage.removeItem('zephye_isManual')
+    } catch {
+      setLocation({ lat, lon, name: 'Current Location', country_code: 'US' })
+    }
   }
 
   const searchCity = async () => {
-    if (!citySearch.trim()) { showToast('Type a place name'); return }
+    if (!citySearch.trim()) { showToast(t('toasts.typePlace') || 'Type a place name'); return }
     try {
       let res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(citySearch)}&count=5&language=en&format=json`)
       let data = await res.json()
       if (!data.results?.length) {
         const owRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(citySearch)}&limit=5&appid=${OPENWEATHER_KEY}`)
         const owData = await owRes.json()
-        if (!owData?.length) { showToast('Place not found'); return }
-        const r = owData[0]; const dn = `${r.name}${r.state ? ', ' + r.state : ''}, ${r.country}`
+        if (!owData?.length) { showToast(t('toasts.placeNotFound') || 'Place not found'); return }
+        const r = owData[0]
+        const dn = `${r.name}${r.state ? ', ' + r.state : ''}, ${r.country}`
         const nl = { lat: r.lat, lon: r.lon, name: dn, country_code: r.country?.slice(0,2)?.toUpperCase() || 'US' }
-        setLocation(nl); setIsManualLocation(true); localStorage.setItem('zephye_location', JSON.stringify(nl)); localStorage.setItem('zephye_isManual', 'true')
-        fetchWeatherData(r.lat, r.lon); setShowLocationModal(false); setCitySearch(''); showToast(`Location: ${dn}`); return
+        setLocation(nl); setIsManualLocation(true)
+        localStorage.setItem('zephye_location', JSON.stringify(nl))
+        localStorage.setItem('zephye_isManual', 'true')
+        fetchWeatherData(r.lat, r.lon)
+        setShowLocationModal(false); setCitySearch('')
+        showToast(`Location: ${dn}`)
+        return
       }
-      const r = data.results[0]; const dn = `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`
+      const r = data.results[0]
+      const dn = `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`
       const nl = { lat: r.latitude, lon: r.longitude, name: dn, country_code: r.country_code?.toUpperCase() || 'US' }
-      setLocation(nl); setIsManualLocation(true); localStorage.setItem('zephye_location', JSON.stringify(nl)); localStorage.setItem('zephye_isManual', 'true')
-      fetchWeatherData(r.latitude, r.longitude); setShowLocationModal(false); setCitySearch(''); showToast(`Location: ${r.name}`)
-    } catch { showToast('Search failed') }
+      setLocation(nl); setIsManualLocation(true)
+      localStorage.setItem('zephye_location', JSON.stringify(nl))
+      localStorage.setItem('zephye_isManual', 'true')
+      fetchWeatherData(r.latitude, r.longitude)
+      setShowLocationModal(false); setCitySearch('')
+      showToast(`Location: ${r.name}`)
+    } catch { showToast(t('toasts.searchFailed') || 'Search failed') }
   }
 
   const fetchWeatherData = async (lat, lon) => {
@@ -838,31 +979,76 @@ function AppContent() {
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`)
       ])
       if (weatherRes.ok) {
-        const om = await weatherRes.json(); const aqiJson = await aqiRes.json()
+        const om = await weatherRes.json()
+        const aqiJson = await aqiRes.json()
         const wd = {
           timezone: om.timezone || 'UTC',
-          current: { temperature_2m: om.current_weather?.temperature ?? null, weather_code: om.current_weather?.weathercode ?? 0, wind_speed_10m: om.current_weather?.windspeed ?? 0, wind_direction_10m: om.current_weather?.winddirection ?? 0, relative_humidity_2m: om.hourly?.relative_humidity_2m?.[0] ?? 50, pressure_msl: om.hourly?.pressure_msl?.[0] ?? null, visibility: null, uv_index: om.daily?.uv_index_max?.[0] ?? 0 },
-          hourly: { time: om.hourly?.time ?? [], temperature_2m: om.hourly?.temperature_2m ?? [], weather_code: om.hourly?.weathercode ?? [], precipitation_probability: om.hourly?.precipitation_probability ?? [], precipitation: om.hourly?.precipitation ?? [], apparent_temperature: om.hourly?.apparent_temperature ?? [], wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [], pressure_msl: om.hourly?.pressure_msl ?? [], relative_humidity_2m: om.hourly?.relative_humidity_2m ?? [] },
-          daily: { time: om.daily?.time ?? [], temperature_2m_max: om.daily?.temperature_2m_max ?? [], temperature_2m_min: om.daily?.temperature_2m_min ?? [], weather_code: om.daily?.weathercode ?? [], uv_index_max: om.daily?.uv_index_max ?? [], sunrise: om.daily?.sunrise ?? [], sunset: om.daily?.sunset ?? [] }
+          current: {
+            temperature_2m: om.current_weather?.temperature ?? null,
+            weather_code: om.current_weather?.weathercode ?? 0,
+            wind_speed_10m: om.current_weather?.windspeed ?? 0,
+            wind_direction_10m: om.current_weather?.winddirection ?? 0,
+            relative_humidity_2m: om.hourly?.relative_humidity_2m?.[0] ?? 50,
+            pressure_msl: om.hourly?.pressure_msl?.[0] ?? null,
+            visibility: null,
+            uv_index: om.daily?.uv_index_max?.[0] ?? 0,
+            apparent_temperature: om.hourly?.apparent_temperature?.[0] ?? om.current_weather?.temperature ?? 0
+          },
+          hourly: {
+            time: om.hourly?.time ?? [],
+            temperature_2m: om.hourly?.temperature_2m ?? [],
+            weather_code: om.hourly?.weathercode ?? [],
+            precipitation_probability: om.hourly?.precipitation_probability ?? [],
+            precipitation: om.hourly?.precipitation ?? [],
+            apparent_temperature: om.hourly?.apparent_temperature ?? [],
+            wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [],
+            pressure_msl: om.hourly?.pressure_msl ?? [],
+            relative_humidity_2m: om.hourly?.relative_humidity_2m ?? [],
+            wind_speed_10m: om.hourly?.wind_speed_10m ?? []
+          },
+          daily: {
+            time: om.daily?.time ?? [],
+            temperature_2m_max: om.daily?.temperature_2m_max ?? [],
+            temperature_2m_min: om.daily?.temperature_2m_min ?? [],
+            weather_code: om.daily?.weathercode ?? [],
+            uv_index_max: om.daily?.uv_index_max ?? [],
+            sunrise: om.daily?.sunrise ?? [],
+            sunset: om.daily?.sunset ?? [],
+            precipitation_probability_max: om.daily?.precipitation_probability_max ?? []
+          }
         }
-        setWeather(wd); setAqi(aqiJson.current); calculateTodayStats(wd.hourly, wd.daily)
+        setWeather(wd)
+        setAqi(aqiJson.current)
+        calculateTodayStats(wd.hourly, wd.daily)
       }
       setIsLoading(false)
-    } catch (err) { console.error(err); showToast('Weather failed'); setIsLoading(false) }
+    } catch (err) {
+      console.error(err)
+      showToast(t('toasts.weatherFailed') || 'Weather failed')
+      setIsLoading(false)
+    }
   }
 
   const saveQuote = (quote) => {
     if (!quote) return
     const saved = JSON.parse(localStorage.getItem('zephye_saved_quotes') || '[]')
-    saved.unshift({ id: Date.now(), quote_text: quote.content || quote.text, quote_author: quote.author || 'Unknown', category: quote.tag || 'Motivational', created_at: new Date().toISOString() })
-    localStorage.setItem('zephye_saved_quotes', JSON.stringify(saved)); showToast('Quote saved')
+    saved.unshift({
+      id: Date.now(),
+      quote_text: quote.content || quote.text,
+      quote_author: quote.author || 'Unknown',
+      category: quote.tag || 'Motivational',
+      created_at: new Date().toISOString()
+    })
+    localStorage.setItem('zephye_saved_quotes', JSON.stringify(saved))
+    showToast(t('toasts.quoteSaved') || 'Quote saved')
   }
 
   const saveFact = (fact) => {
     if (!fact) return
     const saved = JSON.parse(localStorage.getItem('zephye_saved_facts') || '[]')
     saved.unshift({ id: Date.now(), fact_text: fact.text, created_at: new Date().toISOString() })
-    localStorage.setItem('zephye_saved_facts', JSON.stringify(saved)); showToast('Fact saved')
+    localStorage.setItem('zephye_saved_facts', JSON.stringify(saved))
+    showToast(t('toasts.factSaved') || 'Fact saved')
   }
 
   const getWeatherClass = (c) => c === 0 || c === 1 ? 'sunny' : c >= 95 ? 'thunder' : c >= 51 && c <= 82 ? 'rainy' : 'cloudy'
@@ -882,18 +1068,23 @@ function AppContent() {
   const stormInfo = getStormLevel(wc, ws)
 
   if (isLoading && !weather) return (
-    <div className="app"><div className="weather-bg cloudy"></div><div className="container" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}><div className="glass" style={{padding:'40px',borderRadius:'20px',textAlign:'center'}}><div className="text-4xl mb-4">🌤️</div><p className="text-xl font-bold">Loading Zephye...</p></div></div></div>
+    <div className="app">
+      <div className="weather-bg cloudy"></div>
+      <div className="container" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>
+        <div className="glass" style={{padding:'40px',borderRadius:'20px',textAlign:'center'}}>
+          <div className="text-4xl mb-4">🌤️</div>
+          <p className="text-xl font-bold">{t('buttons.loading') || 'Loading'} Zephye...</p>
+        </div>
+      </div>
+    </div>
   )
 
   return (
     <div className="app">
       <div className={`weather-bg ${getWeatherClass(wc)}`}></div>
       {toast && <div className="toast">{toast}</div>}
-      
-      <MapModal 
-        isOpen={showMapModal} 
-        onClose={() => setShowMapModal(false)} 
-      />
+
+      <MapModal isOpen={showMapModal} onClose={() => setShowMapModal(false)} />
 
       <ShareModal
         isOpen={shareModal.isOpen}
@@ -903,15 +1094,36 @@ function AppContent() {
         type={shareModal.type}
       />
 
+      <WeatherShareModal
+        isOpen={weatherShare.isOpen}
+        onClose={() => setWeatherShare({ isOpen: false, type: 'current' })}
+        initialType={weatherShare.type}
+        weather={weather}
+        location={location}
+        todayStats={todayStats}
+        aqi={aqi}
+        uiLanguage={uiLanguage}
+      />
+
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding:'24px'}}>
-            <h3 className="font-bold mb-4">Change Location</h3>
-            <input type="text" placeholder="Type any city, LGA, country..." value={citySearch} onChange={e => setCitySearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchCity()} className="mb-4 w-full" autoFocus />
+            <h3 className="font-bold mb-4">{t('modals.changeLocation') || 'Change Location'}</h3>
+            <input
+              type="text"
+              placeholder={t('placeholders.searchCity') || 'Type any city, LGA, country...'}
+              value={citySearch}
+              onChange={e => setCitySearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchCity()}
+              className="mb-4 w-full"
+              autoFocus
+            />
             <p className="text-xs text-muted mb-3">Type "London", "Ifo LGA", "Tokyo" - any real place</p>
             <div className="flex gap-2">
-              <button className="btn-primary flex-1" onClick={searchCity}>Search</button>
-              <button className="btn-ghost text-xs" onClick={() => { setShowLocationModal(false); setCitySearch('') }}>Cancel</button>
+              <button className="btn-primary flex-1" onClick={searchCity}>{t('buttons.search') || 'Search'}</button>
+              <button className="btn-ghost text-xs" onClick={() => { setShowLocationModal(false); setCitySearch('') }}>
+                {t('buttons.cancel') || 'Cancel'}
+              </button>
             </div>
           </div>
         </div>
@@ -921,25 +1133,29 @@ function AppContent() {
         <div className="modal-overlay" onClick={() => setShowSavedPanel(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding:'24px',maxWidth:'480px',width:'90%',maxHeight:'80vh',overflow:'auto'}}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">My Locations</h3>
+              <h3 className="font-bold text-lg">{t('labels.savedLocations') || 'My Locations'}</h3>
               <button onClick={() => setShowSavedPanel(false)} className="btn-ghost" style={{fontSize:'24px',lineHeight:1}}>&times;</button>
             </div>
+
             <div className="current-location-card">
               <div className="loc-info">
-                <div className="loc-label">CURRENT LOCATION</div>
+                <div className="loc-label">{t('labels.currentLocation') || 'CURRENT LOCATION'}</div>
                 <div className="loc-name">{location.name}</div>
                 <div className="loc-coords">{location.lat.toFixed(2)}, {location.lon.toFixed(2)}</div>
               </div>
               <button className="save-btn" onClick={saveCurrentLocation}>
-                <AddIcon /> Save
+                <AddIcon /> {t('buttons.save') || 'Save'}
               </button>
             </div>
+
             {savedLocations.length === 0 ? (
               <div className="saved-locations-empty">
                 <div className="empty-icon">📍</div>
-                <div className="empty-title">No saved locations yet</div>
-                <div className="empty-subtitle">Save your favorite places for quick access</div>
-                <button onClick={addNewLocation} className="btn-primary" style={{marginTop:'12px'}}>Add Location</button>
+                <div className="empty-title">{t('labels.noSavedLocations') || 'No saved locations yet'}</div>
+                <div className="empty-subtitle">{t('labels.saveFavoritePlaces') || 'Save your favorite places for quick access'}</div>
+                <button onClick={addNewLocation} className="btn-primary" style={{marginTop:'12px'}}>
+                  {t('buttons.addLocation') || 'Add Location'}
+                </button>
               </div>
             ) : (
               <div className="saved-locations-container">
@@ -948,57 +1164,118 @@ function AppContent() {
                     {editingLocId === loc.id ? (
                       <div className="saved-location-edit-form">
                         <div className="form-group">
-                          <label>Name</label>
-                          <input 
-                            type="text" 
-                            value={editLabel} 
-                            onChange={e => setEditLabel(e.target.value)} 
-                            placeholder="Home, Work, etc..." 
-                            autoFocus 
+                          <label>{t('modals.name') || 'Name'}</label>
+                          <input
+                            type="text"
+                            value={editLabel}
+                            onChange={e => setEditLabel(e.target.value)}
+                            placeholder={t('placeholders.locationName') || 'Home, Work, etc...'}
+                            autoFocus
                           />
                         </div>
+
                         <div className="form-group">
-                          <label>Search place</label>
-                          <div className="location-search-container">
-                            <input 
-                              type="text" 
-                              value={editCity} 
-                              onChange={e => { 
-                                setEditCity(e.target.value); 
-                                searchPlaceForLocation(e.target.value) 
-                              }} 
-                              placeholder="Search city..." 
-                            />
-                            {isSearching && (
-                              <div className="location-search-suggestions">
-                                <div className="searching-text">Searching...</div>
-                              </div>
-                            )}
-                            {searchResults.length > 0 && (
-                              <div className="location-search-suggestions">
-                                {searchResults.map(place => (
-                                  <button 
-                                    key={place.id} 
-                                    className="suggestion-item"
-                                    onClick={() => selectPlaceForLocation(loc.id, place)}
-                                  >
-                                    <span className="suggestion-icon">📍</span>
-                                    <span className="suggestion-name">{place.name}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
+                          <label>{t('modals.coordinates') || 'Coordinates'}</label>
+
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                            <button
+                              onClick={() => setEditMode('manual')}
+                              style={{
+                                flex: 1, padding: '8px 12px', borderRadius: 10,
+                                background: editMode === 'manual' ? 'rgba(56,189,248,.15)' : 'rgba(255,255,255,.04)',
+                                border: editMode === 'manual' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,.08)',
+                                color: editMode === 'manual' ? '#38bdf8' : '#fff',
+                                cursor: 'pointer', fontSize: 13
+                              }}
+                            >
+                              📝 {t('buttons.manual') || 'Manual'}
+                            </button>
+                            <button
+                              onClick={() => setEditMode('auto')}
+                              style={{
+                                flex: 1, padding: '8px 12px', borderRadius: 10,
+                                background: editMode === 'auto' ? 'rgba(56,189,248,.15)' : 'rgba(255,255,255,.04)',
+                                border: editMode === 'auto' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,.08)',
+                                color: editMode === 'auto' ? '#38bdf8' : '#fff',
+                                cursor: 'pointer', fontSize: 13
+                              }}
+                            >
+                              📍 {t('buttons.autoCurrent') || 'Auto (current)'}
+                            </button>
                           </div>
-                        </div>
-                        <div className="form-group">
-                          <label>Coordinates</label>
-                          <div style={{fontSize:'12px', color:'var(--text-muted)'}}>
+
+                          {editMode === 'manual' ? (
+                            <div className="location-search-container">
+                              <input
+                                type="text"
+                                value={editCity}
+                                onChange={e => {
+                                  setEditCity(e.target.value)
+                                  searchPlaceForLocation(e.target.value)
+                                }}
+                                placeholder={t('placeholders.searchLocation') || 'Search city...'}
+                              />
+                              {isSearching && (
+                                <div className="location-search-suggestions">
+                                  <div className="searching-text">{t('buttons.loading') || 'Searching...'}</div>
+                                </div>
+                              )}
+                              {searchResults.length > 0 && (
+                                <div className="location-search-suggestions">
+                                  {searchResults.map(place => (
+                                    <button
+                                      key={place.id}
+                                      className="suggestion-item"
+                                      onClick={() => selectPlaceForLocation(loc.id, place)}
+                                    >
+                                      <span className="suggestion-icon">📍</span>
+                                      <span className="suggestion-name">{place.name}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ padding: 16, background: 'rgba(255,255,255,.04)', borderRadius: 10, textAlign: 'center' }}>
+                              {editGPSLoading ? (
+                                <div style={{ color: '#38bdf8', fontSize: 13 }}>
+                                  📡 {t('toasts.detecting') || 'Detecting your location...'}
+                                </div>
+                              ) : editGPSError ? (
+                                <div style={{ color: '#ef4444', fontSize: 13 }}>
+                                  ❌ {editGPSError}
+                                </div>
+                              ) : (
+                                <button
+                                  className="btn-primary"
+                                  onClick={captureCurrentGPSForEdit}
+                                  style={{ padding: '10px 16px', fontSize: 13 }}
+                                >
+                                  📍 {t('buttons.useMyLocation') || 'Use My Current Location'}
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 8 }}>
                             {loc.lat.toFixed(4)}, {loc.lon.toFixed(4)}
                           </div>
                         </div>
+
                         <div className="edit-actions">
-                          <button className="save-btn" onClick={saveLocationEdits}>Done</button>
-                          <button className="cancel-btn" onClick={() => { setEditingLocId(null); setSearchResults([]); }}>Cancel</button>
+                          <button className="save-btn" onClick={() => {
+                            if (editLabel.trim()) updateLocationLabel(loc.id, editLabel.trim())
+                            saveLocationEdits()
+                          }}>
+                            {t('buttons.done') || 'Done'}
+                          </button>
+                          <button className="cancel-btn" onClick={() => {
+                            setEditingLocId(null)
+                            setSearchResults([])
+                            setEditGPSError(null)
+                          }}>
+                            {t('buttons.cancel') || 'Cancel'}
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -1008,11 +1285,13 @@ function AppContent() {
                           <div className="loc-name">{loc.name}</div>
                         </div>
                         <div className="loc-actions">
-                          <button className="edit-btn" onClick={() => { 
-                            setEditingLocId(loc.id); 
-                            setEditLabel(loc.label || ''); 
-                            setEditCity(''); 
-                            setSearchResults([]); 
+                          <button className="edit-btn" onClick={() => {
+                            setEditingLocId(loc.id)
+                            setEditLabel(loc.label || '')
+                            setEditCity('')
+                            setEditMode('manual')
+                            setEditGPSError(null)
+                            setSearchResults([])
                           }}>
                             <EditIcon />
                           </button>
@@ -1026,23 +1305,35 @@ function AppContent() {
                 ))}
               </div>
             )}
+
             {savedLocations.length > 0 && !editingLocId && (
               <button className="add-location-btn" onClick={addNewLocation}>
-                <AddIcon /> Add Another Location
+                <AddIcon /> {t('buttons.addAnother') || 'Add Another Location'}
               </button>
             )}
           </div>
         </div>
       )}
 
-      <ZephyeFullScreen isOpen={tab === 'ai'} onClose={() => setTab('weather')} weather={weather} location={location} todayStats={todayStats} aqi={aqi} userName={localStorage.getItem('weatherman_name')} lang={getLang(location?.country_code)} greeting="Hey" voiceToUse={voiceToUse} />
-      
+      <ZephyeFullScreen
+        isOpen={tab === 'ai'}
+        onClose={() => setTab('weather')}
+        weather={weather}
+        location={location}
+        todayStats={todayStats}
+        aqi={aqi}
+        userName={localStorage.getItem('weatherman_name')}
+        lang={getLang(location?.country_code)}
+        greeting="Hey"
+        voiceToUse={voiceToUse}
+        uiLanguage={uiLanguage}
+      />
+
       <div className="container" style={{display:'flex',flexDirection:'column',gap:'16px'}}>
         {tab === 'weather' && (
           <>
-            {/* Weather Card - Dynamic z-index when dropdown is open */}
-            <div 
-              className="glass" 
+            <div
+              className="glass"
               style={{
                 padding:'20px',
                 borderRadius:'20px',
@@ -1053,36 +1344,91 @@ function AppContent() {
             >
               <div className="flex items-start justify-between mb-4">
                 <button className="location-btn text-left" onClick={() => setShowLocationModal(true)}>
-                  <div className="text-xs text-muted mb-1 flex items-center gap-1"><LocationIcon />Location</div>
+                  <div className="text-xs text-muted mb-1 flex items-center gap-1">
+                    <LocationIcon />{t('labels.location') || 'Location'}
+                  </div>
                   <div className="text-lg font-bold">{location.name}</div>
-                  <div className="text-xs text-muted mt-1">{new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+                  <div className="text-xs text-muted mt-1">
+                    {new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
+                  </div>
                 </button>
-                <div className="text-right"><WeatherIcon code={wc} /><h1 className="text-3xl font-bold mt-1">{weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°</h1></div>
+
+                <div className="text-right" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <button
+                    onClick={() => setWeatherShare({ isOpen: true, type: 'current' })}
+                    className="btn-ghost"
+                    style={{ padding: 6, marginTop: 4 }}
+                    title={t('buttons.shareWeather') || 'Share weather'}
+                  >
+                    <ShareWeatherIcon />
+                  </button>
+                  <div>
+                    <WeatherIcon code={wc} />
+                    <h1 className="text-3xl font-bold mt-1">
+                      {weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°
+                    </h1>
+                  </div>
+                </div>
               </div>
+
               <div className="flex gap-2 flex-wrap mb-3">
-                <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}><LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}</button>
-                {previousLocation && <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}><BackIcon />Back to my location</button>}
-                {savedLocations.slice(0, 3).map(loc => <button key={loc.id} onClick={() => switchToSavedLocation(loc)} className="btn-ghost text-xs" style={{padding:'4px 10px',background:'rgba(255,255,255,0.08)',color:'var(--text)',border:'1px solid var(--glass-border)'}} title={loc.name}>{loc.label || 'Untitled'}</button>)}
+                <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}>
+                  <LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}
+                </button>
+                <button
+                  onClick={() => setWeatherShare({ isOpen: true, type: 'today' })}
+                  className="btn-ghost text-xs flex items-center gap-1"
+                  style={{padding:'4px 10px'}}
+                  title="Share today's summary"
+                >
+                  📅 {t('buttons.shareToday') || 'Today'}
+                </button>
+                {previousLocation && (
+                  <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}>
+                    <BackIcon />{t('buttons.back') || 'Back'}
+                  </button>
+                )}
+                {savedLocations.slice(0, 3).map(loc => (
+                  <button
+                    key={loc.id}
+                    onClick={() => switchToSavedLocation(loc)}
+                    className="btn-ghost text-xs"
+                    style={{
+                      padding:'4px 10px',
+                      background:'rgba(255,255,255,0.08)',
+                      color:'var(--text)',
+                      border:'1px solid var(--glass-border)'
+                    }}
+                    title={loc.name}
+                  >
+                    {loc.label || 'Untitled'}
+                  </button>
+                ))}
               </div>
+
               <div className="flex gap-2 flex-wrap" style={{ overflow: 'visible' }}>
-                {stormInfo && <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>{stormInfo.level}</div>}
+                {stormInfo && (
+                  <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>
+                    {stormInfo.level}
+                  </div>
+                )}
                 {aqiInfo && (
                   <div style={{position:'relative', overflow: 'visible', zIndex: 9999}}>
-                    <button 
-                      className="status-badge" 
+                    <button
+                      className="status-badge"
                       style={{
                         background: aqiInfo.color + '33',
                         borderColor: aqiInfo.color,
                         color: aqiInfo.color,
                         cursor: 'pointer'
-                      }} 
+                      }}
                       onClick={() => setShowAirDropdown(!showAirDropdown)}
                     >
                       Air: {aqiInfo.label} ▼
                     </button>
                     {showAirDropdown && (
-                      <div 
-                        className="glass" 
+                      <div
+                        className="glass"
                         style={{
                           position: 'absolute',
                           top: 'calc(100% + 8px)',
@@ -1097,29 +1443,29 @@ function AppContent() {
                           boxShadow: '0 16px 64px rgba(0, 0, 0, 0.6)'
                         }}
                       >
-                        <p className="font-bold mb-3">Weather Details</p>
+                        <p className="font-bold mb-3">{t('labels.details') || 'Weather Details'}</p>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">AQI</span>
+                          <span className="text-muted">{t('labels.aqi') || 'AQI'}</span>
                           <span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span>
                         </div>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">Wind</span>
+                          <span className="text-muted">{t('labels.wind') || 'Wind'}</span>
                           <span className="font-bold">{Math.round(ws)} km/h {getWindDirection(wd)}</span>
                         </div>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">Humidity</span>
+                          <span className="text-muted">{t('labels.humidity') || 'Humidity'}</span>
                           <span className="font-bold">{hum}%</span>
                         </div>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">Pressure</span>
+                          <span className="text-muted">{t('labels.pressure') || 'Pressure'}</span>
                           <span className="font-bold">{pres} hPa</span>
                         </div>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">Visibility</span>
+                          <span className="text-muted">{t('labels.visibility') || 'Visibility'}</span>
                           <span className="font-bold">{(vis / 1000).toFixed(1)} km</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted">UV Index</span>
+                          <span className="text-muted">{t('labels.uv') || 'UV Index'}</span>
                           <span className="font-bold">{uv}</span>
                         </div>
                       </div>
@@ -1128,35 +1474,44 @@ function AppContent() {
                 )}
               </div>
             </div>
-            
-            {/* WeatherManTab - positioned below weather card with lower z-index */}
+
             <div style={{ position: 'relative', zIndex: 1, overflow: 'visible' }}>
-              <WeatherManTab 
-                weather={weather} 
-                location={location} 
-                todayStats={todayStats} 
-                aqi={aqi} 
-                onRefresh={() => fetchWeatherData(location.lat, location.lon)} 
+              <WeatherManTab
+                weather={weather}
+                location={location}
+                todayStats={todayStats}
+                aqi={aqi}
+                onRefresh={() => fetchWeatherData(location.lat, location.lon)}
+                uiLanguage={uiLanguage}
               />
             </div>
-            
-            {/* Hourly Forecast Card */}
+
             <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2,overflow:'visible'}}>
               <div className="flex justify-between items-center mb-3">
-                <p className="text-sm font-bold">Hourly Forecast</p>
-                <button 
-                  className="btn-ghost text-xs" 
-                  onClick={() => setShowHourlyModal(true)}
-                  style={{ padding: '4px 12px' }}
-                >
-                  View All →
-                </button>
+                <p className="text-sm font-bold">{t('labels.hourlyForecast') || 'Hourly Forecast'}</p>
+                <div className="flex gap-2">
+                  <button
+                    className="btn-ghost text-xs"
+                    onClick={() => setWeatherShare({ isOpen: true, type: 'hourly' })}
+                    style={{ padding: '4px 8px' }}
+                    title="Share hourly"
+                  >
+                    📤
+                  </button>
+                  <button
+                    className="btn-ghost text-xs"
+                    onClick={() => setShowHourlyModal(true)}
+                    style={{ padding: '4px 12px' }}
+                  >
+                    {t('buttons.viewAll') || 'View All →'}
+                  </button>
+                </div>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{scrollSnapType:'x mandatory'}}>
                 {weather?.hourly?.time?.slice(0,12).map((time, i) => (
-                  <div 
-                    key={time} 
-                    className="glass text-center p-3 rounded-2xl flex-shrink-0" 
+                  <div
+                    key={time}
+                    className="glass text-center p-3 rounded-2xl flex-shrink-0"
                     style={{
                       minWidth:'72px',
                       scrollSnapAlign:'start',
@@ -1165,7 +1520,9 @@ function AppContent() {
                     }}
                     onClick={() => setShowHourlyModal(true)}
                   >
-                    <p className="text-xs text-muted">{new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}</p>
+                    <p className="text-xs text-muted">
+                      {new Date(time).toLocaleTimeString('en-US',{hour:'numeric',hour12:true})}
+                    </p>
                     <p className="text-2xl my-1">{getWeatherIcon(weather.hourly.weather_code?.[i] || 0)}</p>
                     <p className="text-sm font-bold">{Math.round(weather.hourly.temperature_2m?.[i] || 0)}°</p>
                     {weather.hourly.precipitation_probability?.[i] > 20 && (
@@ -1175,57 +1532,79 @@ function AppContent() {
                 ))}
               </div>
             </div>
-            
-            {/* Daily Forecast Card */}
+
             <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2,overflow:'visible'}}>
-              <p className="text-sm font-bold mb-3">7-Day Forecast</p>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-bold">{t('labels.dailyForecast') || '7-Day Forecast'}</p>
+                <button
+                  className="btn-ghost text-xs"
+                  onClick={() => setWeatherShare({ isOpen: true, type: 'weekly' })}
+                  style={{ padding: '4px 8px' }}
+                  title="Share weekly"
+                >
+                  📤
+                </button>
+              </div>
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
                 <div key={day} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
                   <span className="text-sm font-medium">{new Date(day).toLocaleDateString('en',{weekday:'short'})}</span>
                   <span className="text-xl">{getWeatherIcon(weather.daily.weather_code[i])}</span>
-                  <div className="flex gap-3 text-sm"><span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span><span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span></div>
+                  <div className="flex gap-3 text-sm">
+                    <span className="font-bold">{Math.round(weather.daily.temperature_2m_max[i])}°</span>
+                    <span className="text-muted">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                  </div>
                 </div>
               ))}
             </div>
           </>
         )}
-        
+
         {tab === 'map' && (
-          <MapTab 
-            weather={weather} 
-            location={location} 
-            aqi={aqi} 
-          />
+          <MapTab weather={weather} location={location} aqi={aqi} uiLanguage={uiLanguage} />
         )}
-        
+
         {tab === 'quotes' && (
-          <QuotesTab 
-            saveQuote={saveQuote} 
+          <QuotesTab
+            saveQuote={saveQuote}
             shareQuote={shareQuote}
             shareFact={shareFact}
-            saveFact={saveFact} 
-            quoteOfDay={quoteOfDay} 
+            saveFact={saveFact}
+            quoteOfDay={quoteOfDay}
           />
         )}
+
         {tab === 'saved' && (
-          <SavedTab 
-            showToast={showToast} 
+          <SavedTab
+            showToast={showToast}
             shareQuote={shareQuote}
             shareFact={shareFact}
           />
         )}
-        <div className="text-center mt-4 mb-4"><p className="text-sm text-muted">hyesent.dev</p></div>
+
+        <div className="text-center mt-4 mb-4">
+          <p className="text-sm text-muted">hyesent.dev</p>
+        </div>
       </div>
-      
+
       <div className="bottom-nav">
-        <button className={`nav-btn ${tab==='weather'?'active':''}`} onClick={()=>setTab('weather')}>Weather</button>
-        <button className={`nav-btn ${tab==='map'?'active':''}`} onClick={()=>setTab('map')}>Map</button>
-        <button className={`nav-btn ${tab==='quotes'?'active':''}`} onClick={()=>setTab('quotes')}>Quotes</button>
-        <button className={`nav-btn ${tab==='saved'?'active':''}`} onClick={()=>setTab('saved')}>Saved</button>
-        <button className={`nav-btn ${tab==='ai'?'active':''}`} onClick={()=>setTab('ai')}>AI</button>
+        <button className={`nav-btn ${tab==='weather'?'active':''}`} onClick={()=>setTab('weather')}>
+          {t('tabs.weather') || 'Weather'}
+        </button>
+        <button className={`nav-btn ${tab==='map'?'active':''}`} onClick={()=>setTab('map')}>
+          {t('tabs.map') || 'Map'}
+        </button>
+        <button className={`nav-btn ${tab==='quotes'?'active':''}`} onClick={()=>setTab('quotes')}>
+          {t('tabs.quotes') || 'Quotes'}
+        </button>
+        <button className={`nav-btn ${tab==='saved'?'active':''}`} onClick={()=>setTab('saved')}>
+          {t('tabs.saved') || 'Saved'}
+        </button>
+        <button className={`nav-btn ${tab==='ai'?'active':''}`} onClick={()=>setTab('ai')}>
+          {t('tabs.ai') || 'AI'}
+        </button>
       </div>
-      
-      <HourlyModal 
+
+      <HourlyModal
         isOpen={showHourlyModal}
         onClose={() => setShowHourlyModal(false)}
         hourlyData={weather?.hourly}
@@ -1246,45 +1625,51 @@ function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
   const [currentFact, setCurrentFact] = useState(null)
   const [loading, setLoading] = useState(false)
   const [lastFetch, setLastFetch] = useState(0)
-  
+
   useEffect(() => { fetchQuote(); fetchFact() }, [])
   useEffect(() => { fetchQuote() }, [quoteCategory])
   useEffect(() => { fetchFact() }, [factCategory])
-  
+
   const fetchQuote = () => {
-    if (Date.now() - lastFetch < 5000) return; 
-    setLastFetch(Date.now()); 
+    if (Date.now() - lastFetch < 5000) return
+    setLastFetch(Date.now())
     setLoading(true)
-    let pool = quoteCategory === 'All' ? getAllQuotesPool() : (QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || [])
-    setCurrentQuote(pool[Math.floor(Math.random() * pool.length)]); 
+    let pool = quoteCategory === 'All'
+      ? getAllQuotesPool()
+      : (QUOTES[quoteCategory]?.map(q => ({...q, tag: quoteCategory})) || [])
+    setCurrentQuote(pool[Math.floor(Math.random() * pool.length)])
     setLoading(false)
   }
-  
+
   const fetchFact = async () => {
     setLoading(true)
-    try { 
-      const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en'); 
-      if (!res.ok) throw new Error(); 
-      setCurrentFact({ text: (await res.json()).text }) 
-    } catch { 
-      try { 
-        const res2 = await fetch('https://numbersapi.com/random/trivia?json'); 
-        if (!res2.ok) throw new Error(); 
-        setCurrentFact({ text: (await res2.json()).text }) 
-      } catch { 
-        let pool = factCategory === 'All' ? Object.values(LOCAL_FACTS).flat() : (LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science); 
-        setCurrentFact(pool[Math.floor(Math.random() * pool.length)]) 
-      } 
+    try {
+      const res = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en')
+      if (!res.ok) throw new Error()
+      setCurrentFact({ text: (await res.json()).text })
+    } catch {
+      try {
+        const res2 = await fetch('https://numbersapi.com/random/trivia?json')
+        if (!res2.ok) throw new Error()
+        setCurrentFact({ text: (await res2.json()).text })
+      } catch {
+        let pool = factCategory === 'All'
+          ? Object.values(LOCAL_FACTS).flat()
+          : (LOCAL_FACTS[factCategory] || LOCAL_FACTS.Science)
+        setCurrentFact(pool[Math.floor(Math.random() * pool.length)])
+      }
     }
     setLoading(false)
   }
-  
+
   return (
     <>
       {quoteOfDay && (
         <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px',border:'2px solid var(--accent)',background:'rgba(56,189,248,0.05)'}}>
           <div className="flex justify-between items-start mb-2">
-            <p className="text-sm font-bold text-accent flex items-center gap-2"><span>🌟</span> Quote of the Day</p>
+            <p className="text-sm font-bold text-accent flex items-center gap-2">
+              <span>🌟</span> Quote of the Day
+            </p>
           </div>
           <p className="text-lg font-bold mb-3">{quoteOfDay.content}</p>
           <p className="text-sm text-muted mb-4">— {quoteOfDay.author}</p>
@@ -1294,14 +1679,18 @@ function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
           </div>
         </div>
       )}
-      
+
       <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}>
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Explore Quotes</p>
-          <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>{loading?'Loading...':'New Quote'}</button>
+          <button className="btn-primary text-sm" onClick={fetchQuote} disabled={loading}>
+            {loading?'Loading...':'New Quote'}
+          </button>
         </div>
         <div className="sub-tabs mb-4">
-          {QUOTE_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${quoteCategory===cat?'active':''}`} onClick={()=>setQuoteCategory(cat)}>{cat}</button>)}
+          {QUOTE_CATEGORIES.map(cat => (
+            <button key={cat} className={`sub-tab ${quoteCategory===cat?'active':''}`} onClick={()=>setQuoteCategory(cat)}>{cat}</button>
+          ))}
         </div>
         {currentQuote && (
           <div className="list-item">
@@ -1314,14 +1703,18 @@ function QuotesTab({ saveQuote, shareQuote, shareFact, saveFact, quoteOfDay }) {
           </div>
         )}
       </div>
-      
+
       <div className="glass mb-4" style={{padding:'20px',borderRadius:'20px'}}>
         <div className="flex justify-between items-center mb-4">
           <p className="font-bold">Did You Know?</p>
-          <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>{loading?'Loading...':'New Fact'}</button>
+          <button className="btn-primary text-sm" onClick={fetchFact} disabled={loading}>
+            {loading?'Loading...':'New Fact'}
+          </button>
         </div>
         <div className="sub-tabs mb-4">
-          {FACT_CATEGORIES.map(cat => <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>)}
+          {FACT_CATEGORIES.map(cat => (
+            <button key={cat} className={`sub-tab ${factCategory===cat?'active':''}`} onClick={()=>setFactCategory(cat)}>{cat}</button>
+          ))}
         </div>
         {currentFact && (
           <div className="list-item">
@@ -1345,35 +1738,39 @@ function SavedTab({ showToast, shareQuote, shareFact }) {
   const [savedQuotes, setSavedQuotes] = useState([])
   const [savedFacts, setSavedFacts] = useState([])
   const [activeSubTab, setActiveSubTab] = useState('quotes')
-  
-  useEffect(() => { 
-    setSavedQuotes(JSON.parse(localStorage.getItem('zephye_saved_quotes')||'[]')); 
-    setSavedFacts(JSON.parse(localStorage.getItem('zephye_saved_facts')||'[]')) 
+
+  useEffect(() => {
+    setSavedQuotes(JSON.parse(localStorage.getItem('zephye_saved_quotes')||'[]'))
+    setSavedFacts(JSON.parse(localStorage.getItem('zephye_saved_facts')||'[]'))
   }, [])
-  
-  const deleteQuote = (id) => { 
-    const u = savedQuotes.filter(q => q.id!==id); 
-    localStorage.setItem('zephye_saved_quotes',JSON.stringify(u)); 
-    setSavedQuotes(u); 
-    showToast('Quote deleted') 
+
+  const deleteQuote = (id) => {
+    const u = savedQuotes.filter(q => q.id!==id)
+    localStorage.setItem('zephye_saved_quotes',JSON.stringify(u))
+    setSavedQuotes(u)
+    showToast('Quote deleted')
   }
-  
-  const deleteFact = (id) => { 
-    const u = savedFacts.filter(f => f.id!==id); 
-    localStorage.setItem('zephye_saved_facts',JSON.stringify(u)); 
-    setSavedFacts(u); 
-    showToast('Fact deleted') 
+
+  const deleteFact = (id) => {
+    const u = savedFacts.filter(f => f.id!==id)
+    localStorage.setItem('zephye_saved_facts',JSON.stringify(u))
+    setSavedFacts(u)
+    showToast('Fact deleted')
   }
-  
+
   return (
     <div className="glass" style={{padding:'20px',borderRadius:'20px'}}>
       <div className="sub-tabs mb-4">
-        <button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>Quotes ({savedQuotes.length})</button>
-        <button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>Facts ({savedFacts.length})</button>
+        <button className={`sub-tab ${activeSubTab==='quotes'?'active':''}`} onClick={()=>setActiveSubTab('quotes')}>
+          Quotes ({savedQuotes.length})
+        </button>
+        <button className={`sub-tab ${activeSubTab==='facts'?'active':''}`} onClick={()=>setActiveSubTab('facts')}>
+          Facts ({savedFacts.length})
+        </button>
       </div>
-      
+
       {activeSubTab==='quotes' && (
-        savedQuotes.length===0 ? 
+        savedQuotes.length===0 ?
         <p className="text-center text-muted py-8">No saved quotes yet.</p> :
         savedQuotes.map(q => (
           <div key={q.id} className="list-item">
@@ -1386,9 +1783,9 @@ function SavedTab({ showToast, shareQuote, shareFact }) {
           </div>
         ))
       )}
-      
+
       {activeSubTab==='facts' && (
-        savedFacts.length===0 ? 
+        savedFacts.length===0 ?
         <p className="text-center text-muted py-8">No saved facts yet.</p> :
         savedFacts.map(f => (
           <div key={f.id} className="list-item">
@@ -1404,7 +1801,24 @@ function SavedTab({ showToast, shareQuote, shareFact }) {
   )
 }
 
-export default function App() { 
+// ============================================================================
+// APP ROOT — wraps with LanguageProvider
+// ============================================================================
+
+function AppContent() {
+  const [homeLocation, setHomeLocation] = useState(() => {
+    const saved = localStorage.getItem('zephye_home_location')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  return (
+    <LanguageProvider homeLocation={homeLocation}>
+      <AppContentInner homeLocation={homeLocation} setHomeLocation={setHomeLocation} />
+    </LanguageProvider>
+  )
+}
+
+export default function App() {
   return (
     <AudioProvider>
       <AppContent />
