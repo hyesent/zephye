@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { generateWeatherImage } from '../utils/weatherShareCanvas'
-import { getHourlySlice } from '../utils/weatherHighlights'
-import { codeToEmoji } from '../utils/weatherHighlights'
+import { generateWeatherImage } from './utils/weatherShareCanvas'
+import { getHourlySlice } from './utils/weatherHighlights'
+import { codeToEmoji } from './utils/weatherHighlights'
 
 const CloseIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
