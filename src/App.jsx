@@ -4,7 +4,7 @@ import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
 import ZephyeFullScreen from './ZephyeFullScreen.jsx'
 import MapTab from './MapTab.jsx'
-import WeatherShareModal from './components/WeatherShareModal'
+import WeatherShareModal from './WeatherShareModal'
 import { getLang, getVoiceForLocation } from './zephyeHelpers'
 import { LanguageProvider, useLanguage, useTranslation } from './utils/translation'
 
