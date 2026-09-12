@@ -450,165 +450,163 @@ const BRIEFING_TEMPLATES = {
     }
   },
   ar: {
-  thunderstorms: 'تنبيه، هناك عواصف رعدية في {location} الآن.',
-  rain: 'إنه يوم ممطر في {location}.',
-  clear: 'سماء صافية فوق {location} اليوم.',
-  cloudy: 'أجواء غائمة في {location}.',
-  temp: 'الآن {temp} درجة، لكن الإحساس الحراري {feels}.',
-  windStrong: 'الرياح تزداد إلى {wind} كم/س، مع هبات تصل إلى {gust}.',
-  windLight: 'رياح خفيفة بسرعة {wind} كم/س.',
-  humidity: 'الرطوبة عند {humidity}%.',
-  uvHigh: 'مؤشر الأشعة فوق البنفسجية مرتفع {uv}، يُنصح بالحماية من الشمس.',
-  uvModerate: 'مؤشر الأشعة فوق البنفسجية معتدل {uv}.',
-  rainSoon: 'خذ مظلة، {prob}% احتمالية هطول أمطار خلال ساعتين.',
-  rainLater: '{prob}% احتمالية هطول أمطار لاحقًا اليوم.',
-  noRain: 'لا يُتوقع هطول أمطار غزيرة، فقط {prob}% احتمالية.',
-  thunder: 'احتمال حدوث رعد لمدة {hours} ساعات تقريبًا اليوم.',
-  aqiBad: 'جودة الهواء {level}، يجب على الفئات الحساسة الحد من النشاط الخارجي.',
-  aqiGood: 'جودة الهواء {level}.',
-  sunrise: 'شروق الشمس في {sunrise}، وغروبها في {sunset}.',
-  closing: 'كان هذا تحديثك من Zephye. حافظ على سلامتك.',
-  brief: {
-    storms: 'عواصف رعدية في {location} الآن.',
-    rain: 'أمطار متوقعة في {location}.',
-    current: 'حاليًا {temp} درجة في {location}.',
-    feels: 'الإحساس {feels}.',
-    rain2h: 'أمطار محتملة خلال ساعتين.',
-    rainToday: '{prob}% احتمالية هطول أمطار اليوم.',
-    uv: 'مؤشر الأشعة فوق البنفسجية مرتفع.',
-    aqi: 'جودة الهواء سيئة.',
-    closing: 'كان هذا Zephye.'
-  }
-},
-
-ja: {
-  thunderstorms: '{location}では現在雷雨が発生しています。',
-  rain: '{location}は雨の一日です。',
-  clear: '{location}は今日、晴天です。',
-  cloudy: '{location}は曇り空です。',
-  temp: '現在の気温は{temp}度ですが、体感温度は{feels}度です。',
-  windStrong: '風速は{wind}キロ毎時で、突風は{gust}キロ毎時です。',
-  windLight: '風は穏やかで、風速は{wind}キロ毎時です。',
-  humidity: '湿度は{humidity}%です。',
-  uvHigh: 'UV指数は{uv}で高く、日焼け対策が推奨されます。',
-  uvModerate: 'UV指数は{uv}で中程度です。',
-  rainSoon: '2時間以内に{prob}%の降水確率があります。傘を持って行きましょう。',
-  rainLater: '今日は後ほど{prob}%の降水確率があります。',
-  noRain: '大きな雨の心配はありません。降水確率は{prob}%です。',
-  thunder: '今日は約{hours}時間、雷の可能性があります。',
-  aqiBad: '空気質は{level}です。敏感な方は屋外活動を控えてください。',
-  aqiGood: '空気質は{level}です。',
-  sunrise: '日の出は{sunrise}、日の入りは{sunset}です。',
-  closing: '以上、Zephyeからの天気情報でした。お気をつけて。',
-  brief: {
-    storms: '{location}で雷雨です。',
-    rain: '{location}で雨の予報です。',
-    current: '現在{temp}度です。',
-    feels: '体感温度は{feels}度。',
-    rain2h: '2時間以内に雨の可能性。',
-    rainToday: '今日の降水確率は{prob}%。',
-    uv: 'UV指数が高いです。',
-    aqi: '空気質が悪いです。',
-    closing: '以上、Zephyeでした。'
-  }
-},
+    thunderstorms: 'تنبيه، هناك عواصف رعدية في {location} الآن.',
+    rain: 'إنه يوم ممطر في {location}.',
+    clear: 'سماء صافية فوق {location} اليوم.',
+    cloudy: 'أجواء غائمة في {location}.',
+    temp: 'الآن {temp} درجة، لكن الإحساس الحراري {feels}.',
+    windStrong: 'الرياح تزداد إلى {wind} كم/س، مع هبات تصل إلى {gust}.',
+    windLight: 'رياح خفيفة بسرعة {wind} كم/س.',
+    humidity: 'الرطوبة عند {humidity}%.',
+    uvHigh: 'مؤشر الأشعة فوق البنفسجية مرتفع {uv}، يُنصح بالحماية من الشمس.',
+    uvModerate: 'مؤشر الأشعة فوق البنفسجية معتدل {uv}.',
+    rainSoon: 'خذ مظلة، {prob}% احتمالية هطول أمطار خلال ساعتين.',
+    rainLater: '{prob}% احتمالية هطول أمطار لاحقًا اليوم.',
+    noRain: 'لا يُتوقع هطول أمطار غزيرة، فقط {prob}% احتمالية.',
+    thunder: 'احتمال حدوث رعد لمدة {hours} ساعات تقريبًا اليوم.',
+    aqiBad: 'جودة الهواء {level}، يجب على الفئات الحساسة الحد من النشاط الخارجي.',
+    aqiGood: 'جودة الهواء {level}.',
+    sunrise: 'شروق الشمس في {sunrise}، وغروبها في {sunset}.',
+    closing: 'كان هذا تحديثك من Zephye. حافظ على سلامتك.',
+    brief: {
+      storms: 'عواصف رعدية في {location} الآن.',
+      rain: 'أمطار متوقعة في {location}.',
+      current: 'حاليًا {temp} درجة في {location}.',
+      feels: 'الإحساس {feels}.',
+      rain2h: 'أمطار محتملة خلال ساعتين.',
+      rainToday: '{prob}% احتمالية هطول أمطار اليوم.',
+      uv: 'مؤشر الأشعة فوق البنفسجية مرتفع.',
+      aqi: 'جودة الهواء سيئة.',
+      closing: 'كان هذا Zephye.'
+    }
+  },
+  ja: {
+    thunderstorms: '{location}では現在雷雨が発生しています。',
+    rain: '{location}は雨の一日です。',
+    clear: '{location}は今日、晴天です。',
+    cloudy: '{location}は曇り空です。',
+    temp: '現在の気温は{temp}度ですが、体感温度は{feels}度です。',
+    windStrong: '風速は{wind}キロ毎時で、突風は{gust}キロ毎時です。',
+    windLight: '風は穏やかで、風速は{wind}キロ毎時です。',
+    humidity: '湿度は{humidity}%です。',
+    uvHigh: 'UV指数は{uv}で高く、日焼け対策が推奨されます。',
+    uvModerate: 'UV指数は{uv}で中程度です。',
+    rainSoon: '2時間以内に{prob}%の降水確率があります。傘を持って行きましょう。',
+    rainLater: '今日は後ほど{prob}%の降水確率があります。',
+    noRain: '大きな雨の心配はありません。降水確率は{prob}%です。',
+    thunder: '今日は約{hours}時間、雷の可能性があります。',
+    aqiBad: '空気質は{level}です。敏感な方は屋外活動を控えてください。',
+    aqiGood: '空気質は{level}です。',
+    sunrise: '日の出は{sunrise}、日の入りは{sunset}です。',
+    closing: '以上、Zephyeからの天気情報でした。お気をつけて。',
+    brief: {
+      storms: '{location}で雷雨です。',
+      rain: '{location}で雨の予報です。',
+      current: '現在{temp}度です。',
+      feels: '体感温度は{feels}度。',
+      rain2h: '2時間以内に雨の可能性。',
+      rainToday: '今日の降水確率は{prob}%。',
+      uv: 'UV指数が高いです。',
+      aqi: '空気質が悪いです。',
+      closing: '以上、Zephyeでした。'
+    }
+  },
   ko: {
-  thunderstorms: '{location}에 현재 천둥번개를 동반한 폭풍이 발생하고 있습니다.',
-  rain: '{location}에는 비가 내리고 있습니다.',
-  clear: '{location}의 하늘은 맑습니다.',
-  cloudy: '{location}는 흐린 날씨입니다.',
-  temp: '현재 기온은 {temp}도이며 체감온도는 {feels}도입니다.',
-  windStrong: '바람은 시속 {wind}킬로미터이며 돌풍은 {gust}킬로미터까지 불겠습니다.',
-  windLight: '바람은 시속 {wind}킬로미터로 약하게 불고 있습니다.',
-  humidity: '습도는 {humidity}%입니다.',
-  uvHigh: '자외선 지수는 {uv}로 높으므로 자외선 차단이 권장됩니다.',
-  uvModerate: '자외선 지수는 {uv}로 보통 수준입니다.',
-  rainSoon: '2시간 이내 강수 확률이 {prob}%입니다. 우산을 챙기세요.',
-  rainLater: '오늘 늦게 비가 올 확률은 {prob}%입니다.',
-  noRain: '큰 비는 예상되지 않으며 강수 확률은 {prob}%입니다.',
-  thunder: '오늘 약 {hours}시간 동안 천둥 가능성이 있습니다.',
-  aqiBad: '대기질은 {level} 수준이며 민감군은 야외 활동을 줄이는 것이 좋습니다.',
-  aqiGood: '대기질은 {level} 수준입니다.',
-  sunrise: '일출은 {sunrise}, 일몰은 {sunset}입니다.',
-  closing: '지금까지 Zephye 날씨 업데이트였습니다. 안전하게 보내세요.',
-  brief: {
-    storms: '{location}에 천둥번개가 발생 중입니다.',
-    rain: '{location}에 비가 예상됩니다.',
-    current: '현재 기온은 {temp}도입니다.',
-    feels: '체감온도는 {feels}도입니다.',
-    rain2h: '2시간 내 비가 올 가능성이 있습니다.',
-    rainToday: '오늘 강수 확률은 {prob}%입니다.',
-    uv: '자외선 지수가 높습니다.',
-    aqi: '대기질이 좋지 않습니다.',
-    closing: '이상 Zephye였습니다.'
-  }
-},
-
-hi: {
-  thunderstorms: '{location} में इस समय गरज के साथ बारिश हो रही है।',
-  rain: '{location} में आज बारिश का मौसम है।',
-  clear: '{location} में आज आसमान साफ है।',
-  cloudy: '{location} में बादल छाए हुए हैं।',
-  temp: 'अभी तापमान {temp} डिग्री है, लेकिन महसूस {feels} डिग्री जैसा हो रहा है।',
-  windStrong: 'हवा की गति {wind} किलोमीटर प्रति घंटा है और झोंके {gust} किलोमीटर प्रति घंटा तक पहुँच सकते हैं।',
-  windLight: 'हल्की हवाएँ {wind} किलोमीटर प्रति घंटा की गति से चल रही हैं।',
-  humidity: 'नमी {humidity}% है।',
-  uvHigh: 'यूवी सूचकांक {uv} है, इसलिए धूप से बचाव की सलाह दी जाती है।',
-  uvModerate: 'यूवी सूचकांक {uv} मध्यम स्तर पर है।',
-  rainSoon: 'अगले दो घंटों में बारिश की संभावना {prob}% है। छाता साथ रखें।',
-  rainLater: 'आज बाद में बारिश की संभावना {prob}% है।',
-  noRain: 'आज भारी बारिश की उम्मीद नहीं है, केवल {prob}% संभावना है।',
-  thunder: 'आज लगभग {hours} घंटे तक गरज की संभावना है।',
-  aqiBad: 'वायु गुणवत्ता {level} है, संवेदनशील लोगों को बाहर की गतिविधियाँ कम करनी चाहिए।',
-  aqiGood: 'वायु गुणवत्ता {level} है।',
-  sunrise: 'सूर्योदय {sunrise} पर हुआ और सूर्यास्त {sunset} पर होगा।',
-  closing: 'यह Zephye की मौसम जानकारी थी। सुरक्षित रहें।',
-  brief: {
-    storms: '{location} में गरज के साथ बारिश हो रही है।',
-    rain: '{location} में बारिश की संभावना है।',
-    current: 'अभी तापमान {temp} डिग्री है।',
-    feels: 'महसूस {feels} डिग्री जैसा हो रहा है।',
-    rain2h: '2 घंटे में बारिश की संभावना है।',
-    rainToday: 'आज बारिश की संभावना {prob}% है।',
-    uv: 'यूवी सूचकांक ऊँचा है।',
-    aqi: 'वायु गुणवत्ता खराब है।',
-    closing: 'यह Zephye था।'
-  }
-},
-
-zh: {
-  thunderstorms: '{location}目前有雷暴天气。',
-  rain: '{location}今天有降雨。',
-  clear: '{location}今天晴空万里。',
-  cloudy: '{location}目前多云。',
-  temp: '当前气温为{temp}度，体感温度为{feels}度。',
-  windStrong: '风速达到每小时{wind}公里，阵风最高可达{gust}公里。',
-  windLight: '风力较弱，风速为每小时{wind}公里。',
-  humidity: '湿度为{humidity}%。',
-  uvHigh: '紫外线指数为{uv}，较高，请注意防晒。',
-  uvModerate: '紫外线指数为{uv}，属于中等水平。',
-  rainSoon: '未来两小时降雨概率为{prob}%，请带上雨伞。',
-  rainLater: '今天稍后降雨概率为{prob}%。',
-  noRain: '今天没有明显降雨，降雨概率仅为{prob}%。',
-  thunder: '今天约有{hours}小时可能出现雷电。',
-  aqiBad: '空气质量为{level}，敏感人群应减少户外活动。',
-  aqiGood: '空气质量为{level}。',
-  sunrise: '日出时间为{sunrise}，日落时间为{sunset}。',
-  closing: '以上是Zephye天气更新，祝您平安。',
-  brief: {
-    storms: '{location}目前有雷暴。',
-    rain: '{location}将有降雨。',
-    current: '当前气温为{temp}度。',
-    feels: '体感温度为{feels}度。',
-    rain2h: '两小时内可能降雨。',
-    rainToday: '今天降雨概率为{prob}%。',
-    uv: '紫外线指数较高。',
-    aqi: '空气质量较差。',
-    closing: '这里是Zephye。'
+    thunderstorms: '{location}에 현재 천둥번개를 동반한 폭풍이 발생하고 있습니다.',
+    rain: '{location}에는 비가 내리고 있습니다.',
+    clear: '{location}의 하늘은 맑습니다.',
+    cloudy: '{location}는 흐린 날씨입니다.',
+    temp: '현재 기온은 {temp}도이며 체감온도는 {feels}도입니다.',
+    windStrong: '바람은 시속 {wind}킬로미터이며 돌풍은 {gust}킬로미터까지 불겠습니다.',
+    windLight: '바람은 시속 {wind}킬로미터로 약하게 불고 있습니다.',
+    humidity: '습도는 {humidity}%입니다.',
+    uvHigh: '자외선 지수는 {uv}로 높으므로 자외선 차단이 권장됩니다.',
+    uvModerate: '자외선 지수는 {uv}로 보통 수준입니다.',
+    rainSoon: '2시간 이내 강수 확률이 {prob}%입니다. 우산을 챙기세요.',
+    rainLater: '오늘 늦게 비가 올 확률은 {prob}%입니다.',
+    noRain: '큰 비는 예상되지 않으며 강수 확률은 {prob}%입니다.',
+    thunder: '오늘 약 {hours}시간 동안 천둥 가능성이 있습니다.',
+    aqiBad: '대기질은 {level} 수준이며 민감군은 야외 활동을 줄이는 것이 좋습니다.',
+    aqiGood: '대기질은 {level} 수준입니다.',
+    sunrise: '일출은 {sunrise}, 일몰은 {sunset}입니다.',
+    closing: '지금까지 Zephye 날씨 업데이트였습니다. 안전하게 보내세요.',
+    brief: {
+      storms: '{location}에 천둥번개가 발생 중입니다.',
+      rain: '{location}에 비가 예상됩니다.',
+      current: '현재 기온은 {temp}도입니다.',
+      feels: '체감온도는 {feels}도입니다.',
+      rain2h: '2시간 내 비가 올 가능성이 있습니다.',
+      rainToday: '오늘 강수 확률은 {prob}%입니다.',
+      uv: '자외선 지수가 높습니다.',
+      aqi: '대기질이 좋지 않습니다.',
+      closing: '이상 Zephye였습니다.'
+    }
+  },
+  hi: {
+    thunderstorms: '{location} में इस समय गरज के साथ बारिश हो रही है।',
+    rain: '{location} में आज बारिश का मौसम है।',
+    clear: '{location} में आज आसमान साफ है।',
+    cloudy: '{location} में बादल छाए हुए हैं।',
+    temp: 'अभी तापमान {temp} डिग्री है, लेकिन महसूस {feels} डिग्री जैसा हो रहा है।',
+    windStrong: 'हवा की गति {wind} किलोमीटर प्रति घंटा है और झोंके {gust} किलोमीटर प्रति घंटा तक पहुँच सकते हैं।',
+    windLight: 'हल्की हवाएँ {wind} किलोमीटर प्रति घंटा की गति से चल रही हैं।',
+    humidity: 'नमी {humidity}% है।',
+    uvHigh: 'यूवी सूचकांक {uv} है, इसलिए धूप से बचाव की सलाह दी जाती है।',
+    uvModerate: 'यूवी सूचकांक {uv} मध्यम स्तर पर है।',
+    rainSoon: 'अगले दो घंटों में बारिश की संभावना {prob}% है। छाता साथ रखें।',
+    rainLater: 'आज बाद में बारिश की संभावना {prob}% है।',
+    noRain: 'आज भारी बारिश की उम्मीद नहीं है, केवल {prob}% संभावना है।',
+    thunder: 'आज लगभग {hours} घंटे तक गरज की संभावना है।',
+    aqiBad: 'वायु गुणवत्ता {level} है, संवेदनशील लोगों को बाहर की गतिविधियाँ कम करनी चाहिए।',
+    aqiGood: 'वायु गुणवत्ता {level} है।',
+    sunrise: 'सूर्योदय {sunrise} पर हुआ और सूर्यास्त {sunset} पर होगा।',
+    closing: 'यह Zephye की मौसम जानकारी थी। सुरक्षित रहें।',
+    brief: {
+      storms: '{location} में गरज के साथ बारिश हो रही है।',
+      rain: '{location} में बारिश की संभावना है।',
+      current: 'अभी तापमान {temp} डिग्री है।',
+      feels: 'महसूस {feels} डिग्री जैसा हो रहा है।',
+      rain2h: '2 घंटे में बारिश की संभावना है।',
+      rainToday: 'आज बारिश की संभावना {prob}% है।',
+      uv: 'यूवी सूचकांक ऊँचा है।',
+      aqi: 'वायु गुणवत्ता खराब है।',
+      closing: 'यह Zephye था।'
+    }
+  },
+  zh: {
+    thunderstorms: '{location}目前有雷暴天气。',
+    rain: '{location}今天有降雨。',
+    clear: '{location}今天晴空万里。',
+    cloudy: '{location}目前多云。',
+    temp: '当前气温为{temp}度，体感温度为{feels}度。',
+    windStrong: '风速达到每小时{wind}公里，阵风最高可达{gust}公里。',
+    windLight: '风力较弱，风速为每小时{wind}公里。',
+    humidity: '湿度为{humidity}%。',
+    uvHigh: '紫外线指数为{uv}，较高，请注意防晒。',
+    uvModerate: '紫外线指数为{uv}，属于中等水平。',
+    rainSoon: '未来两小时降雨概率为{prob}%，请带上雨伞。',
+    rainLater: '今天稍后降雨概率为{prob}%。',
+    noRain: '今天没有明显降雨，降雨概率仅为{prob}%。',
+    thunder: '今天约有{hours}小时可能出现雷电。',
+    aqiBad: '空气质量为{level}，敏感人群应减少户外活动。',
+    aqiGood: '空气质量为{level}。',
+    sunrise: '日出时间为{sunrise}，日落时间为{sunset}。',
+    closing: '以上是Zephye天气更新，祝您平安。',
+    brief: {
+      storms: '{location}目前有雷暴。',
+      rain: '{location}将有降雨。',
+      current: '当前气温为{temp}度。',
+      feels: '体感温度为{feels}度。',
+      rain2h: '两小时内可能降雨。',
+      rainToday: '今天降雨概率为{prob}%。',
+      uv: '紫外线指数较高。',
+      aqi: '空气质量较差。',
+      closing: '这里是Zephye。'
+    }
   }
 }
-}
-  export default function WeatherManTab({ weather, location, todayStats, aqi }) {
+
+export default function WeatherManTab({ weather, location, todayStats, aqi, uiLanguage = 'en' }) {
   const { playGlobal, stopGlobal, isSpeaking } = useAudio()
 
   const [voices, setVoices] = useState([])
@@ -617,6 +615,8 @@ zh: {
   const [userName, setUserName] = useState(
     localStorage.getItem('weatherman_name') || ''
   )
+  // 🔥 NEW: Track manual voice override
+  const [isManuallySelected, setIsManuallySelected] = useState(false)
 
   const { askWeather, isLoading } = useWeatherChat()
 
@@ -636,6 +636,13 @@ zh: {
       .then((data) => setVoices(data || []))
       .catch(() => setVoices([]))
   }, [])
+
+  // 🔥 NEW: Auto-map voice when location changes (unless user manually picked)
+  useEffect(() => {
+    if (!isManuallySelected) {
+      setSelectedVoice(voiceToUse)
+    }
+  }, [voiceToUse, isManuallySelected])
 
   const fill = (str, vars) =>
     str.replace(/{(\w+)}/g, (_, k) => vars[k] ?? '')
@@ -786,6 +793,12 @@ zh: {
     }
   }
 
+  // 🔥 NEW: Manual voice override handler
+  const handleVoiceChange = (voice) => {
+    setSelectedVoice(voice)
+    setIsManuallySelected(true)
+  }
+
   return (
     <ZephyeAIPanel
       weather={weather}
@@ -794,7 +807,7 @@ zh: {
       location={location}
       voices={voices}
       selectedVoice={selectedVoice}
-      setSelectedVoice={setSelectedVoice}
+      setSelectedVoice={handleVoiceChange}
       userName={userName}
       setUserName={setUserName}
       briefMode={briefMode}
@@ -808,6 +821,7 @@ zh: {
       greeting={greeting}
       askWeather={askWeather}
       isLoadingChat={isLoading}
+      uiLanguage={uiLanguage}
     />
   )
-  }
+}
