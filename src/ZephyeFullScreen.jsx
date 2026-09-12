@@ -13,6 +13,8 @@ import {
   getVoiceForLocation
 } from './zephyeHelpers'
 
+import { useTranslation } from './utils/translation'
+
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
 const BackIcon = () => (
@@ -595,7 +597,7 @@ const detectComparison = (question) => {
 // ─── STRUCTURED RESPONSE COMPONENT ──────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-function StructuredResponse({ data, onSpeak, isSpeaking, onCopy }) {
+function StructuredResponse({ data, onSpeak, isSpeaking, onCopy, t }) {
   const [showDetails, setShowDetails] = useState(false)
   const [showFull, setShowFull] = useState(false)
 
@@ -623,7 +625,7 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy }) {
             className="action-btn"
             onClick={() => setShowDetails(!showDetails)}
           >
-            {showDetails ? 'Hide details' : 'Why?'}
+            {showDetails ? t('buttons.hideDetails') : t('buttons.why')}
           </button>
         )}
         {fullText && (
@@ -631,7 +633,7 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy }) {
             className="action-btn"
             onClick={() => setShowFull(!showFull)}
           >
-            {showFull ? 'Show less' : 'More details'}
+            {showFull ? t('buttons.showLess') : t('buttons.moreDetails')}
           </button>
         )}
       </div>
@@ -639,7 +641,7 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy }) {
       {/* Details */}
       {showDetails && details && details.length > 0 && (
         <div className="details-section">
-          <div className="details-title">Why this recommendation?</div>
+          <div className="details-title">{t('labels.whyRecommendation')}</div>
           {details.map((d, i) => (
             <div key={i} className="detail-row">
               <span className="detail-label">{d.label}</span>
@@ -673,9 +675,11 @@ export default function ZephyeFullScreen({
   userName,
   lang = 'en',
   greeting,
-  voiceToUse: propVoiceToUse
+  voiceToUse: propVoiceToUse,
+  uiLanguage = 'en'
 }) {
   const { playGlobal, stopGlobal, isSpeaking } = useAudio()
+  const { t } = useTranslation(uiLanguage, location?.country_code)
 
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
@@ -824,14 +828,14 @@ export default function ZephyeFullScreen({
           content: {
             verdict: `${greeting || 'Hello'}, ${userName || location?.name?.split(',')[0] || 'there'}`,
             summary: `${location?.name || 'Your location'} • ${weatherData.temp}°C • ${condition} • AQI ${aqiLevel.label}`,
-            note: 'What can I help you with today?',
+            note: t('greetings.howCanIHelp'),
             details: [],
             fullText: ''
           }
         }
       ])
     }
-  }, [isOpen, messages.length, greeting, userName, location, weatherData, aqiLevel])
+  }, [isOpen, messages.length, greeting, userName, location, weatherData, aqiLevel, t])
 
   useEffect(() => {
     if (input) {
@@ -1185,7 +1189,7 @@ export default function ZephyeFullScreen({
     return (
       <div className="ai-fullscreen">
         <div className="ai-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p className="text-muted">Loading weather data...</p>
+          <p className="text-muted">{t('buttons.loading')}</p>
         </div>
       </div>
     )
@@ -1229,7 +1233,7 @@ export default function ZephyeFullScreen({
               fontWeight: '400',
               letterSpacing: '0.2px'
             }}>
-              Weather Intelligence
+              {t('labels.weatherIntelligence')}
             </div>
           </div>
         </div>
@@ -1294,7 +1298,7 @@ export default function ZephyeFullScreen({
                 gap: '2px'
               }}>
                 <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Voice
+                  {t('labels.voice')}
                 </div>
                 <button
                   onClick={() => { setGenderPref('female'); setIsMenuOpen(false) }}
@@ -1310,7 +1314,7 @@ export default function ZephyeFullScreen({
                     transition: 'all 0.2s'
                   }}
                 >
-                  Female
+                  {t('buttons.female')}
                 </button>
                 <button
                   onClick={() => { setGenderPref('male'); setIsMenuOpen(false) }}
@@ -1326,7 +1330,7 @@ export default function ZephyeFullScreen({
                     transition: 'all 0.2s'
                   }}
                 >
-                  Male
+                  {t('buttons.male')}
                 </button>
 
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
@@ -1334,7 +1338,7 @@ export default function ZephyeFullScreen({
                 {detectedLanguage !== 'en' && (
                   <>
                     <div style={{ padding: '4px 10px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Language
+                      {t('labels.language')}
                     </div>
                     <div style={{ padding: '6px 12px', fontSize: '13px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <GlobeIcon />
@@ -1359,7 +1363,7 @@ export default function ZephyeFullScreen({
                       transition: 'all 0.2s'
                     }}
                   >
-                    {showOriginal ? 'Hide Original' : 'Show Original'}
+                    {showOriginal ? t('buttons.hideOriginal') : t('buttons.showOriginal')}
                   </button>
                 )}
               </div>
@@ -1410,10 +1414,10 @@ export default function ZephyeFullScreen({
               </div>
 
               <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '6px' }}>
-                Good {getTimeOfDay()}, {userName || 'there'}
+                {t(`greetings.${getTimeOfDay()}`)}, {userName || 'there'}
               </h2>
               <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-                How can I help you today?
+                {t('greetings.howCanIHelp')}
               </p>
 
               <div style={{
@@ -1496,6 +1500,7 @@ export default function ZephyeFullScreen({
                         onSpeak={() => speakText(msg.content)}
                         isSpeaking={isSpeaking}
                         onCopy={() => copyText(msg.content)}
+                        t={t}
                       />
                     ) : (
                       <div className="msg-content">{String(msg.content)}</div>
@@ -1525,7 +1530,7 @@ export default function ZephyeFullScreen({
 
           {isLoading && !streamingText && (
             <div style={{ display: 'flex', marginBottom: 12 }}>
-              <div className="chat-bubble ai text-muted">Thinking...</div>
+              <div className="chat-bubble ai text-muted">{t('chat.thinking')}</div>
             </div>
           )}
 
@@ -1546,7 +1551,7 @@ export default function ZephyeFullScreen({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAsk(input)}
-              placeholder={ghostText || "Ask Zephye..."}
+              placeholder={ghostText || t('placeholders.askZephye')}
               disabled={isLoading}
             />
             <button className="mic-btn" onClick={startListening} title="Voice input">
