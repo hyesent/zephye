@@ -1,3 +1,5 @@
+import { useTranslation } from './utils/translation'
+
 function MetricItem({ label, value, color }) {
   return (
     <div
@@ -62,103 +64,100 @@ export default function MetricGroup({
   weather,
   todayStats,
   aqi,
-  getAqiLevel
+  getAqiLevel,
+  uiLanguage = 'en'
 }) {
+  const { t } = useTranslation(uiLanguage)
+
   return (
     <>
-      <Group title="Atmosphere">
+      <Group title={t('labels.atmosphere')}>
         <MetricItem
-          label="AQI"
-          value={aqi?.us_aqi?? '--'}
+          label={t('labels.aqi')}
+          value={aqi?.us_aqi ?? '--'}
           color={getAqiLevel(aqi?.us_aqi).color}
         />
 
         <MetricItem
-          label="Humidity"
+          label={t('labels.humidity')}
           value={`${weather?.current?.relative_humidity_2m || 0}%`}
         />
 
         <MetricItem
-          label="Pressure"
+          label={t('labels.pressure')}
           value={`${Math.round(weather?.current?.pressure_msl || 0)} hPa`}
         />
 
         <MetricItem
-          label="Visibility"
+          label={t('labels.visibility')}
           value={`${Math.round((weather?.current?.visibility || 10000)/1000)} km`}
         />
       </Group>
 
-      <Group title="Sky">
+      <Group title={t('labels.sky')}>
         <MetricItem
-          label="UV Index"
+          label={t('labels.uv')}
           value={weather?.daily?.uv_index_max?.[0] || 0}
         />
 
         <MetricItem
-          label="Sunshine"
+          label={t('labels.sunshine')}
           value={`${todayStats?.sunHours || 0}h`}
         />
 
         <MetricItem
-          label="Rain"
+          label={t('labels.rain')}
           value={`${todayStats?.rainHours || 0}h`}
         />
 
         <MetricItem
-          label="Thunder"
+          label={t('labels.thunder')}
           value={`${todayStats?.thunderHours || 0}h`}
         />
       </Group>
 
-      <Group title="Wind">
+      <Group title={t('labels.windLabel')}>
         <MetricItem
-          label="Wind"
+          label={t('labels.wind')}
           value={`${Math.round(weather?.current?.wind_speed_10m || 0)} km/h`}
         />
 
         <MetricItem
-          label="Wind Gust"
+          label={t('labels.windGust')}
           value={`${Math.round(todayStats?.windGust || 0)} km/h`}
         />
 
         <MetricItem
-          label="Feels Like"
+          label={t('labels.feelsLike')}
           value={`${Math.round(todayStats?.feelsLike || 0)}°`}
         />
       </Group>
 
-      <Group title="Sun">
+      <Group title={t('labels.sun')}>
         <MetricItem
-          label="Sunrise"
+          label={t('labels.sunrise')}
           value={
             weather?.daily?.sunrise?.[0]
-           ? new Date(weather.daily.sunrise[0]).toLocaleTimeString(
-                  'en-US',
-                  {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  }
-                )
+              ? new Date(weather.daily.sunrise[0]).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
               : '--'
           }
         />
 
         <MetricItem
-          label="Sunset"
+          label={t('labels.sunset')}
           value={
             weather?.daily?.sunset?.[0]
-           ? new Date(weather.daily.sunset[0]).toLocaleTimeString(
-                  'en-US',
-                  {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  }
-                )
+              ? new Date(weather.daily.sunset[0]).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
               : '--'
           }
         />
       </Group>
     </>
   )
-      }
+}
