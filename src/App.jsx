@@ -1405,7 +1405,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                 ))}
               </div>
 
-              {/* 🔥 Badge row with share icon */}
+              
               <div className="flex gap-2 flex-wrap items-center" style={{ overflow: 'visible' }}>
                 {stormInfo && (
                   <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>
@@ -1450,15 +1450,10 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                           Air Quality
                         </div>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">{t('labels.aqi') || 'AQI'} (US)</span>
+                          <span className="text-muted">{t('labels.aqi') || 'AQI'}</span>
                           <span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span>
                         </div>
-                        {aqi?.european_aqi != null && (
-                          <div className="flex justify-between mb-2 text-sm">
-                            <span className="text-muted">AQI (EU)</span>
-                            <span className="font-bold">{aqi.european_aqi}</span>
-                          </div>
-                        )}
+                
                         {aqi?.pm2_5 != null && (
                           <div className="flex justify-between mb-2 text-sm">
                             <span className="text-muted">PM2.5</span>
