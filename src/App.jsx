@@ -1,26 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { QUOTES } from './data/quotes.js'
 import { AudioProvider } from './AudioContext.jsx'
 import WeatherManTab from './WeatherManTab.jsx'
 import ZephyeFullScreen from './ZephyeFullScreen.jsx'
 import MapTab from './MapTab.jsx'
 import WeatherShareModal from './WeatherShareModal'
+import ScheduleToast from './ScheduleToast'
+import ScheduleAskPanel from './ScheduleAskPanel'
+import { checkDueSchedules } from './scheduleEngine'
 import { getLang, getVoiceForLocation } from './zephyeHelpers'
 import { LanguageProvider, useLanguage, useTranslation } from './utils/translation'
-
-import shareBg1 from './assets/images/share 1.jpg'
-import shareBg2 from './assets/images/share 2.jpg'
-import shareBg3 from './assets/images/share 3.jpg'
-import shareBg4 from './assets/images/share 4.jpg'
-import shareBg5 from './assets/images/share 5.jpg'
-import shareBg6 from './assets/images/share 6.jpg'
-import shareBg7 from './assets/images/share 7.jpg'
-import shareBg8 from './assets/images/share 8.jpg'
-import shareBg9 from './assets/images/share 9.jpg'
-import shareBg10 from './assets/images/share 10.jpg'
-import shareBg11 from './assets/images/share 11.jpg'
-import shareBg12 from './assets/images/share 12.jpg'
-import shareBg13 from './assets/images/share 13.jpg'
 
 const shareBackgrounds = [
   shareBg1, shareBg2, shareBg3, shareBg4, shareBg5, shareBg6, shareBg7,
@@ -600,6 +589,12 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
   const [showMapModal, setShowMapModal] = useState(false)
   const [shareModal, setShareModal] = useState({ isOpen: false, content: '', author: '', type: '' })
   const [weatherShare, setWeatherShare] = useState({ isOpen: false, type: 'current' })
+     // ─── SCHEDULE ENGINE STATE ────────────────────────────────────────────
+  const [firedSchedules, setFiredSchedules] = useState([])
+  const [showSchedulesPanel, setShowSchedulesPanel] = useState(false)
+  const [editingScheduleId, setEditingScheduleId] = useState(null)
+  const [prefilledScheduleData, setPrefilledScheduleData] = useState(null)
+  const scheduleCheckRef = useRef(null)
 
   // Auto-create Home on first location detection
   useEffect(() => {
@@ -661,6 +656,56 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
     }
   }, [weather, isLoading])
 
+  // ─── SCHEDULE CHECK: mount + every 60s ────────────────────────────────
+  useEffect(() => {
+    let mounted = true
+
+  const runCheck = async () => {
+    try {
+      const fired = await checkDueSchedules()
+      if (!mounted) return
+      if (fired && fired.length > 0) {
+        setFiredSchedules(prev => [...prev, ...fired])
+
+        // Optional browser notification
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          for (const f of fired) {
+            try {
+              new Notification('Zephye — Schedule Ready', {
+                body: f.toastSummary || 'Your scheduled check is ready.',
+                tag: f.schedule.id,
+                icon: '/favicon.ico'
+              })
+            } catch {}
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[App] schedule check failed:', e)
+    }
+  }
+
+  runCheck()
+  scheduleCheckRef.current = setInterval(runCheck, 60000)
+
+  return () => {
+    mounted = false
+    if (scheduleCheckRef.current) clearInterval(scheduleCheckRef.current)
+  }
+}, [])
+
+// ─── REQUEST NOTIFICATION PERMISSION (once) ───────────────────────────
+useEffect(() => {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission === 'default') {
+    // Ask after 5 seconds so it's not aggressive on first load
+    const timer = setTimeout(() => {
+      Notification.requestPermission().catch(() => {})
+    }, 5000)
+    return () => clearTimeout(timer)
+  }
+}, [])
+
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
   const shareQuote = (text, author) => {
@@ -698,7 +743,6 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
           name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
           lat: r.latitude, lon: r.longitude,
           country_code: r.country_code?.toUpperCase() || 'US',
-          // 🆕 elevation + population from geocoding API
           elevation: r.elevation ?? null,
           population: r.population ?? null
         })))
@@ -1115,6 +1159,52 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
         aqi={aqi}
         uiLanguage={uiLanguage}
       />
+      
+       
+<ScheduleToast
+  firedResults={firedSchedules}
+  onDismiss={() => setFiredSchedules([])}
+  onEdit={(scheduleId) => {
+    setEditingScheduleId(scheduleId)
+    setShowSchedulesPanel(true)
+  }}
+  onOpenSchedules={() => setShowSchedulesPanel(true)}
+  onCopyToChat={(firedResult) => {
+    // Push merged result into Zephye chat
+    // The chat is inside ZephyeFullScreen — if it's closed, open it
+    setTab('ai')
+    // Small delay so Zephye opens first
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('zephye:pushMessage', {
+        detail: {
+          role: 'assistant',
+          content: firedResult.merged
+        }
+      }))
+    }, 400)
+  }}
+/>
+
+{/* ─── Schedule Ask Panel ─────────────────────────────────────────── */}
+{showSchedulesPanel && (
+  <ScheduleAskPanel
+    onClose={() => {
+      setShowSchedulesPanel(false)
+      setEditingScheduleId(null)
+      setPrefilledScheduleData(null)
+    }}
+    savedLocations={savedLocations}
+    homeLocation={
+      homeLocation
+        ? { lat: homeLocation.lat, lon: homeLocation.lon, label: homeLocation.label || homeLocation.name }
+        : location
+        ? { lat: location.lat, lon: location.lon, label: 'Home' }
+        : null
+    }
+    prefilledData={prefilledScheduleData}
+    editScheduleId={editingScheduleId}
+  />
+)}                  
 
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
