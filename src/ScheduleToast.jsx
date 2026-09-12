@@ -7,6 +7,7 @@ import {
   formatScheduleTime,
   getCountdown
 } from './scheduleEngine'
+import { useTranslation } from './utils/translation'
 
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
@@ -62,20 +63,44 @@ const ExpandIcon = () => (
 )
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── INTENT LABEL KEYS ───────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+const INTENT_LABEL_KEY = {
+  route: 'schedule.pillRoute',
+  traffic: 'schedule.pillTraffic',
+  weather: 'schedule.pillWeather',
+  clothing: 'schedule.pillClothing',
+  events: 'schedule.pillEvents',
+  sports: 'schedule.pillSports',
+  health: 'schedule.pillHealth',
+  driving: 'schedule.pillDriving',
+  pets: 'schedule.pillPets',
+  energy: 'schedule.pillEnergy',
+  stargazing: 'schedule.pillStargazing',
+  farming: 'schedule.pillFarming',
+  photography: 'schedule.pillPhotography',
+  lifestyle: 'schedule.pillLifestyle',
+  diy: 'schedule.pillDIY',
+  traveling: 'schedule.pillTravel',
+  skin_hair: 'schedule.pillBeauty'
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── SHIFT PICKER ────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-function ShiftPicker({ schedule, onConfirm, onCancel }) {
+function ShiftPicker({ schedule, onConfirm, onCancel, t }) {
   const [customDate, setCustomDate] = useState('')
   const [customTime, setCustomTime] = useState('')
 
   const quickShifts = [
-    { label: '+15 min', ms: 15 * 60 * 1000 },
-    { label: '+30 min', ms: 30 * 60 * 1000 },
-    { label: '+1 hour', ms: 60 * 60 * 1000 },
-    { label: '+2 hours', ms: 2 * 60 * 60 * 1000 },
-    { label: '+1 day', ms: 24 * 60 * 60 * 1000 },
-    { label: '+1 week', ms: 7 * 24 * 60 * 60 * 1000 }
+    { labelKey: 'schedule.min15Plus', ms: 15 * 60 * 1000 },
+    { labelKey: 'schedule.min30Plus', ms: 30 * 60 * 1000 },
+    { labelKey: 'schedule.hour1Plus', ms: 60 * 60 * 1000 },
+    { labelKey: 'schedule.hours2Plus', ms: 2 * 60 * 60 * 1000 },
+    { labelKey: 'schedule.day1Plus', ms: 24 * 60 * 60 * 1000 },
+    { labelKey: 'schedule.week1Plus', ms: 7 * 24 * 60 * 60 * 1000 }
   ]
 
   const handleQuickShift = (ms) => {
@@ -91,9 +116,9 @@ function ShiftPicker({ schedule, onConfirm, onCancel }) {
 
   return (
     <div className="shift-picker">
-      <div className="shift-title">Shift to when?</div>
+      <div className="shift-title">{t('schedule.shiftToWhen')}</div>
       <div className="shift-original">
-        Original: {formatScheduleTime(schedule.targetTime)}
+        {t('schedule.original')}: {formatScheduleTime(schedule.targetTime)}
       </div>
 
       <div className="shift-quick">
@@ -103,7 +128,7 @@ function ShiftPicker({ schedule, onConfirm, onCancel }) {
             className="shift-chip"
             onClick={() => handleQuickShift(q.ms)}
           >
-            {q.label}
+            {t(q.labelKey)}
           </button>
         ))}
       </div>
@@ -124,13 +149,15 @@ function ShiftPicker({ schedule, onConfirm, onCancel }) {
       </div>
 
       <div className="shift-actions">
-        <button className="toast-btn secondary" onClick={onCancel}>Cancel</button>
+        <button className="toast-btn secondary" onClick={onCancel}>
+          {t('buttons.cancel')}
+        </button>
         <button 
           className="toast-btn primary" 
           onClick={handleCustomShift}
           disabled={!customDate || !customTime}
         >
-          Confirm
+          {t('schedule.confirm')}
         </button>
       </div>
     </div>
@@ -142,12 +169,16 @@ function ShiftPicker({ schedule, onConfirm, onCancel }) {
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export default function ScheduleToast({ 
-  firedResults,      // array of { schedule, merged, toastSummary, results }
-  onDismiss,         // callback when toast fully closes
-  onEdit,            // callback to open edit panel (scheduleId)
-  onOpenSchedules,   // callback to open schedules page
-  onCopyToChat       // callback to push merged result into chat
+  firedResults,
+  onDismiss,
+  onEdit,
+  onOpenSchedules,
+  onCopyToChat,
+  uiLanguage = 'en'
 }) {
+  // Get home language for UI chrome (buttons, labels)
+  const { t } = useTranslation(uiLanguage)
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showFull, setShowFull] = useState(false)
   const [showShift, setShowShift] = useState(false)
@@ -155,7 +186,6 @@ export default function ScheduleToast({
   const current = firedResults?.[currentIndex]
   const schedule = current?.schedule
 
-  // Auto-advance if multiple toasts queued
   useEffect(() => {
     if (!firedResults || firedResults.length === 0) return
     setShowFull(false)
@@ -207,7 +237,6 @@ export default function ScheduleToast({
 
   const advance = () => {
     if (firedResults.length > 1) {
-      // Remove current from queue
       const remaining = firedResults.filter((_, i) => i !== currentIndex)
       if (remaining.length > 0) {
         firedResults.splice(0, firedResults.length, ...remaining)
@@ -220,28 +249,7 @@ export default function ScheduleToast({
     }
   }
 
-  const intentLabels = (schedule.intents || []).map(id => {
-    const map = {
-      route: 'Route',
-      traffic: 'Traffic',
-      weather: 'Weather',
-      clothing: 'Clothing',
-      events: 'Events',
-      sports: 'Sports',
-      health: 'Health',
-      driving: 'Driving',
-      pets: 'Pets',
-      energy: 'Energy',
-      stargazing: 'Stargazing',
-      farming: 'Farming',
-      photography: 'Photography',
-      lifestyle: 'Lifestyle',
-      diy: 'DIY',
-      traveling: 'Travel',
-      skin_hair: 'Beauty'
-    }
-    return map[id] || id
-  })
+  const intentLabels = (schedule.intents || []).map(id => t(INTENT_LABEL_KEY[id] || id))
 
   // ─── RENDER ────────────────────────────────────────────────────────
 
@@ -254,9 +262,9 @@ export default function ScheduleToast({
         <div className="toast-header">
           <div className="toast-header-left">
             <ClockIcon />
-            <span className="toast-title">Schedule Ready</span>
+            <span className="toast-title">{t('schedule.ready')}</span>
           </div>
-          <button className="toast-close" onClick={handleDismiss} title="Dismiss">
+          <button className="toast-close" onClick={handleDismiss} title={t('schedule.statusDismissed')}>
             <CloseIcon />
           </button>
         </div>
@@ -264,14 +272,14 @@ export default function ScheduleToast({
         {/* Queue indicator */}
         {firedResults.length > 1 && (
           <div className="toast-queue-badge">
-            {currentIndex + 1} of {firedResults.length}
+            {currentIndex + 1} {t('schedule.of')} {firedResults.length}
           </div>
         )}
 
         {/* Location + Time */}
         <div className="toast-meta">
           <div className="toast-location">
-            📍 {schedule.location?.label || 'Unknown'}
+            📍 {schedule.location?.label || t('weather.unknown')}
           </div>
           <div className="toast-time">
             {formatScheduleTime(schedule.targetTime)}
@@ -285,9 +293,9 @@ export default function ScheduleToast({
           ))}
         </div>
 
-        {/* Summary */}
+        {/* Summary (dynamically translated result content) */}
         <div className="toast-summary">
-          {current.toastSummary || 'Your scheduled check is ready.'}
+          {current.toastSummary || t('schedule.yourScheduledCheck')}
         </div>
 
         {/* Full content (expandable) */}
@@ -300,7 +308,7 @@ export default function ScheduleToast({
               className="toast-btn ghost" 
               onClick={handleOpenInChat}
             >
-              Open in chat →
+              {t('schedule.openInChat')} →
             </button>
           </div>
         )}
@@ -311,6 +319,7 @@ export default function ScheduleToast({
             schedule={schedule}
             onConfirm={handleShiftConfirm}
             onCancel={() => setShowShift(false)}
+            t={t}
           />
         )}
 
@@ -322,25 +331,25 @@ export default function ScheduleToast({
               onClick={handleViewFull}
             >
               <ExpandIcon />
-              {showFull ? 'Hide Full' : 'View Full'}
+              {showFull ? t('schedule.hideFull') : t('schedule.viewFull')}
             </button>
 
             <div className="toast-actions">
               <button className="toast-btn done" onClick={handleDone}>
                 <CheckIcon />
-                Done
+                {t('schedule.done')}
               </button>
               <button className="toast-btn edit" onClick={handleEdit}>
                 <EditIcon />
-                Edit
+                {t('buttons.edit')}
               </button>
               <button className="toast-btn shift" onClick={handleShift}>
                 <ShiftIcon />
-                Shift
+                {t('schedule.shift')}
               </button>
               <button className="toast-btn cancel" onClick={handleCancel}>
                 <CancelIcon />
-                Cancel
+                {t('schedule.cancel')}
               </button>
             </div>
           </>
@@ -598,7 +607,7 @@ export default function ScheduleToast({
           cursor: not-allowed;
         }
 
-        /* ─── Shift Picker ─────────────────────────────────────────── */
+        /* Shift Picker */
         .shift-picker {
           margin-top: 8px;
           padding: 12px;
