@@ -15,6 +15,12 @@ import {
 
 import { useTranslation } from './utils/translation'
 
+import { 
+  isScheduleCommand, 
+  detectFutureTime,
+  createSchedule
+} from './scheduleEngine'
+
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
 const BackIcon = () => (
@@ -92,6 +98,27 @@ const ChevronDownIcon = () => (
 const ChevronUpIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="18 15 12 9 6 15"/>
+  </svg>
+)
+
+const ClockIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+)
+
+const PlusIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+)
+
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 )
 
@@ -706,6 +733,9 @@ export default function ZephyeFullScreen({
   // Menu State
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
+  // Schedule State
+  const [futureTimeCard, setFutureTimeCard] = useState(null)
+
   // ─── Determine which voice to use ──────────────────────────────────────
   const voiceToUse = useMemo(() => {
     if (detectedLanguage !== 'en' && detectedLanguage !== lang) {
@@ -715,7 +745,7 @@ export default function ZephyeFullScreen({
     return propVoiceToUse
   }, [detectedLanguage, genderPref, propVoiceToUse, lang])
 
-  // ─── Detect language on input change ──────────────────────────────────
+  // ─── Detect language + future time on input change ────────────────────
   useEffect(() => {
     if (input && input.trim().length > 2) {
       const detected = detectLanguageFromText(input)
@@ -724,6 +754,33 @@ export default function ZephyeFullScreen({
       } else {
         setDetectedLanguage('en')
       }
+
+      // ─── Future time detection ─────────────────────────────────────
+      const futureInfo = detectFutureTime(input)
+      if (futureInfo && futureInfo.hasFutureTime && input.trim().length > 8) {
+        const q = input.toLowerCase()
+        const isLikelySchedule = (
+          q.includes('going') || q.includes('trip') || q.includes('travel') ||
+          q.includes('event') || q.includes('meeting') || q.includes('visit') ||
+          q.includes('drive') || q.includes('commute') || q.includes('fly') ||
+          q.includes('party') || q.includes('wedding') || q.includes('work') ||
+          q.includes('tomorrow') || q.includes('next')
+        )
+        
+        if (isLikelySchedule) {
+          setFutureTimeCard({
+            question: input,
+            targetTime: futureInfo.targetTime,
+            phrase: futureInfo.phrase
+          })
+        } else {
+          setFutureTimeCard(null)
+        }
+      } else {
+        setFutureTimeCard(null)
+      }
+    } else {
+      setFutureTimeCard(null)
     }
   }, [input])
 
@@ -797,13 +854,13 @@ export default function ZephyeFullScreen({
   }), [weather, aqi, location, moonPhase, savedLocations])
 
   const aqiLevel = useMemo(() => {
-    if (aqi == null) return { label: 'Unknown', color: '#6b7280' }
+    if (aqi == null) return { label: t('weather.unknown'), color: '#6b7280' }
     if (aqi <= 50) return { label: 'Good', color: '#22c55e' }
     if (aqi <= 100) return { label: 'Moderate', color: '#eab308' }
     if (aqi <= 150) return { label: 'Unhealthy for sensitive groups', color: '#f97316' }
     if (aqi <= 200) return { label: 'Unhealthy', color: '#ef4444' }
     return { label: 'Hazardous', color: '#dc2626' }
-  }, [aqi])
+  }, [aqi, t])
 
   // ─── Effects ──────────────────────────────────────────────────────────
 
@@ -844,12 +901,13 @@ export default function ZephyeFullScreen({
     }
     
     const suggestionsList = [
-      'Ask "stargazing tonight"',
-      'Try "what should I wear"',
-      'Ask "will it rain"',
-      'Compare "today vs tomorrow"',
-      'Ask "biking vs running today?"',
-      'Try "drive or bike to work?"'
+      t('chat.askStargazing'),
+      t('chat.tryWear'),
+      t('chat.askRain'),
+      t('chat.compareToday'),
+      t('chat.askBiking'),
+      t('chat.tryDrive'),
+      t('chat.typeSchedules')
     ]
     
     let i = 0
@@ -863,11 +921,23 @@ export default function ZephyeFullScreen({
     return () => {
       if (ghostIntervalRef.current) clearInterval(ghostIntervalRef.current)
     }
-  }, [input])
+  }, [input, t])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
+
+  // ─── Listen for pushMessage event from App.jsx ────────────────────────
+  useEffect(() => {
+    const handlePushMessage = (e) => {
+      const { role, content } = e.detail || {}
+      if (!role || !content) return
+      setMessages(prev => [...prev, { role, content }])
+    }
+
+    window.addEventListener('zephye:pushMessage', handlePushMessage)
+    return () => window.removeEventListener('zephye:pushMessage', handlePushMessage)
+  }, [])
 
   // ─── Speaking ─────────────────────────────────────────────────────────
 
@@ -877,7 +947,6 @@ export default function ZephyeFullScreen({
       return
     }
     
-    // Extract text from structured response if needed
     let speakableText = text
     if (typeof text === 'object' && text !== null) {
       speakableText = `${text.verdict || ''} ${text.summary || ''} ${text.note || ''}`
@@ -953,14 +1022,13 @@ export default function ZephyeFullScreen({
         const time1Data = getTimeShiftedData(data, comparison.time1, question)
         const time2Data = getTimeShiftedData(data, comparison.time2, question)
         
-        // Need to import getWeatherAdvice directly for comparisons
         const { getWeatherAdvice } = await import('./data/BasicWeatherAdvice.js')
         const response1 = await getWeatherAdvice(time1Data, question)
         const response2 = await getWeatherAdvice(time2Data, question)
         
         return {
           type: 'comparison',
-          title: `${comparison.time1} vs ${comparison.time2}`,
+          title: `${comparison.time1} ${t('zephye.vsLabel')} ${comparison.time2}`,
           items: [
             { label: comparison.time1, content: response1 },
             { label: comparison.time2, content: response2 }
@@ -989,7 +1057,7 @@ export default function ZephyeFullScreen({
         if (results.length > 0) {
           return {
             type: 'comparison',
-            title: 'Location Comparison',
+            title: t('zephye.locationComparison'),
             items: results
           }
         }
@@ -1000,7 +1068,6 @@ export default function ZephyeFullScreen({
     const detectedIntents = detectIntents(q)
     
     if (detectedIntents.length === 0) {
-      // Fallback to weather advice
       const { getWeatherAdvice } = await import('./data/BasicWeatherAdvice.js')
       const response = await getWeatherAdvice(data, question)
       return response
@@ -1014,16 +1081,14 @@ export default function ZephyeFullScreen({
         ? await intent.fn(data, question)
         : intent.fn(data, question)
       
-      // If response is already structured, return it
       if (response && typeof response === 'object' && response.verdict) {
         return response
       }
       
-      // If response is string, wrap it
       return {
-        verdict: `Here's what I found about ${intent.section || intent.name}`,
+        verdict: `${t('zephye.hereIsWhatIFoundAbout')} ${intent.section || intent.name}`,
         summary: String(response).slice(0, 200),
-        note: `Check the full ${intent.section || intent.name} details below.`,
+        note: t('zephye.checkFullDetails'),
         details: [],
         fullText: String(response)
       }
@@ -1072,9 +1137,9 @@ export default function ZephyeFullScreen({
     }
 
     return {
-      verdict: 'Here\'s what I found',
+      verdict: t('zephye.hereIsWhatIFound'),
       summary: mergedSummary.trim(),
-      note: 'Multiple topics covered. Check each section below for details.',
+      note: t('zephye.multipleTopics'),
       details: mergedDetails.flatMap(d => d.details || []),
       fullText: validResults.map(r => {
         const content = r.response
@@ -1083,12 +1148,20 @@ export default function ZephyeFullScreen({
         return JSON.stringify(content)
       }).join('\n\n---\n\n')
     }
-  }, [weatherData, savedLocations])
+  }, [weatherData, savedLocations, t])
 
   // ─── Handle Ask ──────────────────────────────────────────────────────
 
   const handleAsk = useCallback(async (question) => {
     if (!question.trim()) return
+
+    // ─── Schedule command detection ─────────────────────────────────────
+    if (isScheduleCommand(question)) {
+      setInput('')
+      setFutureTimeCard(null)
+      window.dispatchEvent(new CustomEvent('zephye:openSchedules'))
+      return
+    }
 
     const detectedLang = detectLanguageFromText(question)
     if (detectedLang !== 'en') {
@@ -1110,6 +1183,7 @@ export default function ZephyeFullScreen({
       originalLang: detectedLang
     }])
     setInput('')
+    setFutureTimeCard(null)
     setIsLoading(true)
     setStreamingText('')
 
@@ -1119,7 +1193,6 @@ export default function ZephyeFullScreen({
       let finalAnswer = answer
       if (needsTranslation) {
         setIsTranslating(true)
-        // Handle structured translation
         if (typeof answer === 'object' && answer.verdict) {
           finalAnswer = {
             ...answer,
@@ -1169,7 +1242,7 @@ export default function ZephyeFullScreen({
 
     } catch (e) {
       console.error('Error:', e)
-      const fallback = `Error getting advice. Current temp is ${weatherData.temp}°C with ${weatherData.condition}.`
+      const fallback = `${t('zephye.errorGettingAdvice')} ${weatherData.temp}°C ${t('zephye.withCondition')} ${weatherData.condition}.`
       const finalFallback = needsTranslation 
         ? await translateText(fallback, detectedLang)
         : fallback
@@ -1177,7 +1250,7 @@ export default function ZephyeFullScreen({
     } finally {
       setIsLoading(false)
     }
-  }, [routeQuestion, weatherData, voiceToUse, speakText, lang])
+  }, [routeQuestion, weatherData, voiceToUse, speakText, lang, t])
 
   // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
   // ─── RENDER ──────────────────────────────────────────────────────────
@@ -1366,6 +1439,34 @@ export default function ZephyeFullScreen({
                     {showOriginal ? t('buttons.hideOriginal') : t('buttons.showOriginal')}
                   </button>
                 )}
+
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+
+                <button
+                  onClick={() => { 
+                    window.dispatchEvent(new CustomEvent('zephye:openSchedules'))
+                    setIsMenuOpen(false)
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <ClockIcon />
+                  {t('schedule.menuItem')}
+                </button>
               </div>
             )}
           </div>
@@ -1471,10 +1572,10 @@ export default function ZephyeFullScreen({
                   <div className={`chat-bubble ${msg.role}`}>
                     {msg.role === 'assistant' && (
                       <div className="msg-actions-top">
-                        <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : 'Speak'}>
+                        <button className="speak-btn" onClick={() => speakText(msg.content)} title={isSpeaking ? 'Stop' : t('buttons.speak')}>
                           {isSpeaking ? <StopIcon /> : <SpeakIcon />}
                         </button>
-                        <button className="speak-btn" onClick={() => copyText(msg.content)} title="Copy">
+                        <button className="speak-btn" onClick={() => copyText(msg.content)} title={t('buttons.copy')}>
                           <CopyIcon />
                         </button>
                       </div>
@@ -1537,6 +1638,91 @@ export default function ZephyeFullScreen({
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {/* ─── FUTURE TIME CARD ─────────────────────────────────────────── */}
+      {futureTimeCard && (
+        <div style={{
+          maxWidth: '768px',
+          margin: '0 auto',
+          padding: '0 16px 12px',
+          width: '100%'
+        }}>
+          <div style={{
+            background: 'rgba(56,189,248,0.08)',
+            border: '1px solid rgba(56,189,248,0.25)',
+            borderRadius: '12px',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{ 
+                fontSize: '12px', 
+                color: 'var(--accent)', 
+                fontWeight: '600',
+                marginBottom: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <ClockIcon />
+                {t('schedule.scheduleThisAsk')}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {t('schedule.firesAutomatically')}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('zephye:prefillSchedule', {
+                    detail: {
+                      question: futureTimeCard.question,
+                      targetTime: futureTimeCard.targetTime
+                    }
+                  }))
+                  setFutureTimeCard(null)
+                  setInput('')
+                }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  background: 'var(--accent)',
+                  color: 'var(--bg-deep)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <PlusIcon />
+                {t('schedule.setUp')}
+              </button>
+              <button
+                onClick={() => setFutureTimeCard(null)}
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── INPUT ────────────────────────────────────────────────────────── */}
       <div className="ai-input-wrap" style={{
@@ -1721,14 +1907,6 @@ export default function ZephyeFullScreen({
           color: var(--text-muted);
         }
 
-        .aqi-badge {
-          background: rgba(255,255,255,0.06);
-          padding: 0 8px;
-          border-radius: 12px;
-          font-size: 10px;
-          font-weight: 500;
-        }
-
         .ai-body::-webkit-scrollbar {
           width: 4px;
         }
@@ -1847,36 +2025,6 @@ export default function ZephyeFullScreen({
           background: rgba(255,255,255,0.03);
           padding: 12px;
           border-radius: 8px;
-        }
-
-        /* ─── Comparison Styles ─────────────────────────────────────────── */
-        .comparison-container {
-          width: 100%;
-        }
-
-        .comparison-title {
-          font-weight: 600;
-          font-size: 15px;
-          margin-bottom: 12px;
-        }
-
-        .comparison-item {
-          margin-bottom: 12px;
-          padding: 12px;
-          background: rgba(255,255,255,0.03);
-          border-radius: 8px;
-          border-left: 2px solid var(--accent);
-        }
-
-        .comparison-item-label {
-          font-weight: 600;
-          font-size: 13px;
-          margin-bottom: 4px;
-          color: var(--text-muted);
-        }
-
-        .comparison-item-content {
-          font-size: 14px;
         }
       `}</style>
     </div>
