@@ -11,6 +11,19 @@ import { checkDueSchedules } from './scheduleEngine'
 import { getLang, getVoiceForLocation } from './zephyeHelpers'
 import { LanguageProvider, useLanguage, useTranslation } from './utils/translation'
 
+import shareBg1 from './assets/images/share 1.jpg'
+import shareBg2 from './assets/images/share 2.jpg'
+import shareBg3 from './assets/images/share 3.jpg'
+import shareBg4 from './assets/images/share 4.jpg'
+import shareBg5 from './assets/images/share 5.jpg'
+import shareBg6 from './assets/images/share 6.jpg'
+import shareBg7 from './assets/images/share 7.jpg'
+import shareBg8 from './assets/images/share 8.jpg'
+import shareBg9 from './assets/images/share 9.jpg'
+import shareBg10 from './assets/images/share 10.jpg'
+import shareBg11 from './assets/images/share 11.jpg'
+import shareBg12 from './assets/images/share 12.jpg'
+import shareBg13 from './assets/images/share 13.jpg'
 const shareBackgrounds = [
   shareBg1, shareBg2, shareBg3, shareBg4, shareBg5, shareBg6, shareBg7,
   shareBg8, shareBg9, shareBg10, shareBg11, shareBg12, shareBg13
