@@ -44,6 +44,7 @@ const FONT_FAMILIES = [
 
 const getRandomFont = () => FONT_FAMILIES[Math.floor(Math.random() * FONT_FAMILIES.length)]
 
+// ─── SVG ICONS ────────────────────────────────────────────────────────
 const LocationIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -88,8 +89,9 @@ const CloseIcon = () => (
   </svg>
 )
 
-const ShareWeatherIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+// 🔥 THE SHARE ICON — iOS style, used everywhere
+const ShareIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
     <polyline points="16 6 12 2 8 6"/>
     <line x1="12" y1="2" x2="12" y2="15"/>
@@ -98,15 +100,22 @@ const ShareWeatherIcon = () => (
 
 // ============================================================================
 // SHARE MODAL (Quote/Fact)
+// 🔥 FIX: Random background/font regenerate every time modal opens
 // ============================================================================
 
 function ShareModal({ isOpen, onClose, content, author, type }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [backgroundIndex, setBackgroundIndex] = useState(0)
+  const [fontFamily, setFontFamily] = useState(FONT_FAMILIES[0])
 
-  const getRandomBackground = () => Math.floor(Math.random() * shareBackgrounds.length)
-  const [backgroundIndex] = useState(getRandomBackground)
-  const [fontFamily] = useState(getRandomFont())
+  // 🔥 Regenerate random bg/font every time the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setBackgroundIndex(Math.floor(Math.random() * shareBackgrounds.length))
+      setFontFamily(FONT_FAMILIES[Math.floor(Math.random() * FONT_FAMILIES.length)])
+    }
+  }, [isOpen])
 
   const generateImageDataUrl = () => {
     return new Promise((resolve, reject) => {
@@ -272,7 +281,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Share failed:', err)
-        alert('Failed to share image. Please use "Download Image" instead.')
       }
     } finally {
       setIsGenerating(false)
@@ -552,7 +560,7 @@ function HourlyModal({ isOpen, onClose, hourlyData, locationName }) {
 }
 
 // ============================================================================
-// APP CONTENT INNER (has access to uiLanguage)
+// APP CONTENT INNER
 // ============================================================================
 
 function AppContentInner({ homeLocation, setHomeLocation }) {
@@ -596,7 +604,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
   const [shareModal, setShareModal] = useState({ isOpen: false, content: '', author: '', type: '' })
   const [weatherShare, setWeatherShare] = useState({ isOpen: false, type: 'current' })
 
-  // ─── Auto-create Home on first location detection ─────────────────
+  // Auto-create Home on first location detection
   useEffect(() => {
     if (!homeLocation && location && location.name && location.name !== 'Lagos, Nigeria' && location.country_code) {
       const home = { ...location, label: 'Home', id: Date.now() }
@@ -651,7 +659,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
 
   useEffect(() => {
     if (!hasWelcomed && weather && !isLoading) {
-      setTimeout(() => showToast(t('toasts.welcome')), 1000)
+      setTimeout(() => showToast(t('toasts.welcome') || 'Welcome to Zephye'), 1000)
       setHasWelcomed(true)
     }
   }, [weather, isLoading])
@@ -722,13 +730,13 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
     setEditCity('')
     setSearchResults([])
     setEditGPSError(null)
-    showToast(t('toasts.locationUpdated'))
+    showToast(t('toasts.locationUpdated') || 'Location updated')
   }
 
   const deleteLocation = (locId) => {
     setSavedLocations(prev => prev.filter(loc => loc.id !== locId))
     if (editingLocId === locId) setEditingLocId(null)
-    showToast(t('toasts.locationRemoved'))
+    showToast(t('toasts.locationRemoved') || 'Location removed')
   }
 
   const switchToSavedLocation = (savedLoc) => {
@@ -768,7 +776,6 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
     showToast('Back to original location')
   }
 
-  // 🔥 Duplicate-aware save (Home → Home 2 → Home 3...)
   const saveCurrentLocation = () => {
     const exists = savedLocations.find(loc =>
       Math.abs(loc.lat - location.lat) < 0.01 &&
@@ -810,7 +817,6 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
     showToast(t('toasts.locationSaved') || 'Location saved. Edit label to name it.')
   }
 
-  // 🔥 GPS capture for edit form
   const captureCurrentGPSForEdit = () => {
     if (!navigator.geolocation) {
       setEditGPSError('GPS not supported')
@@ -975,7 +981,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
     try {
       setIsLoading(true)
       const [weatherRes, aqiRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset&timezone=auto`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset,precipitation_probability_max&timezone=auto`),
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`)
       ])
       if (weatherRes.ok) {
@@ -1353,35 +1359,17 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                   </div>
                 </button>
 
-                <div className="text-right" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <button
-                    onClick={() => setWeatherShare({ isOpen: true, type: 'current' })}
-                    className="btn-ghost"
-                    style={{ padding: 6, marginTop: 4 }}
-                    title={t('buttons.shareWeather') || 'Share weather'}
-                  >
-                    <ShareWeatherIcon />
-                  </button>
-                  <div>
-                    <WeatherIcon code={wc} />
-                    <h1 className="text-3xl font-bold mt-1">
-                      {weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°
-                    </h1>
-                  </div>
+                <div className="text-right">
+                  <WeatherIcon code={wc} />
+                  <h1 className="text-3xl font-bold mt-1">
+                    {weather?.current ? Math.round(weather.current.temperature_2m) : '--'}°
+                  </h1>
                 </div>
               </div>
 
               <div className="flex gap-2 flex-wrap mb-3">
                 <button onClick={() => setShowSavedPanel(true)} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px'}}>
                   <LocationIcon />{savedLocations.length > 0 ? `${savedLocations.length} saved` : 'My Places'}
-                </button>
-                <button
-                  onClick={() => setWeatherShare({ isOpen: true, type: 'today' })}
-                  className="btn-ghost text-xs flex items-center gap-1"
-                  style={{padding:'4px 10px'}}
-                  title="Share today's summary"
-                >
-                  📅 {t('buttons.shareToday') || 'Today'}
                 </button>
                 {previousLocation && (
                   <button onClick={goBackToOriginalLocation} className="btn-ghost text-xs flex items-center gap-1" style={{padding:'4px 10px',borderColor:'var(--accent)',color:'var(--accent)'}}>
@@ -1406,7 +1394,8 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                 ))}
               </div>
 
-              <div className="flex gap-2 flex-wrap" style={{ overflow: 'visible' }}>
+              {/* 🔥 Badge row with share icon */}
+              <div className="flex gap-2 flex-wrap items-center" style={{ overflow: 'visible' }}>
                 {stormInfo && (
                   <div className="status-badge" style={{background:stormInfo.color+'33',borderColor:stormInfo.color,color:stormInfo.color}}>
                     {stormInfo.level}
@@ -1472,6 +1461,16 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                     )}
                   </div>
                 )}
+
+                {/* 🔥 Share Icon — actual SVG next to badges */}
+                <button
+                  onClick={() => setWeatherShare({ isOpen: true, type: 'current' })}
+                  className="btn-ghost"
+                  style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
+                  title={t('buttons.shareWeather') || 'Share weather'}
+                >
+                  <ShareIcon size={18} />
+                </button>
               </div>
             </div>
 
@@ -1490,13 +1489,14 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">{t('labels.hourlyForecast') || 'Hourly Forecast'}</p>
                 <div className="flex gap-2">
+                  {/* 🔥 Real share icon */}
                   <button
                     className="btn-ghost text-xs"
                     onClick={() => setWeatherShare({ isOpen: true, type: 'hourly' })}
-                    style={{ padding: '4px 8px' }}
-                    title="Share hourly"
+                    style={{ padding: '6px 10px', display: 'flex', alignItems: 'center' }}
+                    title={t('buttons.shareHourly') || 'Share hourly'}
                   >
-                    📤
+                    <ShareIcon size={16} />
                   </button>
                   <button
                     className="btn-ghost text-xs"
@@ -1536,13 +1536,14 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
             <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2,overflow:'visible'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">{t('labels.dailyForecast') || '7-Day Forecast'}</p>
+                {/* 🔥 Real share icon */}
                 <button
                   className="btn-ghost text-xs"
                   onClick={() => setWeatherShare({ isOpen: true, type: 'weekly' })}
-                  style={{ padding: '4px 8px' }}
-                  title="Share weekly"
+                  style={{ padding: '6px 10px', display: 'flex', alignItems: 'center' }}
+                  title={t('buttons.shareWeekly') || 'Share weekly'}
                 >
-                  📤
+                  <ShareIcon size={16} />
                 </button>
               </div>
               {weather?.daily?.time?.slice(0,7).map((day, i) => (
@@ -1802,7 +1803,7 @@ function SavedTab({ showToast, shareQuote, shareFact }) {
 }
 
 // ============================================================================
-// APP ROOT — wraps with LanguageProvider
+// APP ROOT
 // ============================================================================
 
 function AppContent() {
