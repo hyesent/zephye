@@ -1,5 +1,6 @@
 // ============================================================================
 // WEATHER SHARE CANVAS — Render engine for all 5 card types
+// Upgraded: atmospheric radial gradient, screen-blend SVG, modern typography
 // ============================================================================
 
 import { getWeatherTheme, getSVGArt, isNightTime } from '../data/weatherGradients'
@@ -15,6 +16,10 @@ import {
 const CANVAS_SIZE = 1080
 const PADDING = 60
 const FOOTER_TEXT = '✦ Zephye · zephye.vercel.app'
+
+// ─── Modern font stacks ────────────────────────────────────────────────
+const FONT_DISPLAY = '"SF Pro Display", "Inter", "Helvetica Neue", system-ui, -apple-system, sans-serif'
+const FONT_BODY = '"Inter", "SF Pro Text", "Helvetica Neue", system-ui, -apple-system, sans-serif'
 
 // ─── Load SVG string as image ──────────────────────────────────────────
 const svgToImage = (svgString) => {
@@ -35,57 +40,118 @@ const svgToImage = (svgString) => {
   })
 }
 
-// ─── Draw gradient background ──────────────────────────────────────────
-const drawGradient = (ctx, colors) => {
-  const gradient = ctx.createLinearGradient(0, 0, CANVAS_SIZE, CANVAS_SIZE)
-  colors.forEach((color, i) => {
-    gradient.addColorStop(i / (colors.length - 1), color)
-  })
-  ctx.fillStyle = gradient
+// ─── FIX #1: Atmospheric radial gradient ───────────────────────────────
+const drawGradient = (ctx, colors, options = {}) => {
+  const {
+    glowX = 0.5,
+    glowY = 0.28,
+    glowRadius = 0.75
+  } = options
+
+  // 1. Deep base — fill with darkest tone
+  const deepTone = colors[colors.length - 1] || '#000000'
+  ctx.fillStyle = deepTone
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+
+  // 2. Atmospheric radial glow — main color source
+  const cx = CANVAS_SIZE * glowX
+  const cy = CANVAS_SIZE * glowY
+  const r = CANVAS_SIZE * glowRadius
+
+  const radialGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+  radialGrad.addColorStop(0, colors[0] + 'FF')
+  radialGrad.addColorStop(0.35, colors[0] + 'CC')
+  radialGrad.addColorStop(0.65, colors[1] + '88')
+  radialGrad.addColorStop(1, colors[2] + '00')
+
+  ctx.fillStyle = radialGrad
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+
+  // 3. Subtle directional depth (very light)
+  const linearGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_SIZE)
+  linearGrad.addColorStop(0, 'rgba(255, 255, 255, 0.04)')
+  linearGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0)')
+  linearGrad.addColorStop(1, 'rgba(0, 0, 0, 0.18)')
+  ctx.fillStyle = linearGrad
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+
+  // 4. Corner vignette for premium depth
+  const vignette = ctx.createRadialGradient(
+    CANVAS_SIZE / 2, CANVAS_SIZE / 2, CANVAS_SIZE * 0.35,
+    CANVAS_SIZE / 2, CANVAS_SIZE / 2, CANVAS_SIZE * 0.85
+  )
+  vignette.addColorStop(0, 'rgba(0, 0, 0, 0)')
+  vignette.addColorStop(1, 'rgba(0, 0, 0, 0.32)')
+  ctx.fillStyle = vignette
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
 }
 
-// ─── Draw SVG art on top ───────────────────────────────────────────────
-const drawSVGArt = async (ctx, svgType) => {
+// ─── FIX #2: Soft SVG blend with screen mode ───────────────────────────
+const drawSVGArt = async (ctx, svgType, opacity = 0.5) => {
   try {
     const svgString = getSVGArt(svgType, CANVAS_SIZE, CANVAS_SIZE)
     const img = await svgToImage(svgString)
+
+    ctx.save()
+    ctx.globalAlpha = opacity
+    ctx.globalCompositeOperation = 'screen'
     ctx.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE)
+    ctx.restore()
   } catch (err) {
     console.warn('SVG art draw failed:', err)
   }
 }
 
-// ─── Draw branded border ───────────────────────────────────────────────
-const drawBorder = (ctx) => {
-  ctx.strokeStyle = 'rgba(255, 215, 0, 0.18)'
-  ctx.lineWidth = 3
-  const p = PADDING * 0.6
-  ctx.strokeRect(p, p, CANVAS_SIZE - p * 2, CANVAS_SIZE - p * 2)
+// ─── FIX #3: Replace gold border with atmospheric edge ─────────────────
+const drawBorder = (ctx, accentColor = '#ffffff') => {
+  const p = PADDING * 0.5
+  const radius = 24
+  const w = CANVAS_SIZE - p * 2
+  const h = CANVAS_SIZE - p * 2
+
+  // Very faint inner ring (weather accent, not gold)
+  ctx.save()
+  ctx.strokeStyle = accentColor + '22'
+  ctx.lineWidth = 1.5
+  roundRect(ctx, p, p, w, h, radius)
+  ctx.stroke()
+  ctx.restore()
 }
 
-// ─── Draw footer ───────────────────────────────────────────────────────
+// ─── Footer ────────────────────────────────────────────────────────────
 const drawFooter = (ctx, accentColor = '#38bdf8') => {
   ctx.save()
   ctx.textAlign = 'center'
   ctx.textBaseline = 'bottom'
-  ctx.font = 'bold 28px Georgia, serif'
+  ctx.font = `500 26px ${FONT_BODY}`
   ctx.fillStyle = accentColor
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-  ctx.shadowBlur = 12
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+  ctx.shadowBlur = 16
   ctx.fillText(FOOTER_TEXT, CANVAS_SIZE / 2, CANVAS_SIZE - PADDING)
   ctx.restore()
 }
 
-// ─── Text helpers ──────────────────────────────────────────────────────
+// ─── FIX #4: Modern text helper with softer shadow ─────────────────────
 const drawShadowedText = (ctx, text, x, y, options = {}) => {
   ctx.save()
   ctx.textAlign = options.align || 'center'
   ctx.textBaseline = options.baseline || 'middle'
-  ctx.font = options.font || '32px Georgia, serif'
+  ctx.font = options.font || `400 32px ${FONT_BODY}`
   ctx.fillStyle = options.color || '#FFFFFF'
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-  ctx.shadowBlur = 15
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)'
+  ctx.shadowBlur = 24
+  ctx.shadowOffsetY = 2
+  ctx.fillText(text, x, y)
+  ctx.restore()
+}
+
+// ─── Small text helper (no shadow, for secondary info) ─────────────────
+const drawCleanText = (ctx, text, x, y, options = {}) => {
+  ctx.save()
+  ctx.textAlign = options.align || 'center'
+  ctx.textBaseline = options.baseline || 'middle'
+  ctx.font = options.font || `400 22px ${FONT_BODY}`
+  ctx.fillStyle = options.color || 'rgba(255, 255, 255, 0.7)'
   ctx.fillText(text, x, y)
   ctx.restore()
 }
@@ -107,10 +173,19 @@ export const generateCurrentCard = async (weather, location, aqi) => {
 
   const theme = getWeatherTheme(code, night)
 
-  drawGradient(ctx, theme.gradient)
-  await drawSVGArt(ctx, theme.svg)
-  drawBorder(ctx)
+  // Atmospheric gradient with weather-tuned glow position
+  drawGradient(ctx, theme.gradient, {
+    glowX: 0.5,
+    glowY: night ? 0.22 : 0.28,
+    glowRadius: night ? 0.65 : 0.75
+  })
 
+  // Soft SVG art
+  await drawSVGArt(ctx, theme.svg, night ? 0.4 : 0.5)
+
+  drawBorder(ctx, theme.accent)
+
+  // Data
   const temp = Math.round(weather?.current?.temperature_2m ?? 0)
   const feels = Math.round(weather?.current?.apparent_temperature ?? temp)
   const wind = Math.round(weather?.current?.wind_speed_10m ?? 0)
@@ -126,52 +201,56 @@ export const generateCurrentCard = async (weather, location, aqi) => {
   const condition = codeToName(code)
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  // Big emoji
-  ctx.save()
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.font = '160px Georgia, serif'
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-  ctx.shadowBlur = 25
-  ctx.fillText(emoji, CANVAS_SIZE / 2, 280)
-  ctx.restore()
-
-  // Temperature
-  drawShadowedText(ctx, `${temp}°`, CANVAS_SIZE / 2, 460, {
-    font: 'bold 180px Georgia, serif'
+  // ─── BIG TEMPERATURE (the hero) ─────────────────────────────────────
+  drawShadowedText(ctx, `${temp}°`, CANVAS_SIZE / 2, 420, {
+    font: `500 240px ${FONT_DISPLAY}`,
+    color: '#FFFFFF'
   })
 
-  // Condition name
-  drawShadowedText(ctx, condition, CANVAS_SIZE / 2, 590, {
-    font: '44px Georgia, serif',
+  // ─── Condition name ─────────────────────────────────────────────────
+  drawShadowedText(ctx, condition, CANVAS_SIZE / 2, 570, {
+    font: `400 44px ${FONT_BODY}`,
     color: theme.accent
   })
 
-  // Location
-  drawShadowedText(ctx, locationName, CANVAS_SIZE / 2, 660, {
-    font: '38px Georgia, serif'
-  })
-
-  // Feels + AQI line
-  drawShadowedText(ctx, `Feels like ${feels}° · AQI ${aqiVal ?? '--'} (${aqiLabel})`, CANVAS_SIZE / 2, 735, {
-    font: '26px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.85)'
-  })
-
-  // Wind + Humidity + UV
-  drawShadowedText(ctx, `💨 ${wind} km/h    💧 ${humidity}%    ☀️ UV ${uv}`, CANVAS_SIZE / 2, 800, {
-    font: '28px Georgia, serif',
+  // ─── Location ───────────────────────────────────────────────────────
+  drawCleanText(ctx, locationName, CANVAS_SIZE / 2, 640, {
+    font: `400 34px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.9)'
   })
 
-  // Timestamp
+  // ─── Feels + AQI row ────────────────────────────────────────────────
+  drawCleanText(ctx, `Feels ${feels}°  ·  AQI ${aqiVal ?? '--'} ${aqiLabel}`, CANVAS_SIZE / 2, 710, {
+    font: `400 24px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.65)'
+  })
+
+  // ─── Metrics row ────────────────────────────────────────────────────
+  const metricsY = 780
+  const metricSpacing = CANVAS_SIZE / 4
+
+  const metrics = [
+    { icon: '💨', value: `${wind} km/h` },
+    { icon: '💧', value: `${humidity}%` },
+    { icon: '☀️', value: `UV ${uv}` }
+  ]
+
+  metrics.forEach((m, i) => {
+    const x = metricSpacing * (i + 1)
+    drawCleanText(ctx, `${m.icon}  ${m.value}`, x, metricsY, {
+      font: `500 22px ${FONT_BODY}`,
+      color: 'rgba(255, 255, 255, 0.8)'
+    })
+  })
+
+  // ─── Timestamp ──────────────────────────────────────────────────────
   const timeStr = now.toLocaleString('en-US', {
     weekday: 'long', month: 'short', day: 'numeric',
     hour: 'numeric', minute: '2-digit', hour12: true
   })
-  drawShadowedText(ctx, timeStr, CANVAS_SIZE / 2, 885, {
-    font: '24px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.6)'
+  drawCleanText(ctx, timeStr, CANVAS_SIZE / 2, 860, {
+    font: `400 20px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.4)'
   })
 
   drawFooter(ctx, theme.accent)
@@ -198,79 +277,86 @@ export const generateTodayCard = async (weather, location, todayStats, aqi) => {
   const night = isNightTime(now, sunrise, sunset)
   const theme = getWeatherTheme(highlights.dominantCode, night)
 
-  drawGradient(ctx, theme.gradient)
-  await drawSVGArt(ctx, theme.svg)
-  drawBorder(ctx)
+  drawGradient(ctx, theme.gradient, {
+    glowX: 0.5, glowY: 0.22, glowRadius: 0.7
+  })
+  await drawSVGArt(ctx, theme.svg, 0.35)
+  drawBorder(ctx, theme.accent)
 
   const locationName = location?.name?.split(',')[0] || 'Unknown'
   const dateStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric'
   })
 
-  // Header
+  // ─── Header ─────────────────────────────────────────────────────────
   drawShadowedText(ctx, `TODAY IN ${locationName.toUpperCase()}`, CANVAS_SIZE / 2, 130, {
-    font: 'bold 42px Georgia, serif'
+    font: `600 40px ${FONT_DISPLAY}`
   })
 
-  drawShadowedText(ctx, dateStr, CANVAS_SIZE / 2, 190, {
-    font: '28px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.7)'
+  drawCleanText(ctx, dateStr, CANVAS_SIZE / 2, 185, {
+    font: `400 26px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.6)'
   })
 
-  // Weather emoji trio (dominant)
-  const trioEmoji = codeToEmoji(highlights.dominantCode)
-  drawShadowedText(ctx, trioEmoji, CANVAS_SIZE / 2, 310, {
-    font: '120px Georgia, serif'
+  // ─── Weather emoji ──────────────────────────────────────────────────
+  drawShadowedText(ctx, codeToEmoji(highlights.dominantCode), CANVAS_SIZE / 2, 300, {
+    font: `120px ${FONT_DISPLAY}`
   })
 
-  // High / Low
-  drawShadowedText(ctx, `High: ${highlights.high}°   Low: ${highlights.low}°`, CANVAS_SIZE / 2, 430, {
-    font: 'bold 42px Georgia, serif'
+  // ─── High / Low ─────────────────────────────────────────────────────
+  drawShadowedText(ctx, `${highlights.high}°  /  ${highlights.low}°`, CANVAS_SIZE / 2, 420, {
+    font: `500 56px ${FONT_DISPLAY}`
   })
 
-  // Detail box
+  drawCleanText(ctx, 'High / Low', CANVAS_SIZE / 2, 465, {
+    font: `400 20px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.45)',
+    color: 'rgba(255, 255, 255, 0.45)'
+  })
+
+  // ─── Detail panel ───────────────────────────────────────────────────
   const boxX = PADDING * 2
-  const boxY = 510
+  const boxY = 520
   const boxW = CANVAS_SIZE - boxX * 2
   const boxH = 380
 
   ctx.save()
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
-  ctx.lineWidth = 2
-  roundRect(ctx, boxX, boxY, boxW, boxH, 20)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
+  ctx.lineWidth = 1
+  roundRect(ctx, boxX, boxY, boxW, boxH, 24)
   ctx.fill()
   ctx.stroke()
   ctx.restore()
 
   const rows = [
-    ['☀️ Sunshine', `${highlights.sunHours}h`],
-    ['🌧️ Rain', `${highlights.rainHours}h`],
-    ['⛈️ Thunder', `${highlights.thunderHours}h`],
-    ['💨 Max wind', `${highlights.maxWind} km/h`],
-    ['💧 Humidity', `${highlights.maxHumidity}%`],
-    ['☀️ UV Peak', `${highlights.uvPeak}`],
-    ['🌅 Sunrise', highlights.sunrise],
-    ['🌇 Sunset', highlights.sunset]
+    ['☀️  Sunshine', `${highlights.sunHours}h`],
+    ['🌧️  Rain', `${highlights.rainHours}h`],
+    ['⛈️  Thunder', `${highlights.thunderHours}h`],
+    ['💨  Max wind', `${highlights.maxWind} km/h`],
+    ['💧  Humidity', `${highlights.maxHumidity}%`],
+    ['☀️  UV Peak', `${highlights.uvPeak}`],
+    ['🌅  Sunrise', highlights.sunrise],
+    ['🌇  Sunset', highlights.sunset]
   ]
 
-  const rowStartY = boxY + 50
+  const rowStartY = boxY + 55
   const rowGap = 42
 
   rows.forEach((row, i) => {
     const y = rowStartY + i * rowGap
-    ctx.save()
-    ctx.font = '26px Georgia, serif'
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(row[0], boxX + 40, y)
 
-    ctx.textAlign = 'right'
-    ctx.fillStyle = theme.accent
-    ctx.font = 'bold 26px Georgia, serif'
-    ctx.fillText(row[1], boxX + boxW - 40, y)
-    ctx.restore()
+    drawCleanText(ctx, row[0], boxX + 40, y, {
+      align: 'left',
+      font: `400 24px ${FONT_BODY}`,
+      color: 'rgba(255, 255, 255, 0.75)'
+    })
+
+    drawCleanText(ctx, row[1], boxX + boxW - 40, y, {
+      align: 'right',
+      font: `600 24px ${FONT_BODY}`,
+      color: theme.accent
+    })
   })
 
   drawFooter(ctx, theme.accent)
@@ -294,24 +380,26 @@ export const generateHourlyCard = async (weather, location) => {
   const night = isNightTime(now, sunrise, sunset)
   const theme = getWeatherTheme(code, night)
 
-  drawGradient(ctx, theme.gradient)
-  await drawSVGArt(ctx, theme.svg)
-  drawBorder(ctx)
+  drawGradient(ctx, theme.gradient, {
+    glowX: 0.5, glowY: night ? 0.2 : 0.25, glowRadius: 0.7
+  })
+  await drawSVGArt(ctx, theme.svg, 0.35)
+  drawBorder(ctx, theme.accent)
 
   const hours = getHourlySlice(weather?.hourly, 12)
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  drawShadowedText(ctx, 'NEXT 12 HOURS', CANVAS_SIZE / 2, 130, {
-    font: 'bold 48px Georgia, serif'
+  drawShadowedText(ctx, 'NEXT 12 HOURS', CANVAS_SIZE / 2, 120, {
+    font: `600 46px ${FONT_DISPLAY}`
   })
 
-  drawShadowedText(ctx, locationName, CANVAS_SIZE / 2, 195, {
-    font: '30px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.7)'
+  drawCleanText(ctx, locationName, CANVAS_SIZE / 2, 180, {
+    font: `400 26px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.55)'
   })
 
-  // 2 rows x 6 columns grid
-  const gridStartY = 280
+  // Grid
+  const gridStartY = 260
   const cellW = 150
   const cellH = 240
   const gapX = 12
@@ -327,50 +415,51 @@ export const generateHourlyCard = async (weather, location) => {
 
     // Cell background
     ctx.save()
-    ctx.fillStyle = hour.isNow ? 'rgba(56, 189, 248, 0.2)' : 'rgba(0, 0, 0, 0.3)'
-    ctx.strokeStyle = hour.isNow ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.08)'
-    ctx.lineWidth = 2
-    roundRect(ctx, x, y, cellW, cellH, 16)
+    ctx.fillStyle = hour.isNow ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.22)'
+    ctx.strokeStyle = hour.isNow ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.06)'
+    ctx.lineWidth = 1
+    roundRect(ctx, x, y, cellW, cellH, 18)
     ctx.fill()
     ctx.stroke()
     ctx.restore()
 
     // Hour label
-    drawShadowedText(ctx, hour.hourLabel, x + cellW / 2, y + 30, {
-      font: 'bold 20px Georgia, serif',
-      color: hour.isNow ? theme.accent : '#FFFFFF'
+    drawCleanText(ctx, hour.hourLabel, x + cellW / 2, y + 32, {
+      font: `600 20px ${FONT_BODY}`,
+      color: hour.isNow ? theme.accent : 'rgba(255, 255, 255, 0.9)'
     })
 
     // Emoji
-    drawShadowedText(ctx, codeToEmoji(hour.code), x + cellW / 2, y + 100, {
-      font: '56px Georgia, serif'
+    drawShadowedText(ctx, codeToEmoji(hour.code), x + cellW / 2, y + 105, {
+      font: `54px ${FONT_DISPLAY}`
     })
 
     // Temp
-    drawShadowedText(ctx, `${hour.temp}°`, x + cellW / 2, y + 165, {
-      font: 'bold 30px Georgia, serif'
+    drawShadowedText(ctx, `${hour.temp}°`, x + cellW / 2, y + 170, {
+      font: `600 34px ${FONT_DISPLAY}`
     })
 
     // Rain %
     if (hour.rainProb > 0) {
-      drawShadowedText(ctx, `${hour.rainProb}%`, x + cellW / 2, y + 210, {
-        font: '20px Georgia, serif',
+      drawCleanText(ctx, `${hour.rainProb}%`, x + cellW / 2, y + 210, {
+        font: `500 18px ${FONT_BODY}`,
         color: 'rgba(150, 200, 255, 0.9)'
       })
     }
   })
 
-  // Rain summary line
+  // Rain summary
   const rainHours = hours.filter(h => h.rainProb >= 50)
   if (rainHours.length > 0) {
     const first = rainHours[0].hourLabel
     const last = rainHours[rainHours.length - 1].hourLabel
     const summary = rainHours.length === 1
       ? `Rain likely around ${first}`
-      : `Rain likely ${first} - ${last}`
-    drawShadowedText(ctx, summary, CANVAS_SIZE / 2, 885, {
-      font: '26px Georgia, serif',
-      color: 'rgba(150, 200, 255, 0.9)'
+      : `Rain likely ${first} – ${last}`
+
+    drawCleanText(ctx, summary, CANVAS_SIZE / 2, 880, {
+      font: `400 24px ${FONT_BODY}`,
+      color: 'rgba(150, 200, 255, 0.85)'
     })
   }
 
@@ -397,52 +486,50 @@ export const generateSingleHourCard = async (weather, location, hourIndex) => {
   const night = isNightTime(hourDate, sunrise, sunset)
   const theme = getWeatherTheme(hourData.code, night)
 
-  drawGradient(ctx, theme.gradient)
-  await drawSVGArt(ctx, theme.svg)
-  drawBorder(ctx)
+  drawGradient(ctx, theme.gradient, {
+    glowX: 0.5, glowY: night ? 0.22 : 0.28, glowRadius: 0.72
+  })
+  await drawSVGArt(ctx, theme.svg, night ? 0.4 : 0.5)
+  drawBorder(ctx, theme.accent)
 
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  // Big hour label
+  // Hour label — big hero
   drawShadowedText(ctx, hourData.hourLabel, CANVAS_SIZE / 2, 180, {
-    font: 'bold 96px Georgia, serif'
+    font: `500 96px ${FONT_DISPLAY}`
   })
 
-  drawShadowedText(ctx, hourData.dateLabel, CANVAS_SIZE / 2, 270, {
-    font: '30px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.7)'
+  drawCleanText(ctx, hourData.dateLabel, CANVAS_SIZE / 2, 260, {
+    font: `400 26px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.6)'
   })
 
-  // Emoji
-  drawShadowedText(ctx, codeToEmoji(hourData.code), CANVAS_SIZE / 2, 440, {
-    font: '160px Georgia, serif'
-  })
-
-  // Temp
-  drawShadowedText(ctx, `${hourData.temp}°C`, CANVAS_SIZE / 2, 610, {
-    font: 'bold 140px Georgia, serif'
+  // Big temp
+  drawShadowedText(ctx, `${hourData.temp}°`, CANVAS_SIZE / 2, 450, {
+    font: `500 200px ${FONT_DISPLAY}`
   })
 
   // Condition
-  drawShadowedText(ctx, codeToName(hourData.code), CANVAS_SIZE / 2, 720, {
-    font: '38px Georgia, serif',
+  drawShadowedText(ctx, codeToName(hourData.code), CANVAS_SIZE / 2, 590, {
+    font: `400 42px ${FONT_BODY}`,
     color: theme.accent
   })
 
   // Location
-  drawShadowedText(ctx, locationName, CANVAS_SIZE / 2, 785, {
-    font: '32px Georgia, serif'
-  })
-
-  // Metrics
-  drawShadowedText(ctx, `💨 ${hourData.wind} km/h    💧 ${hourData.humidity}%`, CANVAS_SIZE / 2, 855, {
-    font: '26px Georgia, serif',
+  drawCleanText(ctx, locationName, CANVAS_SIZE / 2, 660, {
+    font: `400 32px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.85)'
   })
 
-  drawShadowedText(ctx, `🌧 ${hourData.rainProb}% chance    Feels ${hourData.feelsLike}°`, CANVAS_SIZE / 2, 900, {
-    font: '24px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.75)'
+  // Metrics
+  drawCleanText(ctx, `💨 ${hourData.wind} km/h  ·  💧 ${hourData.humidity}%`, CANVAS_SIZE / 2, 740, {
+    font: `400 24px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.7)'
+  })
+
+  drawCleanText(ctx, `🌧 ${hourData.rainProb}% chance  ·  Feels ${hourData.feelsLike}°`, CANVAS_SIZE / 2, 785, {
+    font: `400 22px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.6)'
   })
 
   drawFooter(ctx, theme.accent)
@@ -472,33 +559,34 @@ export const generateWeeklyCard = async (weather, location) => {
   const dominantCode = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0
   const theme = getWeatherTheme(parseInt(dominantCode), night)
 
-  drawGradient(ctx, theme.gradient)
-  await drawSVGArt(ctx, theme.svg)
-  drawBorder(ctx)
+  drawGradient(ctx, theme.gradient, {
+    glowX: 0.5, glowY: 0.22, glowRadius: 0.7
+  })
+  await drawSVGArt(ctx, theme.svg, 0.35)
+  drawBorder(ctx, theme.accent)
 
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  drawShadowedText(ctx, '7-DAY FORECAST', CANVAS_SIZE / 2, 130, {
-    font: 'bold 48px Georgia, serif'
+  drawShadowedText(ctx, '7-DAY FORECAST', CANVAS_SIZE / 2, 120, {
+    font: `600 46px ${FONT_DISPLAY}`
   })
 
-  drawShadowedText(ctx, locationName, CANVAS_SIZE / 2, 195, {
-    font: '30px Georgia, serif',
-    color: 'rgba(255, 255, 255, 0.7)'
+  drawCleanText(ctx, locationName, CANVAS_SIZE / 2, 180, {
+    font: `400 26px ${FONT_BODY}`,
+    color: 'rgba(255, 255, 255, 0.55)'
   })
 
-  // Days grid — 7 rows
-  const startY = 275
+  // Days container
+  const startY = 260
   const rowH = 78
   const boxX = PADDING * 1.8
   const boxW = CANVAS_SIZE - boxX * 2
 
-  // Box background
   ctx.save()
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'
-  ctx.lineWidth = 2
-  roundRect(ctx, boxX, startY - 20, boxW, rowH * 7 + 40, 20)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
+  ctx.lineWidth = 1
+  roundRect(ctx, boxX, startY - 20, boxW, rowH * 7 + 40, 24)
   ctx.fill()
   ctx.stroke()
   ctx.restore()
@@ -507,61 +595,42 @@ export const generateWeeklyCard = async (weather, location) => {
     const y = startY + i * rowH + 40
 
     // Day name
-    ctx.save()
-    ctx.font = 'bold 30px Georgia, serif'
-    ctx.fillStyle = '#FFFFFF'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'middle'
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 8
-    ctx.fillText(day.dayName.toUpperCase(), boxX + 40, y)
-    ctx.restore()
+    drawCleanText(ctx, day.dayName.toUpperCase(), boxX + 40, y, {
+      align: 'left',
+      font: `600 26px ${FONT_BODY}`,
+      color: '#FFFFFF'
+    })
 
     // Emoji
-    ctx.save()
-    ctx.font = '42px Georgia, serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(codeToEmoji(day.code), boxX + boxW * 0.42, y)
-    ctx.restore()
+    drawShadowedText(ctx, codeToEmoji(day.code), boxX + boxW * 0.42, y, {
+      font: `40px ${FONT_DISPLAY}`
+    })
 
-    // High (warm color)
-    ctx.save()
-    ctx.font = 'bold 32px Georgia, serif'
-    ctx.fillStyle = '#FFB088'
-    ctx.textAlign = 'right'
-    ctx.textBaseline = 'middle'
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 8
-    ctx.fillText(`${day.high}°`, boxX + boxW * 0.68, y)
-    ctx.restore()
+    // High — warm tone
+    drawCleanText(ctx, `${day.high}°`, boxX + boxW * 0.68, y, {
+      align: 'right',
+      font: `600 30px ${FONT_BODY}`,
+      color: '#FFB088'
+    })
 
-    // Low (cool color)
-    ctx.save()
-    ctx.font = 'bold 32px Georgia, serif'
-    ctx.fillStyle = '#88C5FF'
-    ctx.textAlign = 'right'
-    ctx.textBaseline = 'middle'
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 8
-    ctx.fillText(`${day.low}°`, boxX + boxW * 0.82, y)
-    ctx.restore()
+    // Low — cool tone
+    drawCleanText(ctx, `${day.low}°`, boxX + boxW * 0.82, y, {
+      align: 'right',
+      font: `600 30px ${FONT_BODY}`,
+      color: '#88C5FF'
+    })
 
     // Rain %
-    ctx.save()
-    ctx.font = 'bold 24px Georgia, serif'
-    ctx.fillStyle = 'rgba(150, 200, 255, 0.85)'
-    ctx.textAlign = 'right'
-    ctx.textBaseline = 'middle'
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 8
-    ctx.fillText(`${day.rainProb}%`, boxX + boxW - 40, y)
-    ctx.restore()
+    drawCleanText(ctx, `${day.rainProb}%`, boxX + boxW - 40, y, {
+      align: 'right',
+      font: `500 22px ${FONT_BODY}`,
+      color: 'rgba(150, 200, 255, 0.8)'
+    })
   })
 
-  // Summary line
-  drawShadowedText(ctx, weekly.summary, CANVAS_SIZE / 2, 890, {
-    font: 'italic 28px Georgia, serif',
+  // Summary
+  drawCleanText(ctx, weekly.summary, CANVAS_SIZE / 2, 900, {
+    font: `italic 400 24px ${FONT_BODY}`,
     color: theme.accent
   })
 
@@ -571,7 +640,7 @@ export const generateWeeklyCard = async (weather, location) => {
 }
 
 // ============================================================================
-// UTILITY
+// UTILITIES
 // ============================================================================
 
 const roundRect = (ctx, x, y, w, h, r) => {
