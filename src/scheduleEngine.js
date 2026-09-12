@@ -3,7 +3,7 @@
 // Handles: storage, state machine, fire logic, edit/shift, command detection
 // ============================================================================
 
-import { INTENT_MAP } from './ZephyeFullScreen.js'
+import { INTENT_MAP } from './ZephyeFullScreen'
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── CONSTANTS ────────────────────────────────────────────────────────
