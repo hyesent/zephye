@@ -6,10 +6,7 @@ import { useState, useEffect, createContext, useContext } from 'react'
 import { translateText, LANG_MAP } from '../zephyeHelpers'
 import { supabase } from './supabase'
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// UI TEXT MAP
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── UI TEXT MAP ───────────────────────────────────────────────────────
 export const UI_TEXTS = {
   tabs: {
     weather: 'Weather',
@@ -53,7 +50,10 @@ export const UI_TEXTS = {
     windGust: 'Wind Gust',
     feelsLike: 'Feels Like',
     live: 'LIVE',
-    watching: 'Watching'
+    watching: 'Watching',
+    since: 'since',
+    language: 'Language',
+    voice: 'Voice'
   },
   buttons: {
     save: 'Save',
@@ -85,24 +85,35 @@ export const UI_TEXTS = {
     hideOriginal: 'Hide Original',
     reporter: 'Reporter',
     assistant: 'Assistant',
+    you: 'You',
     brief: 'Brief',
     full: 'Full',
-    you: 'You',
-    beginBriefing: 'Begin Weather Briefing',
     speaking: 'Zephye is Speaking...',
+    beginBriefing: 'Begin Weather Briefing',
     manual: 'Manual',
     autoCurrent: 'Auto (current)',
     useMyLocation: 'Use My Current Location',
     refresh: 'Refresh',
     setYourName: 'Set Your Name',
-    saveName: 'Save'
+    saveName: 'Save',
+    shareWeather: 'Share Weather',
+    shareCurrent: 'Current',
+    shareToday: 'Today',
+    shareHourly: 'Hourly',
+    shareSingleHour: 'Single Hour',
+    shareWeekly: 'Weekly',
+    pickHour: 'Pick an hour',
+    why: 'Why?',
+    hideDetails: 'Hide details',
+    moreDetails: 'More details',
+    showLess: 'Show less'
   },
   placeholders: {
     searchCity: 'Type any city, LGA, country...',
     typePlace: 'Type a place name',
     askZephye: 'Ask Zephye...',
     locationName: 'Home, Work, etc...',
-    searchLocation: 'Search city, LGA, country...',
+    searchLocation: 'Search city...',
     enterYourName: 'Enter your name'
   },
   toasts: {
@@ -118,7 +129,8 @@ export const UI_TEXTS = {
     welcome: 'Welcome to Zephye',
     detecting: 'Detecting your location...',
     gpsUnavailable: 'Location unavailable. Try again or use Manual.',
-    locationSaved: 'Location saved. Edit label to name it.'
+    locationSaved: 'Location saved. Edit label to name it.',
+    typePlace: 'Type a place name'
   },
   modals: {
     changeLocation: 'Change Location',
@@ -167,8 +179,8 @@ export const UI_TEXTS = {
     moderate: 'Moderate',
     heavy: 'Heavy',
     noIncidentsReported: 'No traffic incidents reported',
-    incidentReported: 'incident reported',
-    incidentsReported: 'incidents reported',
+    incidentReported: 'incident',
+    incidentsReported: 'incidents',
     route: 'Route',
     loadingWeather: 'Loading weather...',
     loadingPollen: 'Loading pollen...',
@@ -184,17 +196,11 @@ export const UI_TEXTS = {
     tapForWeather: 'Tap for weather · Double tap for pollen · Long press for route',
     longPressForRoute: 'Long press for route',
     doubleTapForPollen: 'Double tap for pollen · Long press for route',
-    updatingIncidents: 'Updating incidents...',
-    freeFlow: 'Free',
-    moderateFlow: 'Moderate',
-    heavyFlow: 'Heavy'
+    updatingIncidents: 'Updating incidents...'
   }
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// LOCALSTORAGE CACHE
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── LOCALSTORAGE CACHE ────────────────────────────────────────────────
 const LOCAL_CACHE_KEY = 'zephye_ui_translations'
 const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000
 
@@ -226,10 +232,7 @@ const setLocalCache = (lang, translations) => {
   }
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// FLATTEN HELPER
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── FLATTEN HELPER ────────────────────────────────────────────────────
 const flattenUITexts = () => {
   const items = []
   const flatten = (obj, prefix = '') => {
@@ -246,10 +249,7 @@ const flattenUITexts = () => {
   return items
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// SUPABASE FETCH
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── SUPABASE FETCH ────────────────────────────────────────────────────
 const fetchFromSupabase = async (language) => {
   try {
     const { data, error } = await supabase
@@ -271,10 +271,7 @@ const fetchFromSupabase = async (language) => {
   }
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// SUPABASE SAVE (AUTO - FIRST TIME ONLY)
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── SUPABASE SAVE (AUTO - FIRST TIME ONLY) ────────────────────────────
 const saveToSupabase = async (language, countryCode, translated, originals) => {
   try {
     const rows = Object.keys(translated).map(key => ({
@@ -293,7 +290,6 @@ const saveToSupabase = async (language, countryCode, translated, originals) => {
         .insert(batch)
 
       if (error) {
-        // Duplicate = another user already saved
         if (error.code === '23505') {
           console.log('✅ Already saved by another user (race handled)')
           return true
@@ -310,10 +306,7 @@ const saveToSupabase = async (language, countryCode, translated, originals) => {
   }
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// TRANSLATION HOOK
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── TRANSLATION HOOK ──────────────────────────────────────────────────
 export const useTranslation = (uiLanguage, countryCode = null) => {
   const [translations, setTranslations] = useState({})
   const [isLoading, setIsLoading] = useState(true)
@@ -329,7 +322,6 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
       // STEP 1: localStorage
       const local = getLocalCache(uiLanguage)
       if (local) {
-        console.log(`📦 [${uiLanguage}] Loaded from localStorage`)
         setTranslations(local)
         setIsLoading(false)
         return
@@ -338,11 +330,9 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
       setIsLoading(true)
 
       // STEP 2: Supabase (shared global cache)
-      console.log(`🔍 [${uiLanguage}] Checking Supabase...`)
       const remote = await fetchFromSupabase(uiLanguage)
 
       if (remote && Object.keys(remote).length > 0) {
-        console.log(`🌐 [${uiLanguage}] Loaded from Supabase (${Object.keys(remote).length} keys)`)
         setLocalCache(uiLanguage, remote)
         setTranslations(remote)
         setIsLoading(false)
@@ -350,8 +340,6 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
       }
 
       // STEP 3: Translate fresh (first time ever for this language)
-      console.log(`🔄 [${uiLanguage}] First time. Translating fresh...`)
-
       const items = flattenUITexts()
       const originals = {}
       items.forEach(item => { originals[item.key] = item.text })
@@ -367,10 +355,7 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
         translated[item.key] = results[index]
       })
 
-      // STEP 4: Save to localStorage
       setLocalCache(uiLanguage, translated)
-
-      // STEP 5: Save to Supabase (fire and forget)
       saveToSupabase(uiLanguage, countryCode, translated, originals)
 
       setTranslations(translated)
@@ -392,10 +377,7 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
   return { t, isLoading, translations }
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// LANGUAGE CONTEXT
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
+// ─── LANGUAGE CONTEXT ──────────────────────────────────────────────────
 const LanguageContext = createContext()
 
 export const LanguageProvider = ({ children, homeLocation }) => {
