@@ -1,102 +1,102 @@
 // ============================================================================
-// WEATHER GRADIENTS + SVG ART
-// Day/Night aware. Weather illustration stays true, only tone shifts.
+// WEATHER GRADIENTS + SVG ART — UPGRADED
+// Atmospheric composition, softer shapes, edge-biased particles
 // ============================================================================
 
 export const WEATHER_THEMES = {
   clearDay: {
-    gradient: ['#FDB813', '#F5A623', '#E88D1F'],
+    gradient: ['#FFD86B', '#F5A623', '#8B4513'],
     textColor: '#FFFFFF',
     accent: '#FFF3C4',
     svg: 'sunny',
     isNight: false
   },
   clearNight: {
-    gradient: ['#0F2027', '#203A43', '#2C5364'],
+    gradient: ['#1E3A5F', '#0F2027', '#050A0F'],
     textColor: '#FFFFFF',
     accent: '#A0C4FF',
     svg: 'clearNight',
     isNight: true
   },
   partlyCloudyDay: {
-    gradient: ['#4A90E2', '#357ABD', '#2C5F8D'],
+    gradient: ['#7EC8F0', '#3D7EA8', '#1B4B6B'],
     textColor: '#FFFFFF',
     accent: '#B8DCF5',
     svg: 'partlyCloudyDay',
     isNight: false
   },
   partlyCloudyNight: {
-    gradient: ['#1B2735', '#090A0F', '#000000'],
+    gradient: ['#2A3F5A', '#131C2B', '#050810'],
     textColor: '#FFFFFF',
     accent: '#8BA8C7',
     svg: 'partlyCloudyNight',
     isNight: true
   },
   cloudyDay: {
-    gradient: ['#6B7B8C', '#4A5966', '#374151'],
+    gradient: ['#8A9AAB', '#5A6B7C', '#2F3A47'],
     textColor: '#FFFFFF',
     accent: '#B0BEC5',
     svg: 'cloudyDay',
     isNight: false
   },
   cloudyNight: {
-    gradient: ['#1F2429', '#131719', '#0A0C0E'],
+    gradient: ['#2A333C', '#171D23', '#080B0F'],
     textColor: '#FFFFFF',
     accent: '#7A8A94',
     svg: 'cloudyNight',
     isNight: true
   },
   rainyDay: {
-    gradient: ['#3E5262', '#2C3E50', '#1F2D38'],
+    gradient: ['#4A6275', '#2A3F52', '#141F2A'],
     textColor: '#FFFFFF',
     accent: '#7DB8E8',
     svg: 'rainyDay',
     isNight: false
   },
   rainyNight: {
-    gradient: ['#0D1B26', '#08131A', '#040A0F'],
+    gradient: ['#15242E', '#0A141B', '#03080D'],
     textColor: '#FFFFFF',
     accent: '#5A8FB8',
     svg: 'rainyNight',
     isNight: true
   },
   thunderDay: {
-    gradient: ['#2C2E3A', '#1E202B', '#14161F'],
+    gradient: ['#3A3D4D', '#1F2230', '#0A0C14'],
     textColor: '#FFFFFF',
     accent: '#FBBF24',
     svg: 'thunderDay',
     isNight: false
   },
   thunderNight: {
-    gradient: ['#0A0B14', '#050610', '#000000'],
+    gradient: ['#15182A', '#080A18', '#000000'],
     textColor: '#FFFFFF',
     accent: '#FCD34D',
     svg: 'thunderNight',
     isNight: true
   },
   snowDay: {
-    gradient: ['#C9D6DF', '#A7BCC9', '#8DA5B8'],
+    gradient: ['#D6E4EF', '#A7BCC9', '#5A6B7C'],
     textColor: '#1A2730',
     accent: '#FFFFFF',
     svg: 'snowDay',
     isNight: false
   },
   snowNight: {
-    gradient: ['#3A4A5C', '#243040', '#141C28'],
+    gradient: ['#4A5F75', '#243040', '#0E151F'],
     textColor: '#FFFFFF',
     accent: '#D4E1EC',
     svg: 'snowNight',
     isNight: true
   },
   fogDay: {
-    gradient: ['#B0BEC5', '#90A4AE', '#607D8B'],
+    gradient: ['#C5D0D8', '#8A9AA5', '#4A5762'],
     textColor: '#FFFFFF',
     accent: '#CFD8DC',
     svg: 'fogDay',
     isNight: false
   },
   fogNight: {
-    gradient: ['#39424A', '#252B31', '#141719'],
+    gradient: ['#4A535C', '#252C33', '#0E1216'],
     textColor: '#FFFFFF',
     accent: '#8A959D',
     svg: 'fogNight',
@@ -154,7 +154,33 @@ export const getWeatherTheme = (weatherCode, isNight = false) => {
 }
 
 // ============================================================================
-// SVG ART - Static illustrations layered on the gradient
+// HELPERS — Seeded randomness + edge-biased distribution
+// ============================================================================
+
+// Deterministic random so visuals are stable
+const seededRandom = (seed) => {
+  const x = Math.sin(seed * 9301 + 49297) * 233280
+  return x - Math.floor(x)
+}
+
+// Edge-biased position (particles cluster near corners/top)
+const edgeBiasedPosition = (seed, w, h, yMin = 0, yMax = 1) => {
+  const r = seededRandom(seed)
+  const r2 = seededRandom(seed + 1)
+  // 60% chance edges, 40% center
+  let x
+  if (r < 0.6) {
+    // Edge zones (left or right 20%)
+    x = r2 > 0.5 ? seededRandom(seed + 2) * w * 0.2 : w - (seededRandom(seed + 2) * w * 0.2)
+  } else {
+    x = seededRandom(seed + 2) * w
+  }
+  const y = h * yMin + seededRandom(seed + 3) * h * (yMax - yMin)
+  return { x, y }
+}
+
+// ============================================================================
+// SVG ART — Softer shapes, edge-biased, integrated composition
 // ============================================================================
 
 export const getSVGArt = (svgType, canvasWidth, canvasHeight) => {
@@ -162,290 +188,348 @@ export const getSVGArt = (svgType, canvasWidth, canvasHeight) => {
   const h = canvasHeight
 
   const svgs = {
-    // ─── SUNNY (Day) ────────────────────────────────────────────────────
+    // ─── SUNNY (Day) — soft warm presence ──────────────────────────────
     sunny: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <radialGradient id="sunGlow" cx="50%" cy="30%" r="30%">
-            <stop offset="0%" stop-color="#FFF3C4" stop-opacity="0.9"/>
-            <stop offset="50%" stop-color="#FDB813" stop-opacity="0.3"/>
+          <radialGradient id="sunGlow" cx="50%" cy="28%" r="45%">
+            <stop offset="0%" stop-color="#FFF8DC" stop-opacity="0.85"/>
+            <stop offset="35%" stop-color="#FFE4A0" stop-opacity="0.4"/>
+            <stop offset="70%" stop-color="#FDB813" stop-opacity="0.12"/>
             <stop offset="100%" stop-color="#FDB813" stop-opacity="0"/>
           </radialGradient>
         </defs>
-        <circle cx="${w * 0.5}" cy="${h * 0.22}" r="${w * 0.16}" fill="url(#sunGlow)"/>
-        <circle cx="${w * 0.5}" cy="${h * 0.22}" r="${w * 0.09}" fill="#FFF3C4" opacity="0.95"/>
-        ${Array.from({ length: 12 }, (_, i) => {
-          const angle = (i * 30) * Math.PI / 180
-          const x1 = w * 0.5 + Math.cos(angle) * w * 0.13
-          const y1 = h * 0.22 + Math.sin(angle) * w * 0.13
-          const x2 = w * 0.5 + Math.cos(angle) * w * 0.20
-          const y2 = h * 0.22 + Math.sin(angle) * w * 0.20
-          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#FFF3C4" stroke-width="4" stroke-linecap="round" opacity="0.5"/>`
-        }).join('')}
+        <!-- Soft atmospheric sun glow, top center -->
+        <ellipse cx="${w * 0.5}" cy="${h * 0.24}" rx="${w * 0.5}" ry="${h * 0.35}" fill="url(#sunGlow)"/>
+        <!-- Sun disc, subtle -->
+        <circle cx="${w * 0.5}" cy="${h * 0.24}" r="${w * 0.08}" fill="#FFF8DC" opacity="0.7"/>
+        <circle cx="${w * 0.5}" cy="${h * 0.24}" r="${w * 0.05}" fill="#FFFFFF" opacity="0.9"/>
       </svg>
     `,
 
-    // ─── CLEAR NIGHT ────────────────────────────────────────────────────
+    // ─── CLEAR NIGHT — moon + sparse stars ─────────────────────────────
     clearNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
-            <stop offset="40%" stop-color="#A0C4FF" stop-opacity="0.3"/>
+            <stop offset="40%" stop-color="#A0C4FF" stop-opacity="0.25"/>
             <stop offset="100%" stop-color="#A0C4FF" stop-opacity="0"/>
           </radialGradient>
         </defs>
-        <circle cx="${w * 0.75}" cy="${h * 0.22}" r="${w * 0.15}" fill="url(#moonGlow)"/>
-        <circle cx="${w * 0.75}" cy="${h * 0.22}" r="${w * 0.075}" fill="#F5F5F5"/>
-        <circle cx="${w * 0.72}" cy="${h * 0.20}" r="${w * 0.02}" fill="#E0E0E0" opacity="0.6"/>
-        <circle cx="${w * 0.77}" cy="${h * 0.24}" r="${w * 0.015}" fill="#E0E0E0" opacity="0.5"/>
-        <circle cx="${w * 0.73}" cy="${h * 0.25}" r="${w * 0.01}" fill="#E0E0E0" opacity="0.4"/>
-        ${Array.from({ length: 40 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.6
-          const r = Math.random() * 2 + 0.5
-          const opacity = Math.random() * 0.7 + 0.3
-          return `<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="${opacity}"/>`
-        }).join('')}
+        <!-- Moon glow -->
+        <circle cx="${w * 0.75}" cy="${h * 0.22}" r="${w * 0.18}" fill="url(#moonGlow)"/>
+        <!-- Moon disc -->
+        <circle cx="${w * 0.75}" cy="${h * 0.22}" r="${w * 0.07}" fill="#F5F5F5"/>
+        <circle cx="${w * 0.72}" cy="${h * 0.20}" r="${w * 0.018}" fill="#D8D8D8" opacity="0.5"/>
+        <circle cx="${w * 0.77}" cy="${h * 0.24}" r="${w * 0.012}" fill="#D8D8D8" opacity="0.4"/>
+        <!-- Sparse stars — 18, concentrated top 45%, edge-biased -->
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 18; i++) {
+            const { x, y } = edgeBiasedPosition(i * 7 + 100, w, h, 0.05, 0.45)
+            const r = seededRandom(i * 11 + 1) * 1.6 + 0.4
+            const opacity = seededRandom(i * 13 + 2) * 0.6 + 0.3
+            stars.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="${opacity}"/>`)
+          }
+          return stars.join('')
+        })()}
       </svg>
     `,
 
-    // ─── PARTLY CLOUDY (Day) ────────────────────────────────────────────
+    // ─── PARTLY CLOUDY (Day) ───────────────────────────────────────────
     partlyCloudyDay: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <radialGradient id="pcSunGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#FFF" stop-opacity="0.8"/>
-            <stop offset="100%" stop-color="#FFF" stop-opacity="0"/>
+          <radialGradient id="pcSun" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFF8DC" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="#FFF8DC" stop-opacity="0"/>
           </radialGradient>
         </defs>
-        <circle cx="${w * 0.72}" cy="${h * 0.18}" r="${w * 0.15}" fill="url(#pcSunGlow)"/>
-        <circle cx="${w * 0.72}" cy="${h * 0.18}" r="${w * 0.075}" fill="#FFF8E1" opacity="0.85"/>
-        <g opacity="0.7">
-          <ellipse cx="${w * 0.25}" cy="${h * 0.28}" rx="${w * 0.13}" ry="${w * 0.055}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.35}" cy="${h * 0.26}" rx="${w * 0.10}" ry="${w * 0.045}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.15}" cy="${h * 0.30}" rx="${w * 0.08}" ry="${w * 0.04}" fill="#FFFFFF"/>
+        <!-- Soft sun glow top-right -->
+        <circle cx="${w * 0.72}" cy="${h * 0.18}" r="${w * 0.18}" fill="url(#pcSun)"/>
+        <circle cx="${w * 0.72}" cy="${h * 0.18}" r="${w * 0.05}" fill="#FFF8DC" opacity="0.65"/>
+        <!-- Soft cloud mass — irregular, edge weighted -->
+        <g opacity="0.32" filter="blur(2px)">
+          <ellipse cx="${w * 0.22}" cy="${h * 0.26}" rx="${w * 0.24}" ry="${w * 0.08}" fill="#FFFFFF"/>
+          <ellipse cx="${w * 0.35}" cy="${h * 0.23}" rx="${w * 0.16}" ry="${w * 0.06}" fill="#FFFFFF"/>
         </g>
-        <g opacity="0.5">
-          <ellipse cx="${w * 0.60}" cy="${h * 0.42}" rx="${w * 0.15}" ry="${w * 0.06}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.72}" cy="${h * 0.40}" rx="${w * 0.11}" ry="${w * 0.05}" fill="#FFFFFF"/>
+        <g opacity="0.18" filter="blur(3px)">
+          <ellipse cx="${w * 0.72}" cy="${h * 0.38}" rx="${w * 0.22}" ry="${w * 0.07}" fill="#FFFFFF"/>
         </g>
       </svg>
     `,
 
-    // ─── PARTLY CLOUDY (Night) ──────────────────────────────────────────
+    // ─── PARTLY CLOUDY (Night) ─────────────────────────────────────────
     partlyCloudyNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        ${Array.from({ length: 30 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.5
-          const r = Math.random() * 1.5 + 0.5
-          const opacity = Math.random() * 0.6 + 0.3
-          return `<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="${opacity}"/>`
-        }).join('')}
-        <circle cx="${w * 0.72}" cy="${h * 0.18}" r="${w * 0.06}" fill="#F5F5F5" opacity="0.9"/>
-        <g opacity="0.55">
-          <ellipse cx="${w * 0.28}" cy="${h * 0.30}" rx="${w * 0.14}" ry="${w * 0.06}" fill="#2A3542"/>
-          <ellipse cx="${w * 0.40}" cy="${h * 0.28}" rx="${w * 0.11}" ry="${w * 0.05}" fill="#2A3542"/>
+        <!-- Sparse stars -->
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 14; i++) {
+            const { x, y } = edgeBiasedPosition(i * 11 + 200, w, h, 0.05, 0.4)
+            const r = seededRandom(i * 17 + 5) * 1.4 + 0.4
+            const opacity = seededRandom(i * 19 + 6) * 0.5 + 0.25
+            stars.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="${opacity}"/>`)
+          }
+          return stars.join('')
+        })()}
+        <!-- Moon peeking -->
+        <circle cx="${w * 0.75}" cy="${h * 0.20}" r="${w * 0.05}" fill="#F5F5F5" opacity="0.75"/>
+        <!-- Dark cloud mass -->
+        <g opacity="0.42" filter="blur(2px)">
+          <ellipse cx="${w * 0.25}" cy="${h * 0.32}" rx="${w * 0.26}" ry="${w * 0.09}" fill="#1A2530"/>
+          <ellipse cx="${w * 0.40}" cy="${h * 0.29}" rx="${w * 0.17}" ry="${w * 0.065}" fill="#1A2530"/>
         </g>
-        <g opacity="0.4">
-          <ellipse cx="${w * 0.60}" cy="${h * 0.42}" rx="${w * 0.16}" ry="${w * 0.065}" fill="#1F2933"/>
-          <ellipse cx="${w * 0.72}" cy="${h * 0.40}" rx="${w * 0.12}" ry="${w * 0.055}" fill="#1F2933"/>
+        <g opacity="0.28" filter="blur(3px)">
+          <ellipse cx="${w * 0.70}" cy="${h * 0.42}" rx="${w * 0.24}" ry="${w * 0.08}" fill="#0F1A24"/>
         </g>
       </svg>
     `,
 
-    // ─── CLOUDY (Day) ───────────────────────────────────────────────────
+    // ─── CLOUDY (Day) — 2 masses only, softer ──────────────────────────
     cloudyDay: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        <g opacity="0.7">
-          <ellipse cx="${w * 0.30}" cy="${h * 0.22}" rx="${w * 0.16}" ry="${w * 0.07}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.42}" cy="${h * 0.20}" rx="${w * 0.13}" ry="${w * 0.06}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.18}" cy="${h * 0.24}" rx="${w * 0.10}" ry="${w * 0.05}" fill="#FFFFFF"/>
+        <g opacity="0.28" filter="blur(3px)">
+          <ellipse cx="${w * 0.28}" cy="${h * 0.24}" rx="${w * 0.30}" ry="${w * 0.10}" fill="#FFFFFF"/>
+          <ellipse cx="${w * 0.45}" cy="${h * 0.21}" rx="${w * 0.22}" ry="${w * 0.08}" fill="#FFFFFF"/>
         </g>
-        <g opacity="0.5">
-          <ellipse cx="${w * 0.65}" cy="${h * 0.35}" rx="${w * 0.18}" ry="${w * 0.08}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.80}" cy="${h * 0.33}" rx="${w * 0.14}" ry="${w * 0.06}" fill="#FFFFFF"/>
-        </g>
-        <g opacity="0.35">
-          <ellipse cx="${w * 0.45}" cy="${h * 0.50}" rx="${w * 0.20}" ry="${w * 0.09}" fill="#FFFFFF"/>
+        <g opacity="0.18" filter="blur(4px)">
+          <ellipse cx="${w * 0.72}" cy="${h * 0.40}" rx="${w * 0.28}" ry="${w * 0.10}" fill="#FFFFFF"/>
         </g>
       </svg>
     `,
 
-    // ─── CLOUDY (Night) ─────────────────────────────────────────────────
+    // ─── CLOUDY (Night) ────────────────────────────────────────────────
     cloudyNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        ${Array.from({ length: 15 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.4
-          return `<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.4"/>`
-        }).join('')}
-        <g opacity="0.45">
-          <ellipse cx="${w * 0.30}" cy="${h * 0.22}" rx="${w * 0.16}" ry="${w * 0.07}" fill="#2A3542"/>
-          <ellipse cx="${w * 0.42}" cy="${h * 0.20}" rx="${w * 0.13}" ry="${w * 0.06}" fill="#2A3542"/>
-          <ellipse cx="${w * 0.18}" cy="${h * 0.24}" rx="${w * 0.10}" ry="${w * 0.05}" fill="#2A3542"/>
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 8; i++) {
+            const { x, y } = edgeBiasedPosition(i * 13 + 300, w, h, 0.05, 0.3)
+            const r = seededRandom(i * 23 + 7) * 1 + 0.4
+            stars.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="0.35"/>`)
+          }
+          return stars.join('')
+        })()}
+        <g opacity="0.35" filter="blur(3px)">
+          <ellipse cx="${w * 0.28}" cy="${h * 0.24}" rx="${w * 0.30}" ry="${w * 0.10}" fill="#1A2229"/>
+          <ellipse cx="${w * 0.45}" cy="${h * 0.21}" rx="${w * 0.22}" ry="${w * 0.08}" fill="#1A2229"/>
         </g>
-        <g opacity="0.35">
-          <ellipse cx="${w * 0.65}" cy="${h * 0.35}" rx="${w * 0.18}" ry="${w * 0.08}" fill="#1A2129"/>
+        <g opacity="0.22" filter="blur(4px)">
+          <ellipse cx="${w * 0.72}" cy="${h * 0.40}" rx="${w * 0.28}" ry="${w * 0.10}" fill="#0F161B"/>
         </g>
       </svg>
     `,
 
-    // ─── RAINY (Day) ────────────────────────────────────────────────────
+    // ─── RAINY (Day) — sparse, edge-biased rain ────────────────────────
     rainyDay: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        <g opacity="0.6">
-          <ellipse cx="${w * 0.35}" cy="${h * 0.18}" rx="${w * 0.20}" ry="${w * 0.08}" fill="#0F1A24"/>
-          <ellipse cx="${w * 0.55}" cy="${h * 0.16}" rx="${w * 0.16}" ry="${w * 0.07}" fill="#0F1A24"/>
+        <!-- Cloud mass top -->
+        <g opacity="0.4" filter="blur(3px)">
+          <ellipse cx="${w * 0.35}" cy="${h * 0.18}" rx="${w * 0.30}" ry="${w * 0.10}" fill="#0F1A24"/>
+          <ellipse cx="${w * 0.58}" cy="${h * 0.16}" rx="${w * 0.22}" ry="${w * 0.08}" fill="#0F1A24"/>
         </g>
-        <g opacity="0.4">
-          <ellipse cx="${w * 0.25}" cy="${h * 0.30}" rx="${w * 0.22}" ry="${w * 0.09}" fill="#0A1219"/>
+        <g opacity="0.25" filter="blur(4px)">
+          <ellipse cx="${w * 0.25}" cy="${h * 0.30}" rx="${w * 0.28}" ry="${w * 0.10}" fill="#0A1219"/>
         </g>
-        ${Array.from({ length: 40 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.7 + h * 0.25
-          const len = Math.random() * 30 + 20
-          return `<line x1="${x}" y1="${y}" x2="${x - 8}" y2="${y + len}" stroke="#7DB8E8" stroke-width="2" stroke-linecap="round" opacity="${Math.random() * 0.5 + 0.3}"/>`
-        }).join('')}
+        <!-- Sparse rain — 22 drops, edge-biased, thinner -->
+        ${(() => {
+          const drops = []
+          for (let i = 0; i < 22; i++) {
+            const { x, y } = edgeBiasedPosition(i * 17 + 400, w, h, 0.35, 0.95)
+            const len = 16 + seededRandom(i * 29 + 8) * 20
+            const opacity = 0.15 + seededRandom(i * 31 + 9) * 0.25
+            drops.push(`<line x1="${x}" y1="${y}" x2="${x - 5}" y2="${y + len}" stroke="#7DB8E8" stroke-width="1.4" stroke-linecap="round" opacity="${opacity}"/>`)
+          }
+          return drops.join('')
+        })()}
       </svg>
     `,
 
-    // ─── RAINY (Night) ──────────────────────────────────────────────────
+    // ─── RAINY (Night) ─────────────────────────────────────────────────
     rainyNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        ${Array.from({ length: 20 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.3
-          return `<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.3"/>`
-        }).join('')}
-        <g opacity="0.5">
-          <ellipse cx="${w * 0.35}" cy="${h * 0.18}" rx="${w * 0.20}" ry="${w * 0.08}" fill="#050A0F"/>
-          <ellipse cx="${w * 0.55}" cy="${h * 0.16}" rx="${w * 0.16}" ry="${w * 0.07}" fill="#050A0F"/>
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 10; i++) {
+            const { x, y } = edgeBiasedPosition(i * 19 + 500, w, h, 0.05, 0.25)
+            stars.push(`<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.3"/>`)
+          }
+          return stars.join('')
+        })()}
+        <g opacity="0.45" filter="blur(3px)">
+          <ellipse cx="${w * 0.35}" cy="${h * 0.18}" rx="${w * 0.30}" ry="${w * 0.10}" fill="#050A0F"/>
+          <ellipse cx="${w * 0.58}" cy="${h * 0.16}" rx="${w * 0.22}" ry="${w * 0.08}" fill="#050A0F"/>
         </g>
-        <g opacity="0.35">
-          <ellipse cx="${w * 0.25}" cy="${h * 0.30}" rx="${w * 0.22}" ry="${w * 0.09}" fill="#020508"/>
+        <g opacity="0.3" filter="blur(4px)">
+          <ellipse cx="${w * 0.25}" cy="${h * 0.30}" rx="${w * 0.28}" ry="${w * 0.10}" fill="#020508"/>
         </g>
-        ${Array.from({ length: 40 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.7 + h * 0.25
-          const len = Math.random() * 30 + 20
-          return `<line x1="${x}" y1="${y}" x2="${x - 8}" y2="${y + len}" stroke="#5A8FB8" stroke-width="2" stroke-linecap="round" opacity="${Math.random() * 0.4 + 0.2}"/>`
-        }).join('')}
+        ${(() => {
+          const drops = []
+          for (let i = 0; i < 22; i++) {
+            const { x, y } = edgeBiasedPosition(i * 23 + 600, w, h, 0.35, 0.95)
+            const len = 16 + seededRandom(i * 37 + 10) * 20
+            const opacity = 0.1 + seededRandom(i * 41 + 11) * 0.2
+            drops.push(`<line x1="${x}" y1="${y}" x2="${x - 5}" y2="${y + len}" stroke="#5A8FB8" stroke-width="1.4" stroke-linecap="round" opacity="${opacity}"/>`)
+          }
+          return drops.join('')
+        })()}
       </svg>
     `,
 
-    // ─── THUNDER (Day) ──────────────────────────────────────────────────
+    // ─── THUNDER (Day) — subtle lightning, softer clouds ───────────────
     thunderDay: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        <g opacity="0.7">
-          <ellipse cx="${w * 0.30}" cy="${h * 0.15}" rx="${w * 0.22}" ry="${w * 0.09}" fill="#0A0C14"/>
-          <ellipse cx="${w * 0.55}" cy="${h * 0.13}" rx="${w * 0.20}" ry="${w * 0.085}" fill="#0A0C14"/>
-          <ellipse cx="${w * 0.75}" cy="${h * 0.16}" rx="${w * 0.15}" ry="${w * 0.07}" fill="#0A0C14"/>
+        <g opacity="0.5" filter="blur(3px)">
+          <ellipse cx="${w * 0.30}" cy="${h * 0.15}" rx="${w * 0.32}" ry="${w * 0.11}" fill="#0A0C14"/>
+          <ellipse cx="${w * 0.58}" cy="${h * 0.13}" rx="${w * 0.26}" ry="${w * 0.09}" fill="#0A0C14"/>
         </g>
-        <g opacity="0.5">
-          <ellipse cx="${w * 0.40}" cy="${h * 0.28}" rx="${w * 0.25}" ry="${w * 0.10}" fill="#05070B"/>
+        <g opacity="0.3" filter="blur(4px)">
+          <ellipse cx="${w * 0.42}" cy="${h * 0.28}" rx="${w * 0.30}" ry="${w * 0.11}" fill="#05070B"/>
         </g>
         <defs>
-          <filter id="lightningGlow">
-            <feGaussianBlur stdDeviation="6" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          <filter id="lightningGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
           </filter>
         </defs>
-        <g filter="url(#lightningGlow)">
-          <path d="M ${w * 0.50} ${h * 0.30} L ${w * 0.44} ${h * 0.55} L ${w * 0.50} ${h * 0.53} L ${w * 0.42} ${h * 0.78} L ${w * 0.55} ${h * 0.50} L ${w * 0.48} ${h * 0.52} L ${w * 0.55} ${h * 0.30} Z" fill="#FCD34D" opacity="0.95"/>
+        <g filter="url(#lightningGlow)" opacity="0.85">
+          <path d="M ${w * 0.50} ${h * 0.30} L ${w * 0.46} ${h * 0.52} L ${w * 0.51} ${h * 0.51} L ${w * 0.44} ${h * 0.75} L ${w * 0.55} ${h * 0.48} L ${w * 0.49} ${h * 0.50} L ${w * 0.55} ${h * 0.30} Z" fill="#FCD34D"/>
         </g>
-        ${Array.from({ length: 30 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.6 + h * 0.35
-          const len = Math.random() * 30 + 20
-          return `<line x1="${x}" y1="${y}" x2="${x - 6}" y2="${y + len}" stroke="#5A8FB8" stroke-width="2" stroke-linecap="round" opacity="${Math.random() * 0.4 + 0.2}"/>`
-        }).join('')}
+        ${(() => {
+          const drops = []
+          for (let i = 0; i < 16; i++) {
+            const { x, y } = edgeBiasedPosition(i * 29 + 700, w, h, 0.4, 0.9)
+            const len = 14 + seededRandom(i * 43 + 12) * 18
+            drops.push(`<line x1="${x}" y1="${y}" x2="${x - 4}" y2="${y + len}" stroke="#5A8FB8" stroke-width="1.2" stroke-linecap="round" opacity="0.2"/>`)
+          }
+          return drops.join('')
+        })()}
       </svg>
     `,
 
-    // ─── THUNDER (Night) ────────────────────────────────────────────────
+    // ─── THUNDER (Night) ───────────────────────────────────────────────
     thunderNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        ${Array.from({ length: 15 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.25
-          return `<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.4"/>`
-        }).join('')}
-        <g opacity="0.6">
-          <ellipse cx="${w * 0.30}" cy="${h * 0.15}" rx="${w * 0.22}" ry="${w * 0.09}" fill="#000000"/>
-          <ellipse cx="${w * 0.55}" cy="${h * 0.13}" rx="${w * 0.20}" ry="${w * 0.085}" fill="#000000"/>
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 8; i++) {
+            const { x, y } = edgeBiasedPosition(i * 31 + 800, w, h, 0.03, 0.2)
+            stars.push(`<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.35"/>`)
+          }
+          return stars.join('')
+        })()}
+        <g opacity="0.55" filter="blur(3px)">
+          <ellipse cx="${w * 0.30}" cy="${h * 0.15}" rx="${w * 0.32}" ry="${w * 0.11}" fill="#000000"/>
+          <ellipse cx="${w * 0.58}" cy="${h * 0.13}" rx="${w * 0.26}" ry="${w * 0.09}" fill="#000000"/>
         </g>
         <defs>
-          <filter id="lightningGlowNight">
-            <feGaussianBlur stdDeviation="8" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          <filter id="lightningGlowNight" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="10" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
           </filter>
         </defs>
         <g filter="url(#lightningGlowNight)">
-          <path d="M ${w * 0.50} ${h * 0.30} L ${w * 0.44} ${h * 0.55} L ${w * 0.50} ${h * 0.53} L ${w * 0.42} ${h * 0.78} L ${w * 0.55} ${h * 0.50} L ${w * 0.48} ${h * 0.52} L ${w * 0.55} ${h * 0.30} Z" fill="#FCD34D"/>
+          <path d="M ${w * 0.50} ${h * 0.30} L ${w * 0.46} ${h * 0.52} L ${w * 0.51} ${h * 0.51} L ${w * 0.44} ${h * 0.75} L ${w * 0.55} ${h * 0.48} L ${w * 0.49} ${h * 0.50} L ${w * 0.55} ${h * 0.30} Z" fill="#FCD34D"/>
         </g>
       </svg>
     `,
 
-    // ─── SNOW (Day) ─────────────────────────────────────────────────────
+    // ─── SNOW (Day) — 25 flakes, softer ────────────────────────────────
     snowDay: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        <g opacity="0.5">
-          <ellipse cx="${w * 0.35}" cy="${h * 0.20}" rx="${w * 0.18}" ry="${w * 0.07}" fill="#FFFFFF"/>
-          <ellipse cx="${w * 0.55}" cy="${h * 0.18}" rx="${w * 0.15}" ry="${w * 0.06}" fill="#FFFFFF"/>
+        <g opacity="0.25" filter="blur(3px)">
+          <ellipse cx="${w * 0.35}" cy="${h * 0.20}" rx="${w * 0.28}" ry="${w * 0.09}" fill="#FFFFFF"/>
+          <ellipse cx="${w * 0.60}" cy="${h * 0.18}" rx="${w * 0.22}" ry="${w * 0.07}" fill="#FFFFFF"/>
         </g>
-        ${Array.from({ length: 60 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.85 + h * 0.15
-          const r = Math.random() * 4 + 1
-          return `<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="${Math.random() * 0.7 + 0.3}"/>`
-        }).join('')}
+        ${(() => {
+          const flakes = []
+          for (let i = 0; i < 25; i++) {
+            const { x, y } = edgeBiasedPosition(i * 41 + 900, w, h, 0.15, 0.95)
+            const r = 1.5 + seededRandom(i * 47 + 13) * 2.5
+            const opacity = 0.35 + seededRandom(i * 53 + 14) * 0.4
+            flakes.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" opacity="${opacity}"/>`)
+          }
+          return flakes.join('')
+        })()}
       </svg>
     `,
 
-    // ─── SNOW (Night) ───────────────────────────────────────────────────
+    // ─── SNOW (Night) ──────────────────────────────────────────────────
     snowNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        ${Array.from({ length: 25 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.3
-          return `<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.4"/>`
-        }).join('')}
-        <g opacity="0.4">
-          <ellipse cx="${w * 0.35}" cy="${h * 0.20}" rx="${w * 0.18}" ry="${w * 0.07}" fill="#1A2432"/>
-          <ellipse cx="${w * 0.55}" cy="${h * 0.18}" rx="${w * 0.15}" ry="${w * 0.06}" fill="#1A2432"/>
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 10; i++) {
+            const { x, y } = edgeBiasedPosition(i * 37 + 1000, w, h, 0.03, 0.22)
+            stars.push(`<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.35"/>`)
+          }
+          return stars.join('')
+        })()}
+        <g opacity="0.3" filter="blur(3px)">
+          <ellipse cx="${w * 0.35}" cy="${h * 0.20}" rx="${w * 0.28}" ry="${w * 0.09}" fill="#1A2432"/>
+          <ellipse cx="${w * 0.60}" cy="${h * 0.18}" rx="${w * 0.22}" ry="${w * 0.07}" fill="#1A2432"/>
         </g>
-        ${Array.from({ length: 60 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.85 + h * 0.15
-          const r = Math.random() * 4 + 1
-          return `<circle cx="${x}" cy="${y}" r="${r}" fill="#D4E1EC" opacity="${Math.random() * 0.7 + 0.3}"/>`
-        }).join('')}
+        ${(() => {
+          const flakes = []
+          for (let i = 0; i < 25; i++) {
+            const { x, y } = edgeBiasedPosition(i * 43 + 1100, w, h, 0.15, 0.95)
+            const r = 1.5 + seededRandom(i * 59 + 15) * 2.5
+            const opacity = 0.3 + seededRandom(i * 61 + 16) * 0.35
+            flakes.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#D4E1EC" opacity="${opacity}"/>`)
+          }
+          return flakes.join('')
+        })()}
       </svg>
     `,
 
-    // ─── FOG (Day) ──────────────────────────────────────────────────────
+    // ─── FOG (Day) — softer layered bands ──────────────────────────────
     fogDay: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        <rect x="0" y="${h * 0.3}" width="${w}" height="${h * 0.12}" fill="#FFFFFF" opacity="0.15"/>
-        <rect x="0" y="${h * 0.45}" width="${w}" height="${h * 0.10}" fill="#FFFFFF" opacity="0.12"/>
-        <rect x="0" y="${h * 0.58}" width="${w}" height="${h * 0.14}" fill="#FFFFFF" opacity="0.10"/>
-        <rect x="0" y="${h * 0.72}" width="${w}" height="${h * 0.10}" fill="#FFFFFF" opacity="0.08"/>
+        <defs>
+          <linearGradient id="fogBand" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
+            <stop offset="50%" stop-color="#FFFFFF" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="${h * 0.32}" width="${w}" height="${h * 0.10}" fill="url(#fogBand)" opacity="0.14"/>
+        <rect x="0" y="${h * 0.48}" width="${w}" height="${h * 0.09}" fill="url(#fogBand)" opacity="0.11"/>
+        <rect x="0" y="${h * 0.62}" width="${w}" height="${h * 0.11}" fill="url(#fogBand)" opacity="0.09"/>
+        <rect x="0" y="${h * 0.76}" width="${w}" height="${h * 0.08}" fill="url(#fogBand)" opacity="0.07"/>
       </svg>
     `,
 
-    // ─── FOG (Night) ────────────────────────────────────────────────────
+    // ─── FOG (Night) ───────────────────────────────────────────────────
     fogNight: `
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        ${Array.from({ length: 12 }, () => {
-          const x = Math.random() * w
-          const y = Math.random() * h * 0.3
-          return `<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.3"/>`
-        }).join('')}
-        <rect x="0" y="${h * 0.3}" width="${w}" height="${h * 0.12}" fill="#FFFFFF" opacity="0.08"/>
-        <rect x="0" y="${h * 0.45}" width="${w}" height="${h * 0.10}" fill="#FFFFFF" opacity="0.06"/>
-        <rect x="0" y="${h * 0.58}" width="${w}" height="${h * 0.14}" fill="#FFFFFF" opacity="0.05"/>
+        ${(() => {
+          const stars = []
+          for (let i = 0; i < 6; i++) {
+            const { x, y } = edgeBiasedPosition(i * 43 + 1200, w, h, 0.03, 0.2)
+            stars.push(`<circle cx="${x}" cy="${y}" r="1" fill="#FFFFFF" opacity="0.25"/>`)
+          }
+          return stars.join('')
+        })()}
+        <defs>
+          <linearGradient id="fogBandNight" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
+            <stop offset="50%" stop-color="#FFFFFF" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="${h * 0.32}" width="${w}" height="${h * 0.10}" fill="url(#fogBandNight)" opacity="0.08"/>
+        <rect x="0" y="${h * 0.48}" width="${w}" height="${h * 0.09}" fill="url(#fogBandNight)" opacity="0.06"/>
+        <rect x="0" y="${h * 0.62}" width="${w}" height="${h * 0.11}" fill="url(#fogBandNight)" opacity="0.05"/>
       </svg>
     `
   }
