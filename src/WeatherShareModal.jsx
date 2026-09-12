@@ -11,11 +11,11 @@ const CloseIcon = () => (
 )
 
 const SHARE_TYPES = [
-  { id: 'current', label: '⛅ Current', desc: 'Weather right now' },
-  { id: 'today', label: '📅 Today', desc: 'Full day summary' },
-  { id: 'hourly', label: '⏰ Hourly', desc: 'Next 12 hours' },
-  { id: 'singleHour', label: '🕐 Single Hour', desc: 'Pick one hour' },
-  { id: 'weekly', label: '📆 Weekly', desc: '7-day forecast' }
+  { id: 'current', label: ' Current', desc: 'Weather right now' },
+  { id: 'today', label: ' Today', desc: 'Full day summary' },
+  { id: 'hourly', label: ' Hourly', desc: 'Next 12 hours' },
+  { id: 'singleHour', label: ' Single Hour', desc: 'Pick one hour' },
+  { id: 'weekly', label: ' Weekly', desc: '7-day forecast' }
 ]
 
 export default function WeatherShareModal({
