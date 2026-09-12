@@ -38,10 +38,10 @@ const CONFIG = {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── INTENT MAP ──────────────────────────────────────────────────────────
+// ─── INTENT MAP (EXPORTED) ───────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-const INTENT_MAP = [
+export const INTENT_MAP = [
   {
     id: 'weather',
     name: 'Weather',
@@ -1001,7 +1001,7 @@ const scoreQuestion = (question, intent) => {
   // 2. Score all keys with phrase weighting
   for (const key of intent.keys) {
     const k = key.toLowerCase()
-    
+
     // Full phrase match (highest weight)
     if (q === k) {
       score += 100
@@ -1012,7 +1012,7 @@ const scoreQuestion = (question, intent) => {
     // Phrase contains key
     if (q.includes(k)) {
       const wordCount = k.split(/\s+/).length
-      
+
       // Weight based on phrase length
       if (wordCount >= 5) {
         score += 80
@@ -1073,15 +1073,15 @@ export const detectIntents = (question) => {
 
   for (const intent of INTENT_MAP) {
     const { score, matched, excluded } = scoreQuestion(question, intent)
-    
+
     // Minimum threshold to consider
     if (score > CONFIG.MIN_SCORE_THRESHOLD) {
-      results.push({ 
-        intent, 
-        score, 
-        matched, 
+      results.push({
+        intent,
+        score,
+        matched,
         excluded,
-        isPrimary: false 
+        isPrimary: false
       })
     }
   }
@@ -1100,9 +1100,9 @@ export const detectIntents = (question) => {
   // Only return intents that are within 40% of the top score
   const primaryScore = results[0]?.score || 0
   const threshold = primaryScore * CONFIG.SECONDARY_THRESHOLD
-  
+
   const filtered = results.filter(r => r.score >= threshold)
-  
+
   return filtered.slice(0, CONFIG.MAX_INTENTS)
 }
 
@@ -1136,4 +1136,4 @@ export const debugIntentMatch = (question) => {
   return results
 }
 
-export default { detectIntents, getIntentFunction, getIntentById, debugIntentMatch }
+export default { INTENT_MAP, detectIntents, getIntentFunction, getIntentById, debugIntentMatch }
