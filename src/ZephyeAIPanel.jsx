@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import LiveIndicator from './LiveIndicator'
 import TranscriptBubble from './TranscriptBubble'
 import MetricGroup from './MetricGroup'
+import { useTranslation } from './utils/translation'
 
 export default function ZephyeAIPanel({
   weather,
@@ -19,13 +20,14 @@ export default function ZephyeAIPanel({
   speakScript,
   buildScript,
   getAqiLevel,
-  // NEW
   lang,
   voiceToUse,
   greeting,
   askWeather,
-  isLoadingChat
+  isLoadingChat,
+  uiLanguage = 'en'
 }) {
+  const { t } = useTranslation(uiLanguage, location?.country_code)
   const [mode, setMode] = useState('reporter')
   const [showNameModal, setShowNameModal] = useState(false)
   const [tempName, setTempName] = useState('')
@@ -60,11 +62,11 @@ export default function ZephyeAIPanel({
       {showNameModal && (
         <div className="modal-overlay" onClick={() => setShowNameModal(false)}>
           <div className="glass modal" onClick={e => e.stopPropagation()} style={{padding: '24px'}}>
-            <h3 className="font-bold mb-4">Set Your Name</h3>
-            <p className="text-sm text-white/70 mb-3">Zephye will greet you by name in the briefing</p>
+            <h3 className="font-bold mb-4">{t('buttons.setYourName')}</h3>
+            <p className="text-sm text-white/70 mb-3">{t('modals.zephyeGreeting')}</p>
             <input
               type="text"
-              placeholder="Enter your name"
+              placeholder={t('placeholders.enterYourName')}
               value={tempName}
               onChange={e => setTempName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveName()}
@@ -72,11 +74,11 @@ export default function ZephyeAIPanel({
               autoFocus
             />
             <div className="flex gap-2">
-              <button className="btn-primary flex-1" onClick={saveName}>Save</button>
+              <button className="btn-primary flex-1" onClick={saveName}>{t('buttons.save')}</button>
               <button className="btn-ghost text-xs" onClick={() => {
                 setShowNameModal(false)
                 setTempName('')
-              }}>Cancel</button>
+              }}>{t('buttons.cancel')}</button>
             </div>
           </div>
         </div>
@@ -123,7 +125,7 @@ export default function ZephyeAIPanel({
             </div>
           </div>
 
-          <LiveIndicator location={location} />
+          <LiveIndicator location={location} uiLanguage={uiLanguage} />
         </div>
 
         {/* Mode Buttons */}
@@ -152,7 +154,7 @@ export default function ZephyeAIPanel({
               color: '#fff'
             }}
           >
-            🎙 Reporter
+            🎙 {t('buttons.reporter')}
           </button>
 
           <button
@@ -173,11 +175,11 @@ export default function ZephyeAIPanel({
               color: '#fff'
             }}
           >
-            🤖 Assistant
+            🤖 {t('buttons.assistant')}
           </button>
         </div>
 
-        {/* Controls - Now includes 👤 You */}
+        {/* Controls */}
         <div
           style={{
             display: 'flex',
@@ -204,7 +206,7 @@ export default function ZephyeAIPanel({
               gap: '6px'
             }}
           >
-            👤 You
+            👤 {t('buttons.you')}
           </button>
 
           <button
@@ -219,7 +221,7 @@ export default function ZephyeAIPanel({
               color: '#fff'
             }}
           >
-            {briefMode? '⚡ Brief' : '📋 Full'}
+            {briefMode? `⚡ ${t('buttons.brief')}` : `📋 ${t('buttons.full')}`}
           </button>
 
           <select
@@ -246,9 +248,10 @@ export default function ZephyeAIPanel({
         <TranscriptBubble
           text={buildScript()}
           isSpeaking={isSpeaking}
+          uiLanguage={uiLanguage}
         />
 
-        {/* Metrics + AI Chat */}
+        {/* Metrics */}
         <MetricGroup
           weather={weather}
           todayStats={todayStats}
@@ -260,6 +263,7 @@ export default function ZephyeAIPanel({
           speakScript={speakScript}
           voiceToUse={voiceToUse}
           location={location}
+          uiLanguage={uiLanguage}
         />
 
         {/* Button */}
@@ -281,10 +285,10 @@ export default function ZephyeAIPanel({
           }}
         >
           {isSpeaking
-          ? '🌬 Zephye is Speaking...'
-            : '🔊 Begin Weather Briefing'}
+          ? `🌬 ${t('buttons.speaking')}`
+            : `🔊 ${t('buttons.beginBriefing')}`}
         </button>
       </div>
     </>
   )
-        }
+}
