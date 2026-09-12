@@ -381,3 +381,12 @@ export function useWeatherChat() {
 
   return { askWeather, isLoading }
 }
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// NEW: UI LANGUAGE HELPER
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+export function getUILanguage(countryCode, override = null) {
+  if (override) return override
+  if (countryCode === 'NG') return 'en'
+  return LANG_MAP[countryCode] || 'en'
+}
