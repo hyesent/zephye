@@ -1,4 +1,7 @@
-export default function LiveIndicator({ location }) {
+import { useTranslation } from './utils/translation'
+
+export default function LiveIndicator({ location, uiLanguage = 'en' }) {
+  const { t } = useTranslation(uiLanguage)
   const now = new Date()
   const hour = now.getHours()
 
@@ -37,7 +40,7 @@ export default function LiveIndicator({ location }) {
             color: '#fff'
           }}
         >
-          LIVE
+          {t('labels.live')}
         </div>
 
         <div
@@ -46,9 +49,9 @@ export default function LiveIndicator({ location }) {
             color: 'rgba(255,255,255,.65)'
           }}
         >
-          Watching {location?.name || 'your area'} since {watchSince}
+          {t('labels.watching')} {location?.name || 'your area'} {t('labels.since')} {watchSince}
         </div>
       </div>
     </div>
   )
-          }
+}
