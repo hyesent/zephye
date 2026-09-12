@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from './utils/translation'
 
 export default function TranscriptBubble({
   text,
-  isSpeaking
+  isSpeaking,
+  uiLanguage = 'en'
 }) {
+  const { t } = useTranslation(uiLanguage)
   const [displayText, setDisplayText] = useState('')
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function TranscriptBubble({
           marginBottom: '10px'
         }}
       >
-        🎙 Zephye Speaking
+        🎙 {t('buttons.speaking')}
       </div>
 
       <div
@@ -61,4 +64,4 @@ export default function TranscriptBubble({
       </div>
     </div>
   )
-  }
+}
