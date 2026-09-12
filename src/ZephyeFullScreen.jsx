@@ -21,6 +21,8 @@ import {
   createSchedule
 } from './scheduleEngine'
 
+import ScheduleAskPanel from './ScheduleAskPanel'
+
 // ─── SVG ICONS ──────────────────────────────────────────────────────────
 
 const BackIcon = () => (
@@ -628,6 +630,11 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy, t }) {
   const [showDetails, setShowDetails] = useState(false)
   const [showFull, setShowFull] = useState(false)
 
+  // If data is a plain string, show directly
+  if (typeof data === 'string') {
+    return <div className="msg-content">{data}</div>
+  }
+
   if (!data || typeof data !== 'object') {
     return <div className="msg-content">{String(data)}</div>
   }
@@ -637,10 +644,10 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy, t }) {
   return (
     <div className="structured-response">
       {/* Verdict */}
-      <div className="verdict">{verdict}</div>
+      {verdict && <div className="verdict">{verdict}</div>}
       
       {/* Summary */}
-      <div className="summary">{summary}</div>
+      {summary && <div className="summary">{summary}</div>}
       
       {/* Note */}
       {note && <div className="note">{note}</div>}
@@ -735,6 +742,9 @@ export default function ZephyeFullScreen({
 
   // Schedule State
   const [futureTimeCard, setFutureTimeCard] = useState(null)
+  const [showSchedules, setShowSchedules] = useState(false)
+  const [schedulePrefill, setSchedulePrefill] = useState(null)
+  const [scheduleEditId, setScheduleEditId] = useState(null)
 
   // ─── Determine which voice to use ──────────────────────────────────────
   const voiceToUse = useMemo(() => {
@@ -937,6 +947,41 @@ export default function ZephyeFullScreen({
 
     window.addEventListener('zephye:pushMessage', handlePushMessage)
     return () => window.removeEventListener('zephye:pushMessage', handlePushMessage)
+  }, [])
+
+  // ─── Listen for schedule events from anywhere in the app ──────────────
+  useEffect(() => {
+    const handleOpenSchedules = () => {
+      setSchedulePrefill(null)
+      setScheduleEditId(null)
+      setShowSchedules(true)
+    }
+
+    const handlePrefillSchedule = (e) => {
+      const { question, targetTime } = e.detail || {}
+      if (!question) return
+      setSchedulePrefill({ question, targetTime })
+      setScheduleEditId(null)
+      setShowSchedules(true)
+    }
+
+    const handleEditSchedule = (e) => {
+      const { scheduleId } = e.detail || {}
+      if (!scheduleId) return
+      setScheduleEditId(scheduleId)
+      setSchedulePrefill(null)
+      setShowSchedules(true)
+    }
+
+    window.addEventListener('zephye:openSchedules', handleOpenSchedules)
+    window.addEventListener('zephye:prefillSchedule', handlePrefillSchedule)
+    window.addEventListener('zephye:editSchedule', handleEditSchedule)
+
+    return () => {
+      window.removeEventListener('zephye:openSchedules', handleOpenSchedules)
+      window.removeEventListener('zephye:prefillSchedule', handlePrefillSchedule)
+      window.removeEventListener('zephye:editSchedule', handleEditSchedule)
+    }
   }, [])
 
   // ─── Speaking ─────────────────────────────────────────────────────────
@@ -1159,7 +1204,9 @@ export default function ZephyeFullScreen({
     if (isScheduleCommand(question)) {
       setInput('')
       setFutureTimeCard(null)
-      window.dispatchEvent(new CustomEvent('zephye:openSchedules'))
+      setSchedulePrefill(null)
+      setScheduleEditId(null)
+      setShowSchedules(true)
       return
     }
 
@@ -1444,8 +1491,10 @@ export default function ZephyeFullScreen({
 
                 <button
                   onClick={() => { 
-                    window.dispatchEvent(new CustomEvent('zephye:openSchedules'))
                     setIsMenuOpen(false)
+                    setSchedulePrefill(null)
+                    setScheduleEditId(null)
+                    setShowSchedules(true)
                   }}
                   style={{
                     padding: '6px 12px',
@@ -1640,7 +1689,7 @@ export default function ZephyeFullScreen({
       </div>
 
       {/* ─── FUTURE TIME CARD ─────────────────────────────────────────── */}
-      {futureTimeCard && (
+      {futureTimeCard && !showSchedules && (
         <div style={{
           maxWidth: '768px',
           margin: '0 auto',
@@ -1678,12 +1727,12 @@ export default function ZephyeFullScreen({
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('zephye:prefillSchedule', {
-                    detail: {
-                      question: futureTimeCard.question,
-                      targetTime: futureTimeCard.targetTime
-                    }
-                  }))
+                  setSchedulePrefill({
+                    question: futureTimeCard.question,
+                    targetTime: futureTimeCard.targetTime
+                  })
+                  setScheduleEditId(null)
+                  setShowSchedules(true)
                   setFutureTimeCard(null)
                   setInput('')
                 }}
@@ -1754,6 +1803,28 @@ export default function ZephyeFullScreen({
           </button>
         </div>
       </div>
+
+      {/* ─── SCHEDULE PANEL ──────────────────────────────────────────── */}
+      {showSchedules && (
+        <ScheduleAskPanel
+          onClose={() => {
+            setShowSchedules(false)
+            setSchedulePrefill(null)
+            setScheduleEditId(null)
+          }}
+          savedLocations={savedLocations}
+          homeLocation={{
+            lat: location?.lat,
+            lon: location?.lon,
+            label: location?.name?.split(',')[0] || 'Home',
+            name: location?.name,
+            country_code: location?.country_code
+          }}
+          prefilledData={schedulePrefill}
+          editScheduleId={scheduleEditId}
+          uiLanguage={uiLanguage}
+        />
+      )}
 
       <style jsx>{`
         .ai-fullscreen {
