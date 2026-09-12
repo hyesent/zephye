@@ -53,7 +53,35 @@ export const UI_TEXTS = {
     watching: 'Watching',
     since: 'since',
     language: 'Language',
-    voice: 'Voice'
+    voice: 'Voice',
+    dewPoint: 'Dew Point',
+    europeanAqi: 'AQI (EU)',
+    pm25: 'PM2.5',
+    pm10: 'PM10',
+    ozone: 'Ozone (O₃)',
+    nitrogenDioxide: 'NO₂',
+    carbonMonoxide: 'CO',
+    sulphurDioxide: 'SO₂',
+    elevation: 'elevation',
+    saved: 'saved',
+    myPlaces: 'My Places',
+    untitled: 'Untitled Location',
+    whyRecommendation: 'Why this recommendation?',
+    noSavedQuotes: 'No saved quotes yet.',
+    noSavedFacts: 'No saved facts yet.',
+    showingWeather: 'Showing weather for',
+    high: 'High',
+    low: 'Low',
+    todayIn: 'Today in',
+    next12Hours: 'Next 12 Hours',
+    feelsShort: 'Feels',
+    chance: 'chance',
+    quote: 'Quote',
+    fact: 'Fact',
+    update: 'Update',
+    new: 'New',
+    improvements: 'Improvements',
+    fixes: 'Fixes'
   },
   buttons: {
     save: 'Save',
@@ -71,8 +99,10 @@ export const UI_TEXTS = {
     addLocation: 'Add Location',
     addAnother: 'Add Another Location',
     back: 'Back to my location',
+    backToOriginal: 'Back to original location',
     done: 'Done',
     loading: 'Loading...',
+    searching: 'Searching...',
     shareAsImage: 'Share as Image',
     downloadImage: 'Download Image',
     shareAsText: 'Share as Text',
@@ -106,7 +136,12 @@ export const UI_TEXTS = {
     why: 'Why?',
     hideDetails: 'Hide details',
     moreDetails: 'More details',
-    showLess: 'Show less'
+    showLess: 'Show less',
+    next: 'Next',
+    previous: 'Previous',
+    skip: 'Skip',
+    seeWhatsNew: "See what's new",
+    close: 'Close'
   },
   placeholders: {
     searchCity: 'Type any city, LGA, country...',
@@ -121,6 +156,8 @@ export const UI_TEXTS = {
     quoteSaved: 'Quote saved',
     factSaved: 'Fact saved',
     locationRemoved: 'Location removed',
+    quoteDeleted: 'Quote deleted',
+    factDeleted: 'Fact deleted',
     alreadySaved: 'Already saved',
     locationDenied: 'Location denied',
     placeNotFound: 'Place not found',
@@ -130,7 +167,10 @@ export const UI_TEXTS = {
     detecting: 'Detecting your location...',
     gpsUnavailable: 'Location unavailable. Try again or use Manual.',
     locationSaved: 'Location saved. Edit label to name it.',
-    typePlace: 'Type a place name'
+    typePlace: 'Type a place name',
+    locationSuccess: 'Location',
+    savedAs: 'Saved as',
+    updatedTo: 'Location updated to'
   },
   modals: {
     changeLocation: 'Change Location',
@@ -166,7 +206,51 @@ export const UI_TEXTS = {
   chat: {
     thinking: 'Thinking...',
     howCanIHelp: 'How can I help you today?',
-    weatherIntelligence: 'Weather Intelligence'
+    weatherIntelligence: 'Weather Intelligence',
+    askStargazing: 'Ask "stargazing tonight"',
+    tryWear: 'Try "what should I wear"',
+    askRain: 'Ask "will it rain"',
+    compareToday: 'Compare "today vs tomorrow"',
+    askBiking: 'Ask "biking vs running today?"',
+    tryDrive: 'Try "drive or bike to work?"'
+  },
+  weather: {
+    clear: 'Clear',
+    mainlyClear: 'Mainly Clear',
+    partlyCloudy: 'Partly Cloudy',
+    overcast: 'Overcast',
+    fog: 'Fog',
+    lightDrizzle: 'Light Drizzle',
+    moderateDrizzle: 'Moderate Drizzle',
+    heavyDrizzle: 'Heavy Drizzle',
+    lightRain: 'Light Rain',
+    moderateRain: 'Moderate Rain',
+    heavyRain: 'Heavy Rain',
+    lightSnow: 'Light Snow',
+    moderateSnow: 'Moderate Snow',
+    heavySnow: 'Heavy Snow',
+    rainShowers: 'Rain Showers',
+    heavyShowers: 'Heavy Showers',
+    violentShowers: 'Violent Showers',
+    thunderstorm: 'Thunderstorm',
+    heavyThunderstorm: 'Heavy Thunderstorm',
+    severeThunderstorm: 'Severe Thunderstorm',
+    heavyStorm: 'Heavy Storm',
+    unknown: 'Unknown'
+  },
+  quoteCategories: {
+    all: 'All',
+    motivational: 'Motivational',
+    success: 'Success',
+    wisdom: 'Wisdom',
+    love: 'Love'
+  },
+  factCategories: {
+    all: 'All',
+    science: 'Science',
+    history: 'History',
+    animals: 'Animals',
+    space: 'Space'
   },
   map: {
     weather: 'Weather',
@@ -196,8 +280,83 @@ export const UI_TEXTS = {
     tapForWeather: 'Tap for weather · Double tap for pollen · Long press for route',
     longPressForRoute: 'Long press for route',
     doubleTapForPollen: 'Double tap for pollen · Long press for route',
-    updatingIncidents: 'Updating incidents...'
+    updatingIncidents: 'Updating incidents...',
+    openMeteoCredit: 'Open-Meteo Air Quality (free)',
+    routeCredit: 'OpenRouteService · Driving'
+  },
+  share: {
+    via: 'via',
+    weatherFor: 'Weather for',
+    location: 'Location',
+    footerBrand: '✦ Zephye',
+    footerUrl: 'zephye.vercel.app',
+    cardTypeCurrent: 'Current',
+    cardTypeToday: 'Today',
+    cardTypeHourly: 'Hourly',
+    cardTypeSingleHour: 'Single Hour',
+    cardTypeWeekly: 'Weekly'
   }
+}
+
+// ─── WHAT'S NEW CONTENT ────────────────────────────────────────────────
+export const WHATS_NEW = {
+  version: '2.0.0',
+  date: '2026-01-15',
+  title: "What's New in Zephye",
+  sections: [
+    {
+      icon: '🌍',
+      title: 'Multi-Language Support',
+      description: 'Zephye now speaks your language. Every part of the interface translates automatically based on your home location.',
+      highlights: [
+        'Auto-detects language from your location',
+        'Shared global translation cache for instant loading',
+        'Choose your home location to lock in your preferred language'
+      ]
+    },
+    {
+      icon: '📤',
+      title: 'Weather Sharing',
+      description: 'Share the current weather, today summary, hourly, or weekly forecast as beautiful cards.',
+      highlights: [
+        'Current weather card with temperature, AQI, and metrics',
+        'Today summary with sun hours, rain periods, and more',
+        'Hourly and single-hour shares',
+        'Weekly 7-day forecast card',
+        'Custom weather-themed gradients'
+      ]
+    },
+    {
+      icon: '🎙',
+      title: 'Voice Auto-Mapping',
+      description: 'The AI briefing voice now matches your location automatically.',
+      highlights: [
+        'Voice changes when you switch locations',
+        'Female and male voice options',
+        'Manual override if you prefer a different voice'
+      ]
+    },
+    {
+      icon: '📍',
+      title: 'Smarter Locations',
+      description: 'Manage your saved places with more control.',
+      highlights: [
+        'Manual or GPS auto-locate for each saved place',
+        'Elevation info for saved locations',
+        'Prevents duplicate saves (auto-numbers them)'
+      ]
+    },
+    {
+      icon: '💨',
+      title: 'Air Quality Breakdown',
+      description: 'See the full air quality picture, not just the AQI number.',
+      highlights: [
+        'PM2.5, PM10, Ozone, NO₂, CO, SO₂ breakdown',
+        'European AQI alongside US AQI',
+        'Dew point for better comfort estimation'
+      ]
+    }
+  ]
 }
 
 // ─── LOCALSTORAGE CACHE ────────────────────────────────────────────────
@@ -375,6 +534,34 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
   }
 
   return { t, isLoading, translations }
+}
+
+// ─── TRANSLATE SHARE TEXT ──────────────────────────────────────────────
+// Use for share cards where content needs translation before canvas draw
+export const useShareTranslation = (uiLanguage) => {
+  const { translations, isLoading } = useTranslation(uiLanguage)
+
+  // Translate a raw string using the same cache/lookup
+  const tShare = (key) => {
+    if (uiLanguage === 'en') {
+      const parts = key.split('.')
+      const last = parts[parts.length - 1]
+      return last.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim()
+    }
+    return translations[key] || key.split('.').pop()
+  }
+
+  // Translate arbitrary text on the fly (uses Supabase + API chain)
+  const translateDynamic = async (text) => {
+    if (uiLanguage === 'en' || !text) return text
+    try {
+      return await translateText(text, uiLanguage)
+    } catch {
+      return text
+    }
+  }
+
+  return { tShare, translateDynamic, isLoading }
 }
 
 // ─── LANGUAGE CONTEXT ──────────────────────────────────────────────────
