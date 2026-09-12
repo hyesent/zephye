@@ -212,7 +212,8 @@ export const UI_TEXTS = {
     askRain: 'Ask "will it rain"',
     compareToday: 'Compare "today vs tomorrow"',
     askBiking: 'Ask "biking vs running today?"',
-    tryDrive: 'Try "drive or bike to work?"'
+    tryDrive: 'Try "drive or bike to work?"',
+    typeSchedules: 'Type "schedules" to manage reminders'
   },
   weather: {
     clear: 'Clear',
@@ -295,6 +296,137 @@ export const UI_TEXTS = {
     cardTypeHourly: 'Hourly',
     cardTypeSingleHour: 'Single Hour',
     cardTypeWeekly: 'Weekly'
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // ZEPHYE AI ADDITIONS
+  // ═══════════════════════════════════════════════════════════════════════
+  zephye: {
+    hereIsWhatIFound: "Here's what I found",
+    hereIsWhatIFoundAbout: "Here's what I found about",
+    checkFullDetails: 'Check the full details below.',
+    multipleTopics: 'Multiple topics covered. Check each section below for details.',
+    errorGettingAdvice: 'Error getting advice. Current temp is',
+    withCondition: 'with',
+    vsLabel: 'vs',
+    comparison: 'Comparison',
+    locationComparison: 'Location Comparison'
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // SCHEDULE ENGINE ADDITIONS
+  // ═══════════════════════════════════════════════════════════════════════
+  schedule: {
+    // Menu
+    menuItem: 'Schedules',
+
+    // Panel
+    title: 'Schedules',
+    newSchedule: 'New Schedule',
+    editSchedule: 'Edit Schedule',
+    result: 'Result',
+
+    // Tabs
+    tabPending: 'Pending',
+    tabFired: 'Fired',
+    tabHistory: 'History',
+
+    // Empty states
+    noPending: 'No pending schedules',
+    noFired: 'No fired schedules',
+    noHistory: 'No history yet',
+    noPendingDesc: 'Schedule an ask to get notified at the right time.',
+    noFiredDesc: 'Fired schedules will appear here when they trigger.',
+    noHistoryDesc: 'Completed and cancelled schedules will show here.',
+    newScheduledAsk: 'New Scheduled Ask',
+
+    // Form
+    whatAsking: 'What are you asking?',
+    whatAskingPlaceholder: 'e.g. Going to an event in Lagos',
+    includeInResult: 'Include in the result',
+    destination: 'Destination',
+    selectDestination: 'Select a destination...',
+    from: 'From',
+    date: 'Date',
+    time: 'Time',
+    fireReminder: 'Fire reminder',
+    scheduleAsk: 'Schedule Ask',
+    saveChanges: 'Save Changes',
+    deleteConfirm: 'Delete this scheduled ask?',
+    home: 'Home',
+
+    // Fire window options
+    min15: '15 min before',
+    min30: '30 min before',
+    hour1: '1 hour before',
+    hours2: '2 hours before',
+    day1: '1 day before',
+
+    // Card actions
+    viewResult: 'View Result',
+    remove: 'Remove',
+    firesIn: 'Fires in',
+    fired: 'Fired',
+
+    // Toast
+    ready: 'Schedule Ready',
+    viewFull: 'View Full',
+    hideFull: 'Hide Full',
+    openInChat: 'Open in chat',
+    of: 'of',
+    yourScheduledCheck: 'Your scheduled check is ready.',
+
+    // Shift picker
+    shiftToWhen: 'Shift to when?',
+    original: 'Original',
+    min15Plus: '+15 min',
+    min30Plus: '+30 min',
+    hour1Plus: '+1 hour',
+    hours2Plus: '+2 hours',
+    day1Plus: '+1 day',
+    week1Plus: '+1 week',
+    confirm: 'Confirm',
+
+    // Future time card
+    scheduleThisAsk: 'Schedule this ask?',
+    firesAutomatically: 'Fires automatically',
+    setUp: 'Set up',
+
+    // Errors
+    errQuestion: 'Please describe what you want to schedule.',
+    errPills: 'Select at least one pill.',
+    errDestination: 'Please pick a destination.',
+    errDateTime: 'Please pick a date and time.',
+    errInvalidDateTime: 'Invalid date or time.',
+    errFutureTime: 'Target time must be in the future.',
+    errDestinationSaved: 'Destination must be a saved location.',
+
+    // Pills labels (17 intents)
+    pillRoute: 'Route',
+    pillTraffic: 'Traffic',
+    pillWeather: 'Weather',
+    pillClothing: 'Clothing',
+    pillEvents: 'Events',
+    pillSports: 'Sports',
+    pillHealth: 'Health',
+    pillDriving: 'Driving',
+    pillPets: 'Pets',
+    pillEnergy: 'Energy',
+    pillStargazing: 'Stargazing',
+    pillFarming: 'Farming',
+    pillPhotography: 'Photography',
+    pillLifestyle: 'Lifestyle',
+    pillDIY: 'DIY',
+    pillTravel: 'Travel',
+    pillBeauty: 'Beauty',
+
+    // Statuses
+    statusPending: 'PENDING',
+    statusFired: 'FIRED',
+    statusDone: 'DONE',
+    statusCancelled: 'CANCELLED',
+    statusDismissed: 'DISMISSED',
+    statusMissed: 'MISSED',
+    statusShifted: 'SHIFTED',
+    statusEdited: 'EDITED'
   }
 }
 
@@ -354,6 +486,17 @@ export const WHATS_NEW = {
         'PM2.5, PM10, Ozone, NO₂, CO, SO₂ breakdown',
         'European AQI alongside US AQI',
         'Dew point for better comfort estimation'
+      ]
+    },
+    {
+      icon: '⏰',
+      title: 'Scheduled Asks',
+      description: 'Schedule any question to fire automatically at the right time.',
+      highlights: [
+        'Pick pills for routing, traffic, weather, and more',
+        'Fires as a toast notification at your chosen time',
+        'Done, Edit, Shift, Cancel, or Dismiss when it fires',
+        'Type "schedules" to manage all reminders'
       ]
     }
   ]
@@ -537,7 +680,7 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
 }
 
 // ─── TRANSLATE SHARE TEXT ──────────────────────────────────────────────
-// Use for share cards where content needs translation before canvas draw
+// Use for share cards and any dynamic content (schedule results, etc.)
 export const useShareTranslation = (uiLanguage) => {
   const { translations, isLoading } = useTranslation(uiLanguage)
 
