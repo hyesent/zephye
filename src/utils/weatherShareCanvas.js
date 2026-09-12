@@ -1,6 +1,6 @@
 // ============================================================================
-// WEATHER SHARE CANVAS — FULL REDESIGN
-// Clean layout hierarchy, visible SVG art, consistent design language
+// WEATHER SHARE CANVAS — WITH TRANSLATION
+// Every static text uses t(); date/time uses uiLanguage
 // ============================================================================
 
 import { getWeatherTheme, getSVGArt, isNightTime } from '../data/weatherGradients'
@@ -19,6 +19,19 @@ const FOOTER_TEXT = '✦ Zephye · zephye.vercel.app'
 
 const FONT_DISPLAY = '"SF Pro Display", "Inter", "Helvetica Neue", system-ui, -apple-system, sans-serif'
 const FONT_BODY = '"Inter", "SF Pro Text", "Helvetica Neue", system-ui, -apple-system, sans-serif'
+
+// ─── Translation helper (fallback to English if no t) ──────────────────
+const tr = (t, key, fallback) => {
+  if (!t) return fallback
+  try {
+    const result = t(key)
+    // If t returns the key fallback (meaning no translation found), use fallback
+    if (!result || result === key.split('.').pop()) return fallback
+    return result
+  } catch {
+    return fallback
+  }
+}
 
 // ─── Load SVG ──────────────────────────────────────────────────────────
 const svgToImage = (svgString) => {
@@ -152,10 +165,56 @@ const drawCleanText = (ctx, text, x, y, options = {}) => {
   ctx.restore()
 }
 
+// ─── Condition name translator ─────────────────────────────────────────
+const translateCondition = (code, t) => {
+  const keyMap = {
+    0: ['weather.clear', 'Clear'],
+    1: ['weather.mainlyClear', 'Mainly Clear'],
+    2: ['weather.partlyCloudy', 'Partly Cloudy'],
+    3: ['weather.overcast', 'Overcast'],
+    45: ['weather.fog', 'Fog'],
+    48: ['weather.fog', 'Fog'],
+    51: ['weather.lightDrizzle', 'Light Drizzle'],
+    53: ['weather.moderateDrizzle', 'Moderate Drizzle'],
+    55: ['weather.heavyDrizzle', 'Heavy Drizzle'],
+    61: ['weather.lightRain', 'Light Rain'],
+    63: ['weather.moderateRain', 'Moderate Rain'],
+    65: ['weather.heavyRain', 'Heavy Rain'],
+    71: ['weather.lightSnow', 'Light Snow'],
+    73: ['weather.moderateSnow', 'Moderate Snow'],
+    75: ['weather.heavySnow', 'Heavy Snow'],
+    80: ['weather.rainShowers', 'Rain Showers'],
+    81: ['weather.heavyShowers', 'Heavy Showers'],
+    82: ['weather.violentShowers', 'Violent Showers'],
+    95: ['weather.thunderstorm', 'Thunderstorm'],
+    96: ['weather.thunderstorm', 'Thunderstorm'],
+    99: ['weather.heavyThunderstorm', 'Heavy Thunderstorm']
+  }
+  const [key, fallback] = keyMap[code] || ['weather.unknown', 'Unknown']
+  return tr(t, key, fallback)
+}
+
+// ─── Date formatting helper ────────────────────────────────────────────
+const formatDate = (date, uiLanguage, options) => {
+  try {
+    return date.toLocaleDateString(uiLanguage || 'en', options)
+  } catch {
+    return date.toLocaleDateString('en', options)
+  }
+}
+
+const formatTime = (date, uiLanguage, options) => {
+  try {
+    return date.toLocaleTimeString(uiLanguage || 'en', options)
+  } catch {
+    return date.toLocaleTimeString('en', options)
+  }
+}
+
 // ============================================================================
 // CARD 1 — CURRENT WEATHER
 // ============================================================================
-export const generateCurrentCard = async (weather, location, aqi) => {
+export const generateCurrentCard = async (weather, location, aqi, t, uiLanguage) => {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
@@ -181,12 +240,14 @@ export const generateCurrentCard = async (weather, location, aqi) => {
   const humidity = weather?.current?.relative_humidity_2m ?? 0
   const uv = weather?.daily?.uv_index_max?.[0] ?? 0
   const aqiVal = aqi?.us_aqi
-  const aqiLabel = aqiVal == null ? '--'
-    : aqiVal <= 50 ? 'Good'
-    : aqiVal <= 100 ? 'Moderate'
-    : aqiVal <= 150 ? 'Unhealthy'
-    : 'Hazardous'
-  const condition = codeToName(code)
+  const aqiLabel = aqiVal == null
+    ? '--'
+    : aqiVal <= 50 ? tr(t, 'aqi.good', 'Good')
+    : aqiVal <= 100 ? tr(t, 'aqi.moderate', 'Moderate')
+    : aqiVal <= 150 ? tr(t, 'aqi.unhealthy', 'Unhealthy')
+    : tr(t, 'aqi.hazardous', 'Hazardous')
+
+  const condition = translateCondition(code, t)
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
   // Location small caps
@@ -201,7 +262,7 @@ export const generateCurrentCard = async (weather, location, aqi) => {
     color: '#FFFFFF'
   })
 
-  // Condition
+  // Condition (translated)
   drawShadowedText(ctx, condition, CANVAS_SIZE / 2, 545, {
     font: `400 46px ${FONT_BODY}`,
     color: theme.accent
@@ -244,15 +305,23 @@ export const generateCurrentCard = async (weather, location, aqi) => {
   ctx.stroke()
   ctx.restore()
 
+  // Translated metric labels
   const metrics = [
-    { label: 'FEELS LIKE', value: `${feels}°` },
-    { label: 'WIND', value: `${wind} km/h` },
-    { label: 'HUMIDITY', value: `${humidity}%` },
-    { label: 'UV INDEX', value: `${uv}` },
-    { label: 'AQI', value: aqiVal == null ? '--' : `${aqiVal}`, sub: aqiLabel },
-    { label: 'SUNSET', value: sunset
-      ? new Date(sunset).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-      : '--' }
+    { label: tr(t, 'labels.feelsLike', 'Feels Like').toUpperCase(), value: `${feels}°` },
+    { label: tr(t, 'labels.wind', 'Wind').toUpperCase(), value: `${wind} km/h` },
+    { label: tr(t, 'labels.humidity', 'Humidity').toUpperCase(), value: `${humidity}%` },
+    { label: tr(t, 'labels.uv', 'UV Index').toUpperCase(), value: `${uv}` },
+    {
+      label: tr(t, 'labels.aqi', 'AQI').toUpperCase(),
+      value: aqiVal == null ? '--' : `${aqiVal}`,
+      sub: aqiLabel
+    },
+    {
+      label: tr(t, 'labels.sunset', 'Sunset').toUpperCase(),
+      value: sunset
+        ? formatTime(new Date(sunset), uiLanguage, { hour: 'numeric', minute: '2-digit', hour12: true })
+        : '--'
+    }
   ]
 
   metrics.forEach((m, i) => {
@@ -279,7 +348,8 @@ export const generateCurrentCard = async (weather, location, aqi) => {
     }
   })
 
-  const timeStr = now.toLocaleString('en-US', {
+  // Timestamp with uiLanguage
+  const timeStr = formatDate(now, uiLanguage, {
     weekday: 'long', month: 'short', day: 'numeric',
     hour: 'numeric', minute: '2-digit', hour12: true
   })
@@ -296,7 +366,7 @@ export const generateCurrentCard = async (weather, location, aqi) => {
 // ============================================================================
 // CARD 2 — TODAY SUMMARY
 // ============================================================================
-export const generateTodayCard = async (weather, location, todayStats, aqi) => {
+export const generateTodayCard = async (weather, location, todayStats, aqi, t, uiLanguage) => {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
@@ -319,11 +389,11 @@ export const generateTodayCard = async (weather, location, todayStats, aqi) => {
   drawBorder(ctx, theme.accent)
 
   const locationName = location?.name?.split(',')[0] || 'Unknown'
-  const dateStr = new Date().toLocaleDateString('en-US', {
+  const dateStr = formatDate(new Date(), uiLanguage, {
     weekday: 'long', month: 'long', day: 'numeric'
   })
 
-  drawCleanText(ctx, 'TODAY IN', CANVAS_SIZE / 2, 110, {
+  drawCleanText(ctx, tr(t, 'labels.todayIn', 'Today in').toUpperCase(), CANVAS_SIZE / 2, 110, {
     font: `500 22px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.5)'
   })
@@ -349,11 +419,11 @@ export const generateTodayCard = async (weather, location, todayStats, aqi) => {
     color: 'rgba(255, 255, 255, 0.55)'
   })
 
-  drawCleanText(ctx, 'HIGH', CANVAS_SIZE * 0.35, 545, {
+  drawCleanText(ctx, tr(t, 'labels.high', 'High').toUpperCase(), CANVAS_SIZE * 0.35, 545, {
     font: `500 14px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.4)'
   })
-  drawCleanText(ctx, 'LOW', CANVAS_SIZE * 0.65, 545, {
+  drawCleanText(ctx, tr(t, 'labels.low', 'Low').toUpperCase(), CANVAS_SIZE * 0.65, 545, {
     font: `500 14px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.4)'
   })
@@ -374,14 +444,14 @@ export const generateTodayCard = async (weather, location, todayStats, aqi) => {
   const gridCellH = 100
 
   const rows = [
-    { icon: '☀️', label: 'SUN', value: `${highlights.sunHours}h` },
-    { icon: '🌧️', label: 'RAIN', value: `${highlights.rainHours}h` },
-    { icon: '⛈️', label: 'STORM', value: `${highlights.thunderHours}h` },
-    { icon: '💨', label: 'WIND', value: `${highlights.maxWind} km/h` },
-    { icon: '💧', label: 'HUMIDITY', value: `${highlights.maxHumidity}%` },
-    { icon: '☀️', label: 'UV PEAK', value: `${highlights.uvPeak}` },
-    { icon: '🌅', label: 'SUNRISE', value: highlights.sunrise },
-    { icon: '🌇', label: 'SUNSET', value: highlights.sunset }
+    { icon: '☀️', label: tr(t, 'labels.sunshine', 'Sunshine').toUpperCase(), value: `${highlights.sunHours}h` },
+    { icon: '🌧️', label: tr(t, 'labels.rain', 'Rain').toUpperCase(), value: `${highlights.rainHours}h` },
+    { icon: '⛈️', label: tr(t, 'labels.thunder', 'Thunder').toUpperCase(), value: `${highlights.thunderHours}h` },
+    { icon: '💨', label: tr(t, 'labels.wind', 'Wind').toUpperCase(), value: `${highlights.maxWind} km/h` },
+    { icon: '💧', label: tr(t, 'labels.humidity', 'Humidity').toUpperCase(), value: `${highlights.maxHumidity}%` },
+    { icon: '☀️', label: tr(t, 'labels.uv', 'UV Peak').toUpperCase(), value: `${highlights.uvPeak}` },
+    { icon: '🌅', label: tr(t, 'labels.sunrise', 'Sunrise').toUpperCase(), value: highlights.sunrise },
+    { icon: '🌇', label: tr(t, 'labels.sunset', 'Sunset').toUpperCase(), value: highlights.sunset }
   ]
 
   rows.forEach((r, i) => {
@@ -413,7 +483,7 @@ export const generateTodayCard = async (weather, location, todayStats, aqi) => {
 // ============================================================================
 // CARD 3 — HOURLY (12 HOURS)
 // ============================================================================
-export const generateHourlyCard = async (weather, location) => {
+export const generateHourlyCard = async (weather, location, t, uiLanguage) => {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
@@ -436,7 +506,7 @@ export const generateHourlyCard = async (weather, location) => {
   const hours = getHourlySlice(weather?.hourly, 12)
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  drawCleanText(ctx, 'NEXT 12 HOURS', CANVAS_SIZE / 2, 120, {
+  drawCleanText(ctx, tr(t, 'labels.next12Hours', 'Next 12 Hours').toUpperCase(), CANVAS_SIZE / 2, 120, {
     font: `500 22px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.5)'
   })
@@ -493,9 +563,13 @@ export const generateHourlyCard = async (weather, location) => {
   if (rainHours.length > 0) {
     const first = rainHours[0].hourLabel
     const last = rainHours[rainHours.length - 1].hourLabel
-    const summary = rainHours.length === 1
-      ? `Rain likely around ${first}`
-      : `Rain likely ${first} – ${last}`
+    const summaryTemplate = tr(t, 'map.rainLikely', 'Rain likely {range}')
+    const range = rainHours.length === 1
+      ? tr(t, 'map.around', `around ${first}`)
+      : `${first} – ${last}`
+    const summary = summaryTemplate.includes('{range}')
+      ? summaryTemplate.replace('{range}', range)
+      : summaryTemplate
 
     drawCleanText(ctx, summary, CANVAS_SIZE / 2, 900, {
       font: `500 24px ${FONT_BODY}`,
@@ -511,7 +585,7 @@ export const generateHourlyCard = async (weather, location) => {
 // ============================================================================
 // CARD 4 — SINGLE HOUR
 // ============================================================================
-export const generateSingleHourCard = async (weather, location, hourIndex) => {
+export const generateSingleHourCard = async (weather, location, hourIndex, t, uiLanguage) => {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
@@ -535,7 +609,12 @@ export const generateSingleHourCard = async (weather, location, hourIndex) => {
 
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  drawCleanText(ctx, hourData.dateLabel.toUpperCase(), CANVAS_SIZE / 2, 140, {
+  // Format date using uiLanguage
+  const dateLabel = formatDate(new Date(hourData.time), uiLanguage, {
+    weekday: 'long', month: 'long', day: 'numeric'
+  })
+
+  drawCleanText(ctx, dateLabel.toUpperCase(), CANVAS_SIZE / 2, 140, {
     font: `500 22px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.5)'
   })
@@ -548,7 +627,7 @@ export const generateSingleHourCard = async (weather, location, hourIndex) => {
     font: `300 240px ${FONT_DISPLAY}`
   })
 
-  drawShadowedText(ctx, codeToName(hourData.code), CANVAS_SIZE / 2, 600, {
+  drawShadowedText(ctx, translateCondition(hourData.code, t), CANVAS_SIZE / 2, 600, {
     font: `400 44px ${FONT_BODY}`,
     color: theme.accent
   })
@@ -573,10 +652,10 @@ export const generateSingleHourCard = async (weather, location, hourIndex) => {
   ctx.restore()
 
   const metrics = [
-    { label: 'FEELS', value: `${hourData.feelsLike}°` },
-    { label: 'WIND', value: `${hourData.wind} km/h` },
-    { label: 'HUMIDITY', value: `${hourData.humidity}%` },
-    { label: 'RAIN', value: `${hourData.rainProb}%` }
+    { label: tr(t, 'labels.feelsShort', 'Feels').toUpperCase(), value: `${hourData.feelsLike}°` },
+    { label: tr(t, 'labels.wind', 'Wind').toUpperCase(), value: `${hourData.wind} km/h` },
+    { label: tr(t, 'labels.humidity', 'Humidity').toUpperCase(), value: `${hourData.humidity}%` },
+    { label: tr(t, 'labels.rain', 'Rain').toUpperCase(), value: `${hourData.rainProb}%` }
   ]
 
   const cellW = panelW / 4
@@ -604,7 +683,7 @@ export const generateSingleHourCard = async (weather, location, hourIndex) => {
 // ============================================================================
 // CARD 5 — WEEKLY (7 DAYS)
 // ============================================================================
-export const generateWeeklyCard = async (weather, location) => {
+export const generateWeeklyCard = async (weather, location, t, uiLanguage) => {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
@@ -630,7 +709,7 @@ export const generateWeeklyCard = async (weather, location) => {
 
   const locationName = location?.name?.split(',')[0] || 'Unknown'
 
-  drawCleanText(ctx, '7-DAY FORECAST', CANVAS_SIZE / 2, 120, {
+  drawCleanText(ctx, tr(t, 'labels.dailyForecast', '7-Day Forecast').toUpperCase(), CANVAS_SIZE / 2, 120, {
     font: `500 22px ${FONT_BODY}`,
     color: 'rgba(255, 255, 255, 0.5)'
   })
@@ -657,7 +736,10 @@ export const generateWeeklyCard = async (weather, location) => {
   weekly.days.forEach((day, i) => {
     const y = boxY + 20 + i * rowH + rowH / 2
 
-    drawCleanText(ctx, day.dayName.toUpperCase(), boxX + 45, y, {
+    // Format day name with uiLanguage
+    const dayName = formatDate(new Date(day.date), uiLanguage, { weekday: 'short' })
+
+    drawCleanText(ctx, dayName.toUpperCase(), boxX + 45, y, {
       align: 'left',
       font: `600 26px ${FONT_BODY}`,
       color: '#FFFFFF'
@@ -697,7 +779,14 @@ export const generateWeeklyCard = async (weather, location) => {
     }
   })
 
-  drawCleanText(ctx, weekly.summary, CANVAS_SIZE / 2, 900, {
+  // Summary line — translate if template provided, otherwise use raw
+  const summaryRaw = weekly.summary || ''
+  const summaryTemplate = tr(t, 'map.weekSummary', summaryRaw)
+  const summary = summaryTemplate
+    .replace('{count}', weekly.rainyDays)
+    .replace('{days}', weekly.rainyDays)
+
+  drawCleanText(ctx, summary, CANVAS_SIZE / 2, 900, {
     font: `italic 400 26px ${FONT_BODY}`,
     color: theme.accent
   })
@@ -723,20 +812,21 @@ const roundRect = (ctx, x, y, w, h, r) => {
 
 export const generateWeatherImage = async (type, params) => {
   try {
+    const { t, uiLanguage } = params
     if (type === 'current') {
-      return await generateCurrentCard(params.weather, params.location, params.aqi)
+      return await generateCurrentCard(params.weather, params.location, params.aqi, t, uiLanguage)
     }
     if (type === 'today') {
-      return await generateTodayCard(params.weather, params.location, params.todayStats, params.aqi)
+      return await generateTodayCard(params.weather, params.location, params.todayStats, params.aqi, t, uiLanguage)
     }
     if (type === 'hourly') {
-      return await generateHourlyCard(params.weather, params.location)
+      return await generateHourlyCard(params.weather, params.location, t, uiLanguage)
     }
     if (type === 'singleHour') {
-      return await generateSingleHourCard(params.weather, params.location, params.hourIndex)
+      return await generateSingleHourCard(params.weather, params.location, params.hourIndex, t, uiLanguage)
     }
     if (type === 'weekly') {
-      return await generateWeeklyCard(params.weather, params.location)
+      return await generateWeeklyCard(params.weather, params.location, t, uiLanguage)
     }
     return null
   } catch (err) {
