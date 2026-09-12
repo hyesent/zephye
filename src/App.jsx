@@ -89,7 +89,6 @@ const CloseIcon = () => (
   </svg>
 )
 
-// 🔥 THE SHARE ICON — iOS style, used everywhere
 const ShareIcon = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -100,7 +99,6 @@ const ShareIcon = ({ size = 18 }) => (
 
 // ============================================================================
 // SHARE MODAL (Quote/Fact)
-// 🔥 FIX: Random background/font regenerate every time modal opens
 // ============================================================================
 
 function ShareModal({ isOpen, onClose, content, author, type }) {
@@ -109,7 +107,6 @@ function ShareModal({ isOpen, onClose, content, author, type }) {
   const [backgroundIndex, setBackgroundIndex] = useState(0)
   const [fontFamily, setFontFamily] = useState(FONT_FAMILIES[0])
 
-  // 🔥 Regenerate random bg/font every time the modal opens
   useEffect(() => {
     if (isOpen) {
       setBackgroundIndex(Math.floor(Math.random() * shareBackgrounds.length))
@@ -700,7 +697,10 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
           id: r.id,
           name: `${r.name}${r.admin1 ? ', ' + r.admin1 : ''}, ${r.country}`,
           lat: r.latitude, lon: r.longitude,
-          country_code: r.country_code?.toUpperCase() || 'US'
+          country_code: r.country_code?.toUpperCase() || 'US',
+          // 🆕 elevation + population from geocoding API
+          elevation: r.elevation ?? null,
+          population: r.population ?? null
         })))
       } else { setSearchResults([]) }
     } catch { setSearchResults([]) }
@@ -710,7 +710,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
   const selectPlaceForLocation = (locId, place) => {
     setSavedLocations(prev => prev.map(loc =>
       loc.id === locId
-        ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code }
+        ? { ...loc, lat: place.lat, lon: place.lon, name: place.name, country_code: place.country_code, elevation: place.elevation, population: place.population }
         : loc
     ))
     setSearchResults([])
@@ -977,12 +977,13 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
     } catch { showToast(t('toasts.searchFailed') || 'Search failed') }
   }
 
+  // 🆕 ENHANCED: fetches PM2.5, PM10, Ozone, NO2, CO, dew point + others
   const fetchWeatherData = async (lat, lon) => {
     try {
       setIsLoading(true)
       const [weatherRes, aqiRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset,precipitation_probability_max&timezone=auto`),
-        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`)
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weathercode,wind_gusts_10m,pressure_msl,relative_humidity_2m,wind_speed_10m,dew_point_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,uv_index_max,sunrise,sunset,precipitation_probability_max&timezone=auto`),
+        fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,european_aqi,pm2_5,pm10,nitrogen_dioxide,ozone,carbon_monoxide,sulphur_dioxide`)
       ])
       if (weatherRes.ok) {
         const om = await weatherRes.json()
@@ -998,7 +999,9 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
             pressure_msl: om.hourly?.pressure_msl?.[0] ?? null,
             visibility: null,
             uv_index: om.daily?.uv_index_max?.[0] ?? 0,
-            apparent_temperature: om.hourly?.apparent_temperature?.[0] ?? om.current_weather?.temperature ?? 0
+            apparent_temperature: om.hourly?.apparent_temperature?.[0] ?? om.current_weather?.temperature ?? 0,
+            // 🆕 dew point
+            dew_point: om.hourly?.dew_point_2m?.[0] ?? null
           },
           hourly: {
             time: om.hourly?.time ?? [],
@@ -1010,7 +1013,8 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
             wind_gusts_10m: om.hourly?.wind_gusts_10m ?? [],
             pressure_msl: om.hourly?.pressure_msl ?? [],
             relative_humidity_2m: om.hourly?.relative_humidity_2m ?? [],
-            wind_speed_10m: om.hourly?.wind_speed_10m ?? []
+            wind_speed_10m: om.hourly?.wind_speed_10m ?? [],
+            dew_point_2m: om.hourly?.dew_point_2m ?? []
           },
           daily: {
             time: om.daily?.time ?? [],
@@ -1070,6 +1074,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
   const pres = weather?.current?.pressure_msl ?? 0
   const vis = weather?.current?.visibility ?? 0
   const uv = weather?.current?.uv_index ?? weather?.daily?.uv_index_max?.[0] ?? 0
+  const dp = weather?.current?.dew_point ?? null
   const aqiInfo = getAqiLevel(aqi?.us_aqi)
   const stormInfo = getStormLevel(wc, ws)
 
@@ -1289,6 +1294,12 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                         <div className="loc-details" onClick={() => switchToSavedLocation(loc)}>
                           <div className="loc-label">{loc.label || 'Untitled Location'}</div>
                           <div className="loc-name">{loc.name}</div>
+                          {/* 🆕 Elevation display */}
+                          {loc.elevation != null && (
+                            <div className="loc-coords" style={{ fontSize: '11px', opacity: 0.6 }}>
+                              ⛰️ {Math.round(loc.elevation)}m elevation
+                            </div>
+                          )}
                         </div>
                         <div className="loc-actions">
                           <button className="edit-btn" onClick={() => {
@@ -1422,7 +1433,7 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                           position: 'absolute',
                           top: 'calc(100% + 8px)',
                           left: 0,
-                          minWidth: '300px',
+                          minWidth: '320px',
                           padding: '16px',
                           zIndex: 99999,
                           borderRadius: '16px',
@@ -1433,9 +1444,64 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                         }}
                       >
                         <p className="font-bold mb-3">{t('labels.details') || 'Weather Details'}</p>
+
+                        {/* Air Quality Group */}
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+                          Air Quality
+                        </div>
                         <div className="flex justify-between mb-2 text-sm">
-                          <span className="text-muted">{t('labels.aqi') || 'AQI'}</span>
+                          <span className="text-muted">{t('labels.aqi') || 'AQI'} (US)</span>
                           <span className="font-bold" style={{color: aqiInfo.color}}>{aqi?.us_aqi ?? '--'}</span>
+                        </div>
+                        {aqi?.european_aqi != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">AQI (EU)</span>
+                            <span className="font-bold">{aqi.european_aqi}</span>
+                          </div>
+                        )}
+                        {aqi?.pm2_5 != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">PM2.5</span>
+                            <span className="font-bold">{aqi.pm2_5.toFixed(1)} µg/m³</span>
+                          </div>
+                        )}
+                        {aqi?.pm10 != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">PM10</span>
+                            <span className="font-bold">{aqi.pm10.toFixed(1)} µg/m³</span>
+                          </div>
+                        )}
+                        {aqi?.ozone != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">Ozone (O₃)</span>
+                            <span className="font-bold">{aqi.ozone.toFixed(1)} µg/m³</span>
+                          </div>
+                        )}
+                        {aqi?.nitrogen_dioxide != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">NO₂</span>
+                            <span className="font-bold">{aqi.nitrogen_dioxide.toFixed(1)} µg/m³</span>
+                          </div>
+                        )}
+                        {aqi?.carbon_monoxide != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">CO</span>
+                            <span className="font-bold">{aqi.carbon_monoxide.toFixed(1)} µg/m³</span>
+                          </div>
+                        )}
+                        {aqi?.sulphur_dioxide != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">SO₂</span>
+                            <span className="font-bold">{aqi.sulphur_dioxide.toFixed(1)} µg/m³</span>
+                          </div>
+                        )}
+
+                        {/* Divider */}
+                        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '10px 0' }} />
+
+                        {/* Weather Group */}
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+                          Weather
                         </div>
                         <div className="flex justify-between mb-2 text-sm">
                           <span className="text-muted">{t('labels.wind') || 'Wind'}</span>
@@ -1445,6 +1511,12 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                           <span className="text-muted">{t('labels.humidity') || 'Humidity'}</span>
                           <span className="font-bold">{hum}%</span>
                         </div>
+                        {dp != null && (
+                          <div className="flex justify-between mb-2 text-sm">
+                            <span className="text-muted">{t('labels.dewPoint') || 'Dew Point'}</span>
+                            <span className="font-bold">{Math.round(dp)}°C</span>
+                          </div>
+                        )}
                         <div className="flex justify-between mb-2 text-sm">
                           <span className="text-muted">{t('labels.pressure') || 'Pressure'}</span>
                           <span className="font-bold">{pres} hPa</span>
@@ -1462,7 +1534,6 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
                   </div>
                 )}
 
-                {/* 🔥 Share Icon — actual SVG next to badges */}
                 <button
                   onClick={() => setWeatherShare({ isOpen: true, type: 'current' })}
                   className="btn-ghost"
@@ -1489,7 +1560,6 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">{t('labels.hourlyForecast') || 'Hourly Forecast'}</p>
                 <div className="flex gap-2">
-                  {/* 🔥 Real share icon */}
                   <button
                     className="btn-ghost text-xs"
                     onClick={() => setWeatherShare({ isOpen: true, type: 'hourly' })}
@@ -1536,7 +1606,6 @@ function AppContentInner({ homeLocation, setHomeLocation }) {
             <div className="glass" style={{padding:'20px',borderRadius:'20px',position:'relative',zIndex:2,overflow:'visible'}}>
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-bold">{t('labels.dailyForecast') || '7-Day Forecast'}</p>
-                {/* 🔥 Real share icon */}
                 <button
                   className="btn-ghost text-xs"
                   onClick={() => setWeatherShare({ isOpen: true, type: 'weekly' })}
