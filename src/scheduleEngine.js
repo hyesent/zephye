@@ -3,7 +3,7 @@
 // Handles: storage, state machine, fire logic, edit/shift, command detection
 // ============================================================================
 
-import { INTENT_MAP } from './ZephyeFullScreen'
+import { getIntentFunction, getIntentById } from './intentEngine.js'
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── CONSTANTS ────────────────────────────────────────────────────────
@@ -341,28 +341,32 @@ export async function fireSchedule(schedule) {
     _scheduleTo: schedule.location
   }
 
-  // Run only the pills the user selected
+    // Run only the pills the user selected
   const results = []
   for (const intentId of schedule.intents) {
-    const intent = INTENT_MAP?.find?.(i => i.id === intentId)
-    if (!intent || typeof intent.fn !== 'function') continue
+    const intentFn = getIntentFunction(intentId)
+    const intentMeta = getIntentById(intentId)
+    
+    if (typeof intentFn !== 'function') {
+      console.warn(`[ScheduleEngine] No function for intent: ${intentId}`)
+      continue
+    }
 
     try {
       const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intentId)
       const response = isAsync
-        ? await intent.fn(data, schedule.question)
-        : intent.fn(data, schedule.question)
+        ? await intentFn(data, schedule.question)
+        : intentFn(data, schedule.question)
 
       results.push({
         intentId,
-        label: intent.section || intentId,
+        label: intentMeta?.section || intentId,
         content: response
       })
     } catch (e) {
       console.error(`[ScheduleEngine] Error in ${intentId}:`, e)
     }
   }
-
   // Merge results as plain string
   const merged = results.map(r => {
     if (typeof r.content === 'string') {
