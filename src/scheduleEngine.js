@@ -1,9 +1,11 @@
 // ============================================================================
 // SCHEDULE ENGINE — Schedule Ask system for Zephye
-// Handles: storage, state machine, fire logic, edit/shift, command detection
+// Handles: storage, state machine, fire logic, edit/shift, recurrence,
+//          route waypoints, multi-location, day-snapshot rewriting
 // ============================================================================
 
 import { getIntentFunction, getIntentById } from './intentEngine.js'
+import { rewriteQuestionForFireDay } from './scheduleParser.js'
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── CONSTANTS ────────────────────────────────────────────────────────
@@ -12,6 +14,19 @@ import { getIntentFunction, getIntentById } from './intentEngine.js'
 const STORAGE_KEY = 'zephye_schedules'
 const MISSED_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 const FIRED_TIMEOUT_MS = 5 * 60 * 1000    // check every 5 min for missed
+
+// Recurrence safety cap
+const MAX_RECURRENCE_OCCURRENCES = 52
+
+// Auto-clean history older than 30 days
+const HISTORY_CLEANUP_MS = 30 * 24 * 60 * 60 * 1000
+
+// Retry weather fetch
+const WEATHER_FETCH_RETRIES = 3
+const WEATHER_FETCH_RETRY_DELAY_MS = 2000
+
+// Max waypoints to sample on a route
+const MAX_ROUTE_WAYPOINTS = 3
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── STORAGE ──────────────────────────────────────────────────────────
@@ -63,22 +78,68 @@ export function getHistorySchedules() {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── AUTO-CLEAN (runs on due check) ──────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+function autoCleanHistory() {
+  const now = Date.now()
+  const schedules = getSchedules()
+  const before = schedules.length
+
+  const cleaned = schedules.filter(s => {
+    // Always keep pending + fired
+    if (s.status === 'pending' || s.status === 'fired') return true
+
+    // Keep history records younger than 30 days
+    const age = now - (s.updatedAt || s.createdAt || now)
+    return age < HISTORY_CLEANUP_MS
+  })
+
+  if (cleaned.length !== before) {
+    saveSchedules(cleaned)
+    console.log(`[ScheduleEngine] Auto-cleaned ${before - cleaned.length} old history records`)
+  }
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── CREATE ───────────────────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export function createSchedule({
   question,
+  resolvedQuestion = null,          // 🆕 rewritten for fire day
+  resolvedDate = null,              // 🆕 "2026-09-14"
+  relativeWordMap = {},             // 🆕 { tomorrow: 'today' }
+  isDaySnapshot = false,            // 🆕 day overview vs moment
+
+  locationMode = 'single',          // 🆕 'single' | 'route' | 'multi'
   location,
-  fromLocation = null,   // { lat, lon, label } — only if routing pill selected
-  targetTime,            // timestamp
-  intents,               // ['route', 'traffic', 'weather', ...]
-  fireWindow = 30,       // minutes before target
-  notify = 'both'        // 'toast' | 'browser' | 'both'
+  fromLocation = null,              // 🆕 only if route mode
+  extraLocations = [],              // 🆕 for multi mode
+  checkWaypoints = false,           // 🆕 auto-true for route
+
+  targetTime,
+  fireWindow = 30,
+  intents,
+  recurrence = { mode: 'once', daysOfWeek: [], until: null },  // 🆕
+  askNowToo = false,                // 🆕
+
+  notify = 'both'
 }) {
   const now = Date.now()
+
   const schedule = {
     id: `sch_${now}_${Math.random().toString(36).slice(2, 8)}`,
+
+    // Question + rewriting
     question: question || '',
+    resolvedQuestion: resolvedQuestion || question || '',
+    resolvedDate,
+    relativeWordMap: relativeWordMap || {},
+    isDaySnapshot,
+
+    // Location modes
+    locationMode,
     location: {
       lat: location?.lat || 0,
       lon: location?.lon || 0,
@@ -89,17 +150,39 @@ export function createSchedule({
       lon: fromLocation.lon,
       label: fromLocation.label || fromLocation.name || 'Unknown'
     } : null,
+    extraLocations: (extraLocations || []).map(l => ({
+      lat: l.lat,
+      lon: l.lon,
+      label: l.label || l.name || 'Unknown'
+    })),
+    checkWaypoints: locationMode === 'route' ? (checkWaypoints !== false) : false,
+
+    // Core
     targetTime,
     fireWindow,
     intents: intents || [],
+
+    // Recurrence
+    recurrence: recurrence || { mode: 'once', daysOfWeek: [], until: null },
+    chainCount: 0,
+    maxOccurrences: MAX_RECURRENCE_OCCURRENCES,
+
+    // Flags
+    askNowToo,
     notify,
+
+    // State machine
     status: 'pending',
     createdAt: now,
     updatedAt: now,
     history: [{ status: 'pending', timestamp: now }],
     firedAt: null,
     result: null,
-    reminderCount: 0
+    reminderCount: 0,
+
+    // Chain linking
+    derivedFrom: null,
+    derivedId: null
   }
 
   const schedules = getSchedules()
@@ -157,6 +240,63 @@ export function clearHistory() {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── CANCEL WITH PROMPT (single vs chain) ────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+/**
+ * Cancel a schedule.
+ * @param {string} id
+ * @param {string} mode — 'one' (cancel this occurrence) | 'chain' (kill entire recurrence)
+ */
+export function cancelSchedule(id, mode = 'one') {
+  const schedule = getScheduleById(id)
+  if (!schedule) return null
+
+  // Mark this one cancelled
+  transitionSchedule(id, 'cancelled')
+
+  if (mode === 'chain') {
+    // Find the root of the chain
+    let root = schedule
+    let safety = 0
+    while (root.derivedFrom && safety < 100) {
+      const parent = getScheduleById(root.derivedFrom)
+      if (!parent) break
+      root = parent
+      safety++
+    }
+
+    // BFS forward through all descendants
+    const all = getSchedules()
+    const queue = [root.id]
+    const visited = new Set()
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()
+      if (visited.has(currentId)) continue
+      visited.add(currentId)
+
+      const current = all.find(s => s.id === currentId)
+      if (!current) continue
+
+      // Cancel any pending in the chain
+      if (current.status === 'pending') {
+        transitionSchedule(current.id, 'cancelled')
+      }
+
+      // Queue children
+      all.forEach(s => {
+        if (s.derivedFrom === currentId && !visited.has(s.id)) {
+          queue.push(s.id)
+        }
+      })
+    }
+  }
+
+  return getScheduleById(id)
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 // ─── ACTIONS (from toast) ────────────────────────────────────────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
@@ -164,8 +304,9 @@ export function markDone(id) {
   return transitionSchedule(id, 'done')
 }
 
-export function markCancelled(id) {
-  return transitionSchedule(id, 'cancelled')
+export function markCancelled(id, mode = 'one') {
+  // Delegate to cancelSchedule for chain-awareness
+  return cancelSchedule(id, mode)
 }
 
 export function markDismissed(id) {
@@ -189,17 +330,28 @@ export function shiftSchedule(id, newTargetTime) {
   // Create new pending with same everything except target time
   const newSchedule = createSchedule({
     question: original.question,
+    resolvedQuestion: original.resolvedQuestion,
+    resolvedDate: original.resolvedDate,
+    relativeWordMap: original.relativeWordMap,
+    isDaySnapshot: original.isDaySnapshot,
+    locationMode: original.locationMode,
     location: original.location,
     fromLocation: original.fromLocation,
+    extraLocations: original.extraLocations,
+    checkWaypoints: original.checkWaypoints,
     targetTime: newTargetTime,
     intents: original.intents,
+    recurrence: original.recurrence,
     fireWindow: original.fireWindow,
     notify: original.notify
   })
 
   // Link them
   updateSchedule(id, { derivedId: newSchedule.id })
-  updateSchedule(newSchedule.id, { derivedFrom: id })
+  updateSchedule(newSchedule.id, {
+    derivedFrom: id,
+    chainCount: original.chainCount || 0
+  })
 
   return newSchedule
 }
@@ -218,17 +370,109 @@ export function editSchedule(id, changes) {
   // Create new pending with edits applied (but same target time)
   const newSchedule = createSchedule({
     question: changes.question ?? original.question,
+    resolvedQuestion: changes.resolvedQuestion ?? original.resolvedQuestion,
+    resolvedDate: changes.resolvedDate ?? original.resolvedDate,
+    relativeWordMap: changes.relativeWordMap ?? original.relativeWordMap,
+    isDaySnapshot: changes.isDaySnapshot ?? original.isDaySnapshot,
+    locationMode: changes.locationMode ?? original.locationMode,
     location: changes.location ?? original.location,
     fromLocation: changes.fromLocation ?? original.fromLocation,
+    extraLocations: changes.extraLocations ?? original.extraLocations,
+    checkWaypoints: changes.checkWaypoints ?? original.checkWaypoints,
     targetTime: original.targetTime,
     intents: changes.intents ?? original.intents,
+    recurrence: changes.recurrence ?? original.recurrence,
     fireWindow: changes.fireWindow ?? original.fireWindow,
     notify: changes.notify ?? original.notify
   })
 
   // Link them
   updateSchedule(id, { derivedId: newSchedule.id })
-  updateSchedule(newSchedule.id, { derivedFrom: id })
+  updateSchedule(newSchedule.id, {
+    derivedFrom: id,
+    chainCount: original.chainCount || 0
+  })
+
+  return newSchedule
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── RECURRENCE SPAWNER ───────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+export function spawnNextRecurrence(schedule) {
+  const recurrence = schedule.recurrence || { mode: 'once' }
+  if (recurrence.mode === 'once') return null
+
+  const count = schedule.chainCount || 0
+  const maxCount = schedule.maxOccurrences || MAX_RECURRENCE_OCCURRENCES
+
+  if (count >= maxCount) {
+    console.log('[ScheduleEngine] Recurrence cap reached — stopping chain')
+    return null
+  }
+
+  // ─── Compute next target time ─────────────────────────────────────
+  const currentTarget = new Date(schedule.targetTime)
+  const nextTarget = new Date(currentTarget)
+
+  if (recurrence.mode === 'daily') {
+    nextTarget.setDate(nextTarget.getDate() + 1)
+  } else if (recurrence.mode === 'weekly') {
+    nextTarget.setDate(nextTarget.getDate() + 7)
+  } else if (recurrence.mode === 'weekdays') {
+    nextTarget.setDate(nextTarget.getDate() + 1)
+    let guard = 0
+    while ((nextTarget.getDay() === 0 || nextTarget.getDay() === 6) && guard < 14) {
+      nextTarget.setDate(nextTarget.getDate() + 1)
+      guard++
+    }
+  } else if (recurrence.mode === 'weekends') {
+    nextTarget.setDate(nextTarget.getDate() + 1)
+    let guard = 0
+    while (nextTarget.getDay() !== 0 && nextTarget.getDay() !== 6 && guard < 14) {
+      nextTarget.setDate(nextTarget.getDate() + 1)
+      guard++
+    }
+  } else if (recurrence.mode === 'custom' && recurrence.daysOfWeek?.length > 0) {
+    nextTarget.setDate(nextTarget.getDate() + 1)
+    let guard = 0
+    while (!recurrence.daysOfWeek.includes(nextTarget.getDay()) && guard < 14) {
+      nextTarget.setDate(nextTarget.getDate() + 1)
+      guard++
+    }
+  } else {
+    // Unknown mode — treat as once
+    return null
+  }
+
+  // ─── Check until date ─────────────────────────────────────────────
+  if (recurrence.until && nextTarget.getTime() > recurrence.until) {
+    console.log('[ScheduleEngine] Recurrence until date passed — stopping chain')
+    return null
+  }
+
+  // ─── Create new pending schedule ──────────────────────────────────
+  const now = Date.now()
+  const newSchedule = {
+    ...schedule,
+    id: `sch_${now}_${Math.random().toString(36).slice(2, 8)}`,
+    targetTime: nextTarget.getTime(),
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now,
+    history: [{ status: 'pending', timestamp: now }],
+    firedAt: null,
+    result: null,
+    reminderCount: 0,
+    chainCount: count,   // inherit — will increment when THIS fires
+    derivedFrom: schedule.id,
+    derivedId: null
+  }
+
+  const schedules = getSchedules()
+  schedules.push(newSchedule)
+  saveSchedules(schedules)
 
   return newSchedule
 }
@@ -268,7 +512,6 @@ async function fetchWeatherForLocation(lat, lon) {
     )
     const om = await res.json()
 
-    // Basic condition mapping (duplicated here to avoid circular import)
     const WMO = {
       0: 'clear', 1: 'clear', 2: 'partly-cloudy', 3: 'cloudy',
       45: 'fog', 48: 'fog', 51: 'drizzle', 53: 'drizzle', 55: 'drizzle',
@@ -305,30 +548,130 @@ async function fetchWeatherForLocation(lat, lon) {
   }
 }
 
+/**
+ * Fetch with retry — 3 attempts, 2s apart.
+ */
+async function fetchWeatherWithRetry(lat, lon) {
+  for (let attempt = 0; attempt < WEATHER_FETCH_RETRIES; attempt++) {
+    const result = await fetchWeatherForLocation(lat, lon)
+    if (result) return result
+
+    if (attempt < WEATHER_FETCH_RETRIES - 1) {
+      await new Promise(r => setTimeout(r, WEATHER_FETCH_RETRY_DELAY_MS))
+    }
+  }
+  return null
+}
+
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── FIRE A SCHEDULE ──────────────────────────────────────────────────
+// ─── WAYPOINT DISCOVERY (uses saved locations, no CITY_DATABASE) ─────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
-export async function fireSchedule(schedule) {
+/**
+ * Find saved locations that lie roughly between two points.
+ * Uses a lat/lon bounding box heuristic (no external API).
+ */
+function getWaypointsAlong(fromLat, fromLon, toLat, toLon, savedLocations, max = MAX_ROUTE_WAYPOINTS) {
+  if (!fromLat || !fromLon || !toLat || !toLon) return []
+  if (!savedLocations || savedLocations.length === 0) return []
+
+  const minLat = Math.min(fromLat, toLat) - 0.5
+  const maxLat = Math.max(fromLat, toLat) + 0.5
+  const minLon = Math.min(fromLon, toLon) - 0.5
+  const maxLon = Math.max(fromLon, toLon) + 0.5
+
+  const candidates = savedLocations.filter(loc => {
+    if (!loc.lat || !loc.lon) return false
+
+    // Exclude endpoints (same as from or to within 5km)
+    const dFrom = Math.hypot(loc.lat - fromLat, loc.lon - fromLon)
+    const dTo = Math.hypot(loc.lat - toLat, loc.lon - toLon)
+    if (dFrom < 0.05 || dTo < 0.05) return false
+
+    // Must be inside the bounding box
+    return loc.lat >= minLat && loc.lat <= maxLat && loc.lon >= minLon && loc.lon <= maxLon
+  })
+
+  // Sort by distance from start
+  candidates.sort((a, b) => {
+    const da = Math.hypot(a.lat - fromLat, a.lon - fromLon)
+    const db = Math.hypot(b.lat - fromLat, b.lon - fromLon)
+    return da - db
+  })
+
+  return candidates.slice(0, max)
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── RUN INTENTS (shared by fire + preview) ──────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+async function runScheduleIntents(schedule, { persist = true } = {}) {
   if (!schedule) return null
 
-  // Fetch weather for destination
-  const weather = await fetchWeatherForLocation(
-    schedule.location.lat,
-    schedule.location.lon
-  )
+  // ─── Day-snapshot rewriting ───────────────────────────────────────
+  // "will it rain tomorrow?" → on fire day → "will it rain today?"
+  const fireQuestion = schedule.resolvedQuestion
+    || (schedule.relativeWordMap
+        ? rewriteQuestionForFireDay(schedule.question, schedule.relativeWordMap)
+        : schedule.question)
 
-  if (!weather) {
-    transitionSchedule(schedule.id, 'missed', {
-      firedAt: Date.now(),
-      result: { error: 'Failed to fetch weather' }
-    })
+  // ─── Determine locations to fetch ─────────────────────────────────
+  const locationMode = schedule.locationMode || 'single'
+  const locationList = []
+
+  if (locationMode === 'route') {
+    // From + waypoints + To
+    if (schedule.fromLocation?.lat) {
+      locationList.push({ ...schedule.fromLocation, _role: 'from' })
+    }
+
+    const saved = getSavedLocationsForRouting()
+    const waypoints = schedule.checkWaypoints !== false
+      ? getWaypointsAlong(
+          schedule.fromLocation?.lat, schedule.fromLocation?.lon,
+          schedule.location.lat, schedule.location.lon,
+          saved
+        )
+      : []
+
+    waypoints.forEach(w => locationList.push({
+      lat: w.lat, lon: w.lon, label: w.label || w.name, _role: 'waypoint'
+    }))
+
+    locationList.push({ ...schedule.location, _role: 'to' })
+  } else if (locationMode === 'multi') {
+    // Primary + extras
+    locationList.push({ ...schedule.location, _role: 'primary' })
+    ;(schedule.extraLocations || []).forEach(l => locationList.push({
+      ...l, _role: 'extra'
+    }))
+  } else {
+    locationList.push({ ...schedule.location, _role: 'single' })
+  }
+
+  // ─── Fetch weather for each (with retry) ──────────────────────────
+  const weatherMap = {}
+  for (const loc of locationList) {
+    const weather = await fetchWeatherWithRetry(loc.lat, loc.lon)
+    weatherMap[loc.label] = weather
+  }
+
+  // ─── Primary weather must succeed ─────────────────────────────────
+  const primaryWeather = weatherMap[schedule.location.label]
+  if (!primaryWeather) {
+    if (persist) {
+      transitionSchedule(schedule.id, 'missed', {
+        firedAt: Date.now(),
+        result: { error: 'Failed to fetch weather after retries' }
+      })
+    }
     return null
   }
 
-  // Build data object passed to advice functions
-  const data = {
-    ...weather,
+  // ─── Build enriched data ──────────────────────────────────────────
+  const baseData = {
+    ...primaryWeather,
     city: schedule.location.label,
     lat: schedule.location.lat,
     lon: schedule.location.lon,
@@ -336,17 +679,35 @@ export async function fireSchedule(schedule) {
     homeLon: schedule.fromLocation?.lon ?? schedule.location.lon,
     homeName: schedule.fromLocation?.label ?? schedule.location.label,
     savedLocations: getSavedLocationsForRouting(),
-    _scheduledQuestion: schedule.question,
+    _scheduledQuestion: fireQuestion,
+    _originalQuestion: schedule.question,
     _scheduleFrom: schedule.fromLocation,
-    _scheduleTo: schedule.location
+    _scheduleTo: schedule.location,
+    _locationMode: locationMode
   }
 
-    // Run only the pills the user selected
+  if (locationMode === 'route') {
+    baseData._waypoints = locationList
+      .filter(l => l._role === 'waypoint')
+      .map(w => ({
+        label: w.label,
+        weather: weatherMap[w.label]
+      }))
+    baseData._fromWeather = weatherMap[schedule.fromLocation?.label]
+  } else if (locationMode === 'multi') {
+    baseData._multiLocations = locationList.map(loc => ({
+      label: loc.label,
+      weather: weatherMap[loc.label],
+      role: loc._role
+    }))
+  }
+
+  // ─── Run intents ──────────────────────────────────────────────────
   const results = []
   for (const intentId of schedule.intents) {
     const intentFn = getIntentFunction(intentId)
     const intentMeta = getIntentById(intentId)
-    
+
     if (typeof intentFn !== 'function') {
       console.warn(`[ScheduleEngine] No function for intent: ${intentId}`)
       continue
@@ -355,8 +716,8 @@ export async function fireSchedule(schedule) {
     try {
       const isAsync = ['farming', 'stargazing', 'route', 'traffic'].includes(intentId)
       const response = isAsync
-        ? await intentFn(data, schedule.question)
-        : intentFn(data, schedule.question)
+        ? await intentFn(baseData, fireQuestion)
+        : intentFn(baseData, fireQuestion)
 
       results.push({
         intentId,
@@ -367,7 +728,8 @@ export async function fireSchedule(schedule) {
       console.error(`[ScheduleEngine] Error in ${intentId}:`, e)
     }
   }
-  // Merge results as plain string
+
+  // ─── Merge results ────────────────────────────────────────────────
   const merged = results.map(r => {
     if (typeof r.content === 'string') {
       return `${r.label}\n${r.content}`
@@ -377,7 +739,7 @@ export async function fireSchedule(schedule) {
     return `${r.label}\n${String(r.content)}`
   }).join('\n\n---\n\n')
 
-  // Short summary for toast
+  // ─── Short summary ────────────────────────────────────────────────
   const summaryParts = results.map(r => {
     if (r.content && typeof r.content === 'object' && r.content.verdict) {
       return `${r.label}: ${r.content.verdict}`
@@ -391,23 +753,63 @@ export async function fireSchedule(schedule) {
 
   const toastSummary = summaryParts.join(' · ')
 
-  // Mark as fired
-  transitionSchedule(schedule.id, 'fired', {
-    firedAt: Date.now(),
-    result: {
+  // ─── Persist (fire mode only) ─────────────────────────────────────
+  if (persist) {
+    const newChainCount = (schedule.chainCount || 0) + 1
+
+    transitionSchedule(schedule.id, 'fired', {
       firedAt: Date.now(),
-      content: merged,
-      summary: toastSummary,
-      intentCount: results.length
+      chainCount: newChainCount,
+      result: {
+        firedAt: Date.now(),
+        content: merged,
+        summary: toastSummary,
+        intentCount: results.length,
+        fireQuestion,
+        locationMode
+      }
+    })
+
+    // Spawn next recurrence
+    const recurrence = schedule.recurrence || { mode: 'once' }
+    if (recurrence.mode !== 'once') {
+      const next = spawnNextRecurrence({
+        ...schedule,
+        chainCount: newChainCount
+      })
+      if (next) {
+        updateSchedule(schedule.id, { derivedId: next.id })
+      }
     }
-  })
+  }
 
   return {
     schedule,
     merged,
     toastSummary,
-    results
+    results,
+    fireQuestion
   }
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── FIRE A SCHEDULE ──────────────────────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+export async function fireSchedule(schedule) {
+  return runScheduleIntents(schedule, { persist: true })
+}
+
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── PREVIEW A SCHEDULE (ask-now-too) ────────────────────────────────
+// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+
+/**
+ * Run intents without persisting state or spawning recurrence.
+ * Used for "Ask now too" — user sees result immediately.
+ */
+export async function previewSchedule(schedule) {
+  return runScheduleIntents(schedule, { persist: false })
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
@@ -451,7 +853,7 @@ export function isScheduleCommand(question) {
 }
 
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── FUTURE TIME DETECTION ────────────────────────────────────────────
+// ─── FUTURE TIME DETECTION (legacy — kept for compatibility) ─────────
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export function detectFutureTime(question) {
@@ -461,7 +863,6 @@ export function detectFutureTime(question) {
   const now = new Date()
   const result = { hasFutureTime: false, targetTime: null, phrase: null }
 
-  // Pattern: "in X days/hours/minutes"
   const inMatch = q.match(/in\s+(\d+)\s+(day|days|hour|hours|hr|hrs|minute|minutes|min|mins)\b/i)
   if (inMatch) {
     const num = parseInt(inMatch[1])
@@ -472,7 +873,6 @@ export function detectFutureTime(question) {
     else if (unit.startsWith('hour') || unit.startsWith('hr')) target.setHours(target.getHours() + num)
     else if (unit.startsWith('min')) target.setMinutes(target.getMinutes() + num)
 
-    // Try to also parse a time of day if present
     const timeMatch = q.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
     if (timeMatch) {
       let hour = parseInt(timeMatch[1])
@@ -489,7 +889,6 @@ export function detectFutureTime(question) {
     return result
   }
 
-  // Pattern: "tomorrow at X"
   if (q.includes('tomorrow')) {
     const target = new Date(now)
     target.setDate(target.getDate() + 1)
@@ -510,7 +909,6 @@ export function detectFutureTime(question) {
     return result
   }
 
-  // Pattern: "next week"
   if (q.includes('next week')) {
     const target = new Date(now)
     target.setDate(target.getDate() + 7)
@@ -521,7 +919,6 @@ export function detectFutureTime(question) {
     return result
   }
 
-  // Pattern: "on monday" / "on saturday" etc (with optional time)
   const dayMatch = q.match(/\b(?:on\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
   if (dayMatch) {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
@@ -556,6 +953,9 @@ export function detectFutureTime(question) {
 // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
 
 export async function checkDueSchedules() {
+  // Auto-clean old history first (cheap)
+  autoCleanHistory()
+
   const due = getDueSchedules()
   const fired = []
 
