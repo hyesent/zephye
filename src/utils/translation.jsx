@@ -21,6 +21,7 @@ export const UI_TEXTS = {
     wind: 'Wind',
     aqi: 'AQI',
     uv: 'UV Index',
+    uvPeak: 'UV Peak',
     pressure: 'Pressure',
     visibility: 'Visibility',
     sunrise: 'Sunrise',
@@ -140,8 +141,11 @@ export const UI_TEXTS = {
     next: 'Next',
     previous: 'Previous',
     skip: 'Skip',
+    notNow: 'Not now',
     seeWhatsNew: "See what's new",
-    close: 'Close'
+    close: 'Close',
+    shareNotSupported: 'Web Share API not supported. Please use "Download Image".',
+    cannotShareImage: 'Cannot share image on this device. Please use "Download Image".'
   },
   placeholders: {
     searchCity: 'Type any city, LGA, country...',
@@ -216,6 +220,7 @@ export const UI_TEXTS = {
     typeSchedules: 'Type "schedules" to manage reminders'
   },
   weather: {
+    sunny: 'Sunny',
     clear: 'Clear',
     mainlyClear: 'Mainly Clear',
     partlyCloudy: 'Partly Cloudy',
@@ -253,6 +258,13 @@ export const UI_TEXTS = {
     animals: 'Animals',
     space: 'Space'
   },
+  aqi: {
+    good: 'Good',
+    moderate: 'Moderate',
+    unhealthy: 'Unhealthy',
+    hazardous: 'Hazardous',
+    unknown: 'Unknown'
+  },
   map: {
     weather: 'Weather',
     pollen: 'Pollen',
@@ -283,7 +295,10 @@ export const UI_TEXTS = {
     doubleTapForPollen: 'Double tap for pollen · Long press for route',
     updatingIncidents: 'Updating incidents...',
     openMeteoCredit: 'Open-Meteo Air Quality (free)',
-    routeCredit: 'OpenRouteService · Driving'
+    routeCredit: 'OpenRouteService · Driving',
+    rainLikely: 'Rain likely {range}',
+    around: 'around',
+    weekSummary: 'Mostly dry week ahead. Great for outdoor plans!'
   },
   share: {
     via: 'via',
@@ -297,9 +312,6 @@ export const UI_TEXTS = {
     cardTypeSingleHour: 'Single Hour',
     cardTypeWeekly: 'Weekly'
   },
-  // ═══════════════════════════════════════════════════════════════════════
-  // ZEPHYE AI ADDITIONS
-  // ═══════════════════════════════════════════════════════════════════════
   zephye: {
     hereIsWhatIFound: "Here's what I found",
     hereIsWhatIFoundAbout: "Here's what I found about",
@@ -311,25 +323,15 @@ export const UI_TEXTS = {
     comparison: 'Comparison',
     locationComparison: 'Location Comparison'
   },
-  // ═══════════════════════════════════════════════════════════════════════
-  // SCHEDULE ENGINE ADDITIONS
-  // ═══════════════════════════════════════════════════════════════════════
   schedule: {
-    // Menu
     menuItem: 'Schedules',
-
-    // Panel
     title: 'Schedules',
     newSchedule: 'New Schedule',
     editSchedule: 'Edit Schedule',
     result: 'Result',
-
-    // Tabs
     tabPending: 'Pending',
     tabFired: 'Fired',
     tabHistory: 'History',
-
-    // Empty states
     noPending: 'No pending schedules',
     noFired: 'No fired schedules',
     noHistory: 'No history yet',
@@ -337,8 +339,6 @@ export const UI_TEXTS = {
     noFiredDesc: 'Fired schedules will appear here when they trigger.',
     noHistoryDesc: 'Completed and cancelled schedules will show here.',
     newScheduledAsk: 'New Scheduled Ask',
-
-    // Form
     whatAsking: 'What are you asking?',
     whatAskingPlaceholder: 'e.g. Going to an event in Lagos',
     includeInResult: 'Include in the result',
@@ -352,29 +352,24 @@ export const UI_TEXTS = {
     saveChanges: 'Save Changes',
     deleteConfirm: 'Delete this scheduled ask?',
     home: 'Home',
-
-    // Fire window options
+    done: 'Done',
+    shift: 'Shift',
+    cancel: 'Cancel',
     min15: '15 min before',
     min30: '30 min before',
     hour1: '1 hour before',
     hours2: '2 hours before',
     day1: '1 day before',
-
-    // Card actions
     viewResult: 'View Result',
     remove: 'Remove',
     firesIn: 'Fires in',
     fired: 'Fired',
-
-    // Toast
     ready: 'Schedule Ready',
     viewFull: 'View Full',
     hideFull: 'Hide Full',
     openInChat: 'Open in chat',
     of: 'of',
     yourScheduledCheck: 'Your scheduled check is ready.',
-
-    // Shift picker
     shiftToWhen: 'Shift to when?',
     original: 'Original',
     min15Plus: '+15 min',
@@ -384,13 +379,9 @@ export const UI_TEXTS = {
     day1Plus: '+1 day',
     week1Plus: '+1 week',
     confirm: 'Confirm',
-
-    // Future time card
     scheduleThisAsk: 'Schedule this ask?',
     firesAutomatically: 'Fires automatically',
     setUp: 'Set up',
-
-    // Errors
     errQuestion: 'Please describe what you want to schedule.',
     errPills: 'Select at least one pill.',
     errDestination: 'Please pick a destination.',
@@ -398,8 +389,7 @@ export const UI_TEXTS = {
     errInvalidDateTime: 'Invalid date or time.',
     errFutureTime: 'Target time must be in the future.',
     errDestinationSaved: 'Destination must be a saved location.',
-
-    // Pills labels (17 intents)
+    errFrom: 'Please pick an origin for the route.',
     pillRoute: 'Route',
     pillTraffic: 'Traffic',
     pillWeather: 'Weather',
@@ -417,8 +407,6 @@ export const UI_TEXTS = {
     pillDIY: 'DIY',
     pillTravel: 'Travel',
     pillBeauty: 'Beauty',
-
-    // Statuses
     statusPending: 'PENDING',
     statusFired: 'FIRED',
     statusDone: 'DONE',
@@ -551,6 +539,28 @@ const flattenUITexts = () => {
   return items
 }
 
+// ─── LOOKUP ENGLISH TEXT (walks UI_TEXTS) ──────────────────────────────
+// This is the KEY fix — t() actually resolves nested keys now
+const lookupEnglishText = (key) => {
+  const parts = key.split('.')
+  let current = UI_TEXTS
+
+  for (const part of parts) {
+    if (current && typeof current === 'object' && part in current) {
+      current = current[part]
+    } else {
+      // Fallback: format the last segment
+      const last = parts[parts.length - 1]
+      return last
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, s => s.toUpperCase())
+        .trim()
+    }
+  }
+
+  return typeof current === 'string' ? current : key.split('.').pop()
+}
+
 // ─── SUPABASE FETCH ────────────────────────────────────────────────────
 const fetchFromSupabase = async (language) => {
   try {
@@ -667,34 +677,30 @@ export const useTranslation = (uiLanguage, countryCode = null) => {
     loadTranslations()
   }, [uiLanguage, countryCode])
 
+  // ─── CORRECTED t() ──────────────────────────────────────────────────
   const t = (key) => {
     if (uiLanguage === 'en') {
-      const parts = key.split('.')
-      const last = parts[parts.length - 1]
-      return last.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim()
+      return lookupEnglishText(key)
     }
-    return translations[key] || key.split('.').pop()
+    return translations[key] || lookupEnglishText(key)
   }
 
   return { t, isLoading, translations }
 }
 
 // ─── TRANSLATE SHARE TEXT ──────────────────────────────────────────────
-// Use for share cards and any dynamic content (schedule results, etc.)
 export const useShareTranslation = (uiLanguage) => {
   const { translations, isLoading } = useTranslation(uiLanguage)
 
-  // Translate a raw string using the same cache/lookup
+  // ─── CORRECTED tShare() ─────────────────────────────────────────────
   const tShare = (key) => {
     if (uiLanguage === 'en') {
-      const parts = key.split('.')
-      const last = parts[parts.length - 1]
-      return last.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim()
+      return lookupEnglishText(key)
     }
-    return translations[key] || key.split('.').pop()
+    return translations[key] || lookupEnglishText(key)
   }
 
-  // Translate arbitrary text on the fly (uses Supabase + API chain)
+  // Translate arbitrary text on the fly
   const translateDynamic = async (text) => {
     if (uiLanguage === 'en' || !text) return text
     try {
