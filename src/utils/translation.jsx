@@ -82,7 +82,12 @@ export const UI_TEXTS = {
     update: 'Update',
     new: 'New',
     improvements: 'Improvements',
-    fixes: 'Fixes'
+    fixes: 'Fixes',
+
+    // 🆕 Added — ZephyeFullScreen fallbacks
+    yourLocation: 'Your location',
+    city: 'City',
+    friend: 'there'
   },
   buttons: {
     save: 'Save',
@@ -145,7 +150,11 @@ export const UI_TEXTS = {
     seeWhatsNew: "See what's new",
     close: 'Close',
     shareNotSupported: 'Web Share API not supported. Please use "Download Image".',
-    cannotShareImage: 'Cannot share image on this device. Please use "Download Image".'
+    cannotShareImage: 'Cannot share image on this device. Please use "Download Image".',
+
+    // 🆕 Added — ZephyeFullScreen tooltips
+    stop: 'Stop',
+    voiceInput: 'Voice input'
   },
   placeholders: {
     searchCity: 'Type any city, LGA, country...',
@@ -205,7 +214,10 @@ export const UI_TEXTS = {
     morning: 'Good morning',
     afternoon: 'Good afternoon',
     evening: 'Good evening',
-    howCanIHelp: 'How can I help you today?'
+    howCanIHelp: 'How can I help you today?',
+
+    // 🆕 Added — ZephyeFullScreen fallback
+    hello: 'Hello'
   },
   chat: {
     thinking: 'Thinking...',
@@ -414,7 +426,44 @@ export const UI_TEXTS = {
     statusDismissed: 'DISMISSED',
     statusMissed: 'MISSED',
     statusShifted: 'SHIFTED',
-    statusEdited: 'EDITED'
+    statusEdited: 'EDITED',
+
+    // 🆕 Added — from ScheduleAskPanel.jsx
+    recOnce: 'Once',
+    recDaily: 'Daily',
+    recWeekdays: 'Weekdays',
+    recWeekends: 'Weekends',
+    recWeekly: 'Weekly',
+    recCustom: 'Custom',
+    dayMon: 'Mon',
+    dayTue: 'Tue',
+    dayWed: 'Wed',
+    dayThu: 'Thu',
+    dayFri: 'Fri',
+    daySat: 'Sat',
+    daySun: 'Sun',
+    recurrence: 'Recurrence',
+    until: 'Until',
+    askNowToo: 'Ask now too',
+    extraLocations: 'Extra locations',
+    addAnother: 'Add another location',
+    daySnapshotHint: 'Day-shifted language detected — will resolve to the actual calendar day when fired.',
+    noResult: 'No result yet',
+    errNoHomeSet: 'Please set a home location first, or save at least one location.',
+
+    // 🆕 Added — from ScheduleToast.jsx
+    moreLocations: 'more locations',
+    cancelPromptTitle: 'Cancel this schedule?',
+    cancelPromptSubtitle: 'This is a recurring schedule. Cancel just this one, or the entire chain?',
+    cancelOne: 'Just this one',
+    cancelAll: 'Entire chain',
+    daySnapshotBadge: 'Day snapshot',
+    routeBadge: 'Route',
+    multiBadge: 'Multi',
+
+    // 🆕 Added — from ZephyeFullScreen.jsx
+    detectedFutureTime: 'Detected future time',
+    askResult: 'Scheduled ask result'
   }
 }
 
@@ -540,7 +589,6 @@ const flattenUITexts = () => {
 }
 
 // ─── LOOKUP ENGLISH TEXT (walks UI_TEXTS) ──────────────────────────────
-// This is the KEY fix — t() actually resolves nested keys now
 const lookupEnglishText = (key) => {
   const parts = key.split('.')
   let current = UI_TEXTS
@@ -549,7 +597,6 @@ const lookupEnglishText = (key) => {
     if (current && typeof current === 'object' && part in current) {
       current = current[part]
     } else {
-      // Fallback: format the last segment
       const last = parts[parts.length - 1]
       return last
         .replace(/([A-Z])/g, ' $1')
