@@ -5,7 +5,6 @@
 import {
   fetchWeather,
   fetchWeatherBatch,
-  fetchWeatherWithAqi,
 } from './weatherFetcher.js'
 
 const DAY_NAMES = [
@@ -18,7 +17,10 @@ const LOCATION_STOPWORDS = new Set([
   'this', 'that', 'these', 'those', 'here', 'there',
   'morning', 'afternoon', 'evening', 'night', 'tonight',
   'today', 'tomorrow', 'yesterday', 'weekend', 'weekday',
-  'now', 'later', 'soon', 'outside',
+  'now', 'later', 'soon', 'outside', 'compare', 'versus', 'vs',
+  'weather', 'forecast', 'temperature', 'check', 'show', 'tell',
+  'give', 'what', 'how', 'is', 'will', 'be', 'and', 'or', 'in',
+  'at', 'on', 'for', 'to', 'from', 'of',
 ])
 
 const HOME_ALIASES = new Set([
@@ -40,6 +42,24 @@ function cleanLocationHint(raw) {
 
 function stripStopword(text) {
   return LOCATION_STOPWORDS.has(text.toLowerCase()) ? null : text
+}
+
+/**
+ * HARD FILTER: is this a plausible place name?
+ * Rejects verbs, stopwords, multi-word junk like "compare london".
+ */
+function isPlausibleLocation(text) {
+  if (!text) return false
+  const t = text.toLowerCase().trim()
+  if (t.length < 2 || t.length > 40) return false
+  if (LOCATION_STOPWORDS.has(t)) return false
+  // Must not start with a verb/stopword
+  const firstWord = t.split(/\s+/)[0]
+  if (LOCATION_STOPWORDS.has(firstWord)) return false
+  if (/^(compare|check|show|tell|give|weather|forecast|what|how|when|where|is|are|will|can|should)\b/.test(t)) return false
+  // Max 3 words (real place names: "New York", "San Francisco", "Rio de Janeiro")
+  if (t.split(/\s+/).length > 3) return false
+  return true
 }
 
 // ─── TIME PARSING ───────────────────────────────────────────────────────
@@ -174,6 +194,8 @@ export function parseTimeReference(question, now = new Date()) {
   return result
 }
 
+// ─── TIME SLICING ───────────────────────────────────────────────────────
+
 export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   if (!weather) return null
 
@@ -300,9 +322,6 @@ export function mapWeatherCode(code) {
 
 // ─── LOCATION PARSING ──────────────────────────────────────────────────
 
-/**
- * FIXED: proper end-of-string handling for route parsing.
- */
 export function parseFromTo(question) {
   if (!question) return null
   const m = question.match(
@@ -337,23 +356,22 @@ export function parseInLocation(question) {
   return stripStopword(hint)
 }
 
+// ─── COMPARISON DETECTION (REWRITTEN) ──────────────────────────────────
+
 /**
- * FIXED: comparison now detects unsaved locations too.
+ * Detect a comparison question.
+ * Returns { type: 'time', time1, time2 } or { type: 'location', locations: [...] }
  */
 export function detectComparison(question, savedLocations = []) {
   if (!question) return null
-  const q = question.toLowerCase()
+  const q = question.toLowerCase().trim()
 
+  // Must have a comparison trigger
   const hasCompare = /\b(vs|versus|compare|or|better|best|which|difference|rather)\b/i.test(q)
   if (!hasCompare) return null
 
   // ─── Time comparison ─────────────────────────────────────────────
-  const timeWords = [
-    'today', 'tomorrow', 'yesterday',
-    'morning', 'afternoon', 'evening', 'night', 'tonight',
-    'weekend', 'weekday',
-    ...DAY_NAMES,
-  ]
+  const timeWords = ['today', 'tomorrow', 'yesterday', 'morning', 'afternoon', 'evening', 'night', 'tonight']
   const foundTimes = timeWords.filter(w => q.includes(w))
   if (foundTimes.length >= 2) {
     return { type: 'time', time1: foundTimes[0], time2: foundTimes[1] }
@@ -362,7 +380,7 @@ export function detectComparison(question, savedLocations = []) {
   // ─── Location comparison ─────────────────────────────────────────
   const foundLocations = []
 
-  // (a) Check saved locations
+  // (a) Saved location matches
   for (const loc of savedLocations || []) {
     const label = (loc.label || '').toLowerCase()
     const name = (loc.name || '').toLowerCase()
@@ -372,38 +390,45 @@ export function detectComparison(question, savedLocations = []) {
     }
   }
 
-  // (b) "in X" / "at X" — catches unsaved locations
-  const inMatches = [...q.matchAll(/\b(?:in|at)\s+([a-z][a-z\s,'-]{1,30}?)(?=\s+(?:vs|versus|or|and|,|tomorrow|today|tonight|\?)|$)/gi)]
-  inMatches.forEach(m => {
-    const hint = cleanLocationHint(m[1])
-    if (hint && !LOCATION_STOPWORDS.has(hint.toLowerCase()) && !foundLocations.includes(hint)) {
-      foundLocations.push(hint)
+  // (b) Extract tokens that look like place names
+  // Strip the comparison trigger words first so they don't become locations
+  const cleaned = q
+    .replace(/\b(compare|versus|vs\.?|better|best|which|difference|rather)\b/gi, ' ')
+    .replace(/\b(weather|forecast|temperature|conditions?)\b/gi, ' ')
+    .replace(/\b(today|tomorrow|tonight|yesterday|this|next)\b/gi, ' ')
+    .replace(/\b(morning|afternoon|evening|night)\b/gi, ' ')
+    .replace(/[?!.]/g, ' ')
+
+  // Split on commas, "and", "or"
+  const segments = cleaned
+    .split(/\s*,\s*|\s+and\s+|\s+or\s+/i)
+    .map(s => s.trim())
+    .filter(Boolean)
+
+  segments.forEach(seg => {
+    // Trim "in X" / "at X" prefix
+    const stripped = seg.replace(/^\s*(?:in|at|near)\s+/i, '').trim()
+    if (isPlausibleLocation(stripped) && !foundLocations.includes(stripped)) {
+      // Normalize casing: title-case each word
+      const normalized = stripped
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+      if (!foundLocations.includes(normalized)) {
+        foundLocations.push(normalized)
+      }
     }
   })
 
-  // (c) Comma-separated list: "London, Paris and Tokyo"
-  const commaListMatch = q.match(
-    /\b([a-z]+(?:\s+[a-z]+)?)\s*,\s*([a-z]+(?:\s+[a-z]+)?)(?:\s*,\s*([a-z]+(?:\s+[a-z]+)?))?(?:\s*,?\s*and\s+([a-z]+(?:\s+[a-z]+)?))?/i
-  )
-  if (commaListMatch) {
-    const parts = [commaListMatch[1], commaListMatch[2], commaListMatch[3], commaListMatch[4]]
-      .filter(Boolean)
-      .map(s => s.trim())
-    parts.forEach(p => {
-      const clean = p.split(/\s+/).slice(0, 2).join(' ')
-      if (clean && !LOCATION_STOPWORDS.has(clean.toLowerCase()) && !foundLocations.includes(clean)) {
-        foundLocations.push(clean)
-      }
-    })
-  }
-
-  // (d) "X vs Y" / "X versus Y" / "X and Y"
-  const pairMatch = q.match(/\b([a-z][a-z\s,'-]{1,25}?)\s+(?:vs\.?|versus|and)\s+([a-z][a-z\s,'-]{1,25}?)(?:\s+(?:tomorrow|today|tonight|\?)|$)/i)
-  if (pairMatch) {
-    const a = cleanLocationHint(pairMatch[1])
-    const b = cleanLocationHint(pairMatch[2])
-    if (a && !LOCATION_STOPWORDS.has(a.toLowerCase()) && !foundLocations.includes(a)) foundLocations.push(a)
-    if (b && !LOCATION_STOPWORDS.has(b.toLowerCase()) && !foundLocations.includes(b)) foundLocations.push(b)
+  // (c) "X vs Y" pattern fallback
+  if (foundLocations.length < 2) {
+    const vsMatch = q.match(/([a-z][a-z\s]{1,25}?)\s+(?:vs\.?|versus)\s+([a-z][a-z\s]{1,25}?)(?:\s+(?:tomorrow|today|tonight|\?)|$)/i)
+    if (vsMatch) {
+      const a = cleanLocationHint(vsMatch[1])
+      const b = cleanLocationHint(vsMatch[2])
+      if (a && isPlausibleLocation(a) && !foundLocations.includes(a)) foundLocations.push(a)
+      if (b && isPlausibleLocation(b) && !foundLocations.includes(b)) foundLocations.push(b)
+    }
   }
 
   const unique = [...new Set(foundLocations)]
@@ -523,22 +548,13 @@ export async function resolveLocation(hint, savedLocations = [], homeLocation = 
 const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjkzZGIxMDYzZDZmOTQyOGZiZGFlMzk2OTA3ZWJkZjA4IiwiaCI6Im11cm11cjY0In0='
 
 const MODE_TO_ORS_PROFILE = {
-  car: 'driving-car',
-  driving: 'driving-car',
-  hgv: 'driving-hgv',
-  truck: 'driving-hgv',
-  walk: 'foot-walking',
-  walking: 'foot-walking',
-  foot: 'foot-walking',
-  hike: 'foot-hiking',
-  hiking: 'foot-hiking',
-  cycle: 'cycling-regular',
-  cycling: 'cycling-regular',
-  bike: 'cycling-regular',
-  bicycle: 'cycling-regular',
-  roadbike: 'cycling-road',
-  mtb: 'cycling-mountain',
-  ebike: 'cycling-electric',
+  car: 'driving-car', driving: 'driving-car',
+  hgv: 'driving-hgv', truck: 'driving-hgv',
+  walk: 'foot-walking', walking: 'foot-walking', foot: 'foot-walking',
+  hike: 'foot-hiking', hiking: 'foot-hiking',
+  cycle: 'cycling-regular', cycling: 'cycling-regular',
+  bike: 'cycling-regular', bicycle: 'cycling-regular',
+  roadbike: 'cycling-road', mtb: 'cycling-mountain', ebike: 'cycling-electric',
   wheelchair: 'wheelchair',
 }
 
@@ -645,33 +661,37 @@ export async function resolveWeatherContext({
         context,
       }
     }
+
     if (comparison.type === 'location') {
       const resolved = []
       for (const hint of comparison.locations) {
         const loc = await resolveLocation(hint, savedLocations, homeLocation)
         if (loc?.lat != null) resolved.push(loc)
       }
-      if (resolved.length < 2) {
-        return { type: 'single', bundle: null, context }
-      }
-      const coords = resolved.map(r => ({ lat: r.lat, lon: r.lon }))
-      const weathers = await fetchWeatherBatch(coords)
-      const timeRef = parseTimeReference(question, now)
-      const items = resolved.map((loc, i) => ({
-        label: loc.label || loc.name,
-        bundle: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
-        location: loc,
-      }))
 
-      // Context: use the first resolved location so header isn't "Lagos"
-      context.location = resolved.map(r => r.label || r.name).join(' vs ')
+      if (resolved.length >= 2) {
+        const coords = resolved.map(r => ({ lat: r.lat, lon: r.lon }))
+        const weathers = await fetchWeatherBatch(coords)
+        const timeRef = parseTimeReference(question, now)
 
-      return {
-        type: 'comparison',
-        comparisonType: 'location',
-        items,
-        context,
+        const items = resolved.map((loc, i) => ({
+          label: loc.label || loc.name,
+          bundle: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
+          location: loc,
+        })).filter(item => item.bundle != null)
+
+        if (items.length >= 2) {
+          context.location = items.map(it => it.label).join(' vs ')
+          return {
+            type: 'comparison',
+            comparisonType: 'location',
+            items,
+            context,
+          }
+        }
       }
+
+      // Comparison detected but couldn't resolve — fall through to single
     }
   }
 
@@ -687,9 +707,9 @@ export async function resolveWeatherContext({
 
       if (route) {
         const allPoints = [
-          { ...fromLoc, role: 'from' },
-          ...route.waypoints.map(wp => ({ ...wp, label: wp.label || 'Waypoint', role: 'waypoint' })),
-          { ...toLoc, role: 'to' },
+          { ...fromLoc, role: 'from', label: fromLoc.label || fromLoc.name || 'Origin' },
+          ...route.waypoints.map(wp => ({ ...wp, role: 'waypoint' })),
+          { ...toLoc, role: 'to', label: toLoc.label || toLoc.name || 'Destination' },
         ]
 
         const coords = allPoints.map(p => ({ lat: p.lat, lon: p.lon }))
@@ -698,7 +718,7 @@ export async function resolveWeatherContext({
 
         const waypoints = allPoints.map((p, i) => ({
           label: p.label || p.name || `Point ${i + 1}`,
-          role: p.role || 'waypoint',
+          role: p.role,
           location: p,
           weather: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
         }))
@@ -721,7 +741,6 @@ export async function resolveWeatherContext({
         }
       }
 
-      // Route fetch failed — fall back to destination weather
       const destWeather = await fetchWeather(toLoc.lat, toLoc.lon)
       const timeRef = parseTimeReference(question, now)
       return {
@@ -749,16 +768,11 @@ export async function resolveWeatherContext({
       }
       context.location = loc.label || loc.name
 
-      return {
-        type: 'single',
-        bundle,
-        location: loc,
-        context,
-      }
+      return { type: 'single', bundle, location: loc, context }
     }
   }
 
-  // ─── 4. No location — current ─────────────────────────────────────
+  // ─── 4. Current location ─────────────────────────────────────────
   let weather = baseWeather
   const timeRef = parseTimeReference(question, now)
   const needsForecast = timeRef.isFuture || timeRef.daysAhead > 0 || !weather?.hourly?.time?.length
