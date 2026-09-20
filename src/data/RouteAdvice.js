@@ -1,4 +1,4 @@
-;// ============================================================================
+// ============================================================================
 // ROUTE ADVICE — Full directions, all modes, weather-along-the-way
 //
 // The weather resolver + response merger do the heavy lifting:
@@ -36,8 +36,7 @@ function formatDistance(meters) {
   return `${Math.round(km)} km`
 }
 
-f'\
-  [unction modeLabel(mode) {
+function modeLabel(mode) {
   const map = {
     car: 'Car', driving: 'Car',
     hgv: 'Truck', truck: 'Truck',
@@ -93,11 +92,6 @@ function isSnowCode(code) {
 
 // ─── MULTI-STOP WEATHER DIAGRAM ────────────────────────────────────────
 
-/**
- * Build a one-line diagram showing weather at each waypoint.
- *
- *   Home → ☀️ → Stop 1 → 🌧️ → Stop 2 → ⛅ → Work
- */
 function buildWeatherDiagram(waypoints) {
   if (!Array.isArray(waypoints) || waypoints.length === 0) return ''
 
@@ -109,7 +103,6 @@ function buildWeatherDiagram(waypoints) {
     parts.push(emoji)
   })
 
-  // Trailing destination label without an emoji
   return parts.join(' → ')
 }
 
@@ -155,7 +148,6 @@ function buildWeatherNarrative(waypoints) {
       parts.push(`Rain from ${first} to ${last}. Drive carefully through the wet section.`)
     }
   } else {
-    // No rain anywhere — mention temp spread
     const temps = waypoints.map(w => w.weather?.temp).filter(t => t != null)
     if (temps.length > 1) {
       const min = Math.min(...temps)
@@ -170,14 +162,12 @@ function buildWeatherNarrative(waypoints) {
     }
   }
 
-  // Wind warning
   const windyWaypoints = waypoints.filter(wp => (wp.weather?.wind ?? 0) > 40)
   if (windyWaypoints.length > 0) {
     const labels = windyWaypoints.map(w => w.label).filter(Boolean)
     parts.push(`Strong wind near ${labels.join(', ')} — expect crosswinds.`)
   }
 
-  // Fog warning
   const foggyWaypoints = waypoints.filter(wp => wp.weather?.visibility != null && wp.weather.visibility < 1)
   if (foggyWaypoints.length > 0) {
     const labels = foggyWaypoints.map(w => w.label).filter(Boolean)
@@ -193,7 +183,6 @@ function buildModeAdvice(mode, route, waypoints) {
   const advice = []
   const m = (mode || 'car').toLowerCase()
 
-  // Extract weather signals from waypoints
   const anyRain = waypoints.some(w => isWetCode(w.weather?.conditionCode) || (w.weather?.precipitationProb ?? 0) > 40)
   const anySnow = waypoints.some(w => isSnowCode(w.weather?.conditionCode))
   const maxWind = Math.max(0, ...waypoints.map(w => w.weather?.wind ?? 0))
@@ -239,10 +228,6 @@ function buildModeAdvice(mode, route, waypoints) {
 
 // ─── STEP EXTRACTION ───────────────────────────────────────────────────
 
-/**
- * Extract clean step lines from ORS step objects.
- * Returns array of { instruction, distance } — NEVER truncated.
- */
 function extractSteps(route) {
   if (!route?.steps || !Array.isArray(route.steps)) return []
 
@@ -293,17 +278,6 @@ function collectWarnings(waypoints, route, mode) {
 
 // ─── MAIN ENTRY POINT ──────────────────────────────────────────────────
 
-/**
- * Get route advice.
- *
- * The resolver + merger already computed the route and fetched weather
- * for every waypoint. This module just narrates.
- *
- * @param {Object} data — bundle with _route and _waypoints pre-populated
- * @param {string} question — original question
- * @returns {Object} — { type, title, from, to, mode, distance, duration,
- *                       summary, waypoints, directions, warnings }
- */
 export const getRouteAdvice = (data, question = '') => {
   if (!data) {
     return {
@@ -324,7 +298,6 @@ export const getRouteAdvice = (data, question = '') => {
   const route = data._route || null
   const waypoints = Array.isArray(data._waypoints) ? data._waypoints : []
 
-  // ─── No route resolved — return honest failure ─────────────────────
   if (!route) {
     return {
       type: 'route',
@@ -345,15 +318,12 @@ export const getRouteAdvice = (data, question = '') => {
   const fromLabel = safeStr(route.from?.label || route.from?.name, 'Origin')
   const toLabel = safeStr(route.to?.label || route.to?.name, 'Destination')
 
-  // ─── Basic info ────────────────────────────────────────────────────
   const distanceLabel = formatDistance(route.distance)
   const durationLabel = formatDuration(route.duration)
 
-  // ─── Weather narrative + diagram ───────────────────────────────────
   const diagram = buildWeatherDiagram(waypoints)
   const narrative = buildWeatherNarrative(waypoints)
 
-  // ─── Full step list (never truncated) ──────────────────────────────
   const steps = extractSteps(route)
   const directions = steps.map(s => {
     if (s.distance == null) return s.instruction
@@ -361,19 +331,14 @@ export const getRouteAdvice = (data, question = '') => {
     return distLabel ? `${s.instruction} (${distLabel})` : s.instruction
   })
 
-  // ─── Mode-specific advice ──────────────────────────────────────────
   const modeAdvice = buildModeAdvice(mode, route, waypoints)
-
-  // ─── Warnings ──────────────────────────────────────────────────────
   const warnings = collectWarnings(waypoints, route, mode)
 
-  // ─── Assemble summary ──────────────────────────────────────────────
   const summaryParts = []
   if (narrative) summaryParts.push(narrative)
   if (modeAdvice.length > 0) summaryParts.push(modeAdvice.join(' '))
   const summary = summaryParts.join(' ')
 
-  // ─── Full text (used by merger to build the expandable fullText) ───
   const fullParts = []
   if (diagram) fullParts.push(diagram)
 
