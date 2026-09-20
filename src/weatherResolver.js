@@ -1,18 +1,5 @@
 // ============================================================================
 // WEATHER RESOLVER — The brain
-//
-// Takes a raw question + base context, figures out what locations and times
-// the user is asking about, fetches the data, and returns clean bundle(s)
-// ready to hand directly to intent/advice modules.
-//
-// Advice modules never fetch. They never parse. They never calculate dates.
-// They just read the bundle and narrate.
-//
-// Returns one of:
-//   { type: 'single',     bundle }                      — normal question
-//   { type: 'comparison', items: [bundle, bundle, ...] } — 2-3 sides
-//   { type: 'route',      bundle, waypoints }            — route + weather
-//   { type: 'multi',      items: [bundle, bundle, ...] } — multi-location
 // ============================================================================
 
 import {
@@ -20,8 +7,6 @@ import {
   fetchWeatherBatch,
   fetchWeatherWithAqi,
 } from './weatherFetcher.js'
-
-// ─── CONSTANTS ─────────────────────────────────────────────────────────
 
 const DAY_NAMES = [
   'sunday', 'monday', 'tuesday', 'wednesday',
@@ -36,22 +21,19 @@ const LOCATION_STOPWORDS = new Set([
   'now', 'later', 'soon', 'outside',
 ])
 
-// Common "home" aliases → resolve to homeLocation
 const HOME_ALIASES = new Set([
   'home', 'my home', 'my place', 'my house', 'here', 'current location',
 ])
 
-// Common "work" aliases → resolve to a saved location labelled work/office
 const WORK_ALIASES = new Set([
   'work', 'office', 'my office', 'my work', 'workplace',
 ])
 
-// ─── TEXT UTILITIES ────────────────────────────────────────────────────
+// ─── TEXT UTILITIES ─────────────────────────────────────────────────────
 
 function cleanLocationHint(raw) {
   if (!raw) return null
   let s = raw.trim().replace(/[,?.!]+$/, '').replace(/\s+/g, ' ')
-  // Strip leading "the " for matching
   s = s.replace(/^the\s+/i, '')
   return s || null
 }
@@ -60,12 +42,8 @@ function stripStopword(text) {
   return LOCATION_STOPWORDS.has(text.toLowerCase()) ? null : text
 }
 
-// ─── TIME PARSING ──────────────────────────────────────────────────────
+// ─── TIME PARSING ───────────────────────────────────────────────────────
 
-/**
- * Parse a time reference from a question.
- * Returns { targetDate, timePhrase, hasSpecificHour, isFuture, daysAhead }
- */
 export function parseTimeReference(question, now = new Date()) {
   const q = (question || '').toLowerCase()
 
@@ -81,7 +59,6 @@ export function parseTimeReference(question, now = new Date()) {
 
   result.targetDate.setSeconds(0, 0)
 
-  // ─── "in X days/hours/minutes" ─────────────────────────────────────
   const inMatch = q.match(/\bin\s+(\d+)\s+(day|days|hour|hours|hr|hrs|min|mins|minute|minutes)\b/i)
   if (inMatch) {
     const num = parseInt(inMatch[1], 10)
@@ -98,42 +75,33 @@ export function parseTimeReference(question, now = new Date()) {
     result.timePhrase = inMatch[0]
   }
 
-  // ─── "day after tomorrow" ──────────────────────────────────────────
   if (/\bday\s+after\s+tomorrow\b/i.test(q)) {
     result.targetDate.setDate(result.targetDate.getDate() + 2)
     result.daysAhead = 2
     result.isFuture = true
     result.timePhrase = 'day after tomorrow'
-  }
-  // ─── "tomorrow" ────────────────────────────────────────────────────
-  else if (/\btomorrow\b/i.test(q)) {
+  } else if (/\btomorrow\b/i.test(q)) {
     result.targetDate.setDate(result.targetDate.getDate() + 1)
     result.daysAhead = 1
     result.isFuture = true
     result.timePhrase = 'tomorrow'
-  }
-  // ─── "yesterday" ───────────────────────────────────────────────────
-  else if (/\byesterday\b/i.test(q)) {
+  } else if (/\byesterday\b/i.test(q)) {
     result.targetDate.setDate(result.targetDate.getDate() - 1)
     result.daysAhead = -1
     result.timePhrase = 'yesterday'
-  }
-  // ─── "next <weekday>" ──────────────────────────────────────────────
-  else {
+  } else {
     const nextDayMatch = q.match(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
     if (nextDayMatch) {
       const targetDayIdx = DAY_NAMES.indexOf(nextDayMatch[1].toLowerCase())
       const currentDay = result.targetDate.getDay()
       let diff = (targetDayIdx - currentDay + 7) % 7
       if (diff === 0) diff = 7
-      diff += 7 // "next" means week after this coming one
+      diff += 7
       result.targetDate.setDate(result.targetDate.getDate() + diff)
       result.daysAhead = diff
       result.isFuture = true
       result.timePhrase = nextDayMatch[0]
-    }
-    // ─── "this <weekday>" / "on <weekday>" ───────────────────────────
-    else {
+    } else {
       const thisDayMatch = q.match(/\b(?:this\s+|on\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
       if (thisDayMatch) {
         const targetDayIdx = DAY_NAMES.indexOf(thisDayMatch[1].toLowerCase())
@@ -144,16 +112,12 @@ export function parseTimeReference(question, now = new Date()) {
         result.daysAhead = diff
         result.isFuture = true
         result.timePhrase = thisDayMatch[0].trim()
-      }
-      // ─── "next week" ──────────────────────────────────────────────
-      else if (/\bnext\s+week\b/i.test(q)) {
+      } else if (/\bnext\s+week\b/i.test(q)) {
         result.targetDate.setDate(result.targetDate.getDate() + 7)
         result.daysAhead = 7
         result.isFuture = true
         result.timePhrase = 'next week'
-      }
-      // ─── "this weekend" / "weekend" ───────────────────────────────
-      else if (/\b(?:this\s+)?weekend\b/i.test(q)) {
+      } else if (/\b(?:this\s+)?weekend\b/i.test(q)) {
         const currentDay = result.targetDate.getDay()
         const daysUntilSat = (6 - currentDay + 7) % 7 || 7
         result.targetDate.setDate(result.targetDate.getDate() + daysUntilSat)
@@ -164,7 +128,6 @@ export function parseTimeReference(question, now = new Date()) {
     }
   }
 
-  // ─── Explicit hour ("at 5pm", "at 17:30") ──────────────────────────
   const hourMatch = q.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i)
   if (hourMatch) {
     let hour = parseInt(hourMatch[1], 10)
@@ -179,7 +142,6 @@ export function parseTimeReference(question, now = new Date()) {
     }
   }
 
-  // ─── Named times of day ────────────────────────────────────────────
   if (!result.hasSpecificHour) {
     if (/\b(?:morning|sunrise|dawn)\b/i.test(q)) {
       result.explicitHour = 8
@@ -200,21 +162,9 @@ export function parseTimeReference(question, now = new Date()) {
     }
   }
 
-  // ─── Apply explicit hour ───────────────────────────────────────────
   if (result.hasSpecificHour) {
     result.targetDate.setHours(result.explicitHour, result.explicitMinute, 0, 0)
-
-    // If it's already past that hour today, push to tomorrow
     if (!result.isFuture && result.targetDate.getTime() < now.getTime()) {
-      result.targetDate.setDate(result.targetDate.getDate() + 1)
-      result.daysAhead = 1
-      result.isFuture = true
-    }
-  }
-
-  // ─── If in past and not yesterday, push forward ────────────────────
-  if (!result.isFuture && result.daysAhead === 0) {
-    if (result.targetDate.getTime() < now.getTime() && result.hasSpecificHour) {
       result.targetDate.setDate(result.targetDate.getDate() + 1)
       result.daysAhead = 1
       result.isFuture = true
@@ -224,14 +174,6 @@ export function parseTimeReference(question, now = new Date()) {
   return result
 }
 
-/**
- * Given a normalized weather object and a time reference, slice out the
- * exact hour/day values the user asked about.
- *
- * This is the "look up in Open-Meteo's own arrays" logic — no manual math.
- * Returns a bundle shaped like the weather object but with `temp`, `wind`,
- * `humidity`, etc. hoisted to the top level for advice modules to read.
- */
 export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   if (!weather) return null
 
@@ -246,7 +188,6 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   const daily = weather.daily || {}
   const times = hourly.time || []
 
-  // ─── Find the closest hour index ───────────────────────────────────
   let hourIndex = -1
   if (times.length > 0 && timeRef?.hasSpecificHour) {
     const targetMs = timeRef.targetDate.getTime()
@@ -254,16 +195,11 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     times.forEach((t, i) => {
       const ms = new Date(t).getTime()
       const diff = Math.abs(ms - targetMs)
-      if (diff < bestDiff) {
-        bestDiff = diff
-        hourIndex = i
-      }
+      if (diff < bestDiff) { bestDiff = diff; hourIndex = i }
     })
-    // Sanity: if we're more than 2 hours off, no good match
     if (bestDiff > 2 * 60 * 60 * 1000) hourIndex = -1
   }
 
-  // ─── Find the day index ────────────────────────────────────────────
   let dayIndex = -1
   if (daily.time && daily.time.length > 0) {
     const targetDay = new Date(timeRef?.targetDate ?? now)
@@ -273,24 +209,18 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     daily.time.forEach((t, i) => {
       const dayMs = new Date(t).getTime() + 12 * 60 * 60 * 1000
       const diff = Math.abs(dayMs - targetMs)
-      if (diff < bestDiff) {
-        bestDiff = diff
-        dayIndex = i
-      }
+      if (diff < bestDiff) { bestDiff = diff; dayIndex = i }
     })
-    // Sanity: if we're more than 30 hours off, no good match
     if (bestDiff > 30 * 60 * 60 * 1000) dayIndex = -1
   }
 
-  // If no explicit hour, default dayIndex = daysAhead
-  if (dayIndex === -1 && timeRef?.daysAhead != null && daily.time?.length > timeRef.daysAhead) {
+  if (dayIndex === -1 && timeRef?.daysAhead != null && daily.time?.length > timeRef.daysAhead && timeRef.daysAhead >= 0) {
     dayIndex = timeRef.daysAhead
   }
 
   bundle._hourIndex = hourIndex
   bundle._dayIndex = dayIndex
 
-  // ─── Hoist current values (fallback) ───────────────────────────────
   const cur = weather.current || {}
   bundle.temp = cur.temperature_2m
   bundle.feelsLike = cur.apparent_temperature
@@ -303,7 +233,6 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   bundle.cloudCover = cur.cloud_cover
   bundle.pressure = cur.pressure_msl
 
-  // ─── Override with hourly if we have an hour match ─────────────────
   if (hourIndex >= 0 && times[hourIndex]) {
     const h = hourly
     if (h.temperature_2m?.[hourIndex] != null) bundle.temp = Math.round(h.temperature_2m[hourIndex])
@@ -323,7 +252,6 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     if (h.is_day?.[hourIndex] != null) bundle.isDay = h.is_day[hourIndex]
   }
 
-  // ─── Override with daily if we only have a day match ───────────────
   if (dayIndex >= 0 && daily.time?.[dayIndex]) {
     const d = daily
     if (d.temperature_2m_max?.[dayIndex] != null) bundle.tempMax = Math.round(d.temperature_2m_max[dayIndex])
@@ -346,13 +274,11 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     }
   }
 
-  // ─── Condition string from code ────────────────────────────────────
   bundle.condition = mapWeatherCode(bundle.conditionCode)
-
   return bundle
 }
 
-// ─── SIMPLE WMO MAP (inlined so resolver has no external dep) ──────────
+// ─── WMO CODE MAP ──────────────────────────────────────────────────────
 
 export function mapWeatherCode(code) {
   if (code === 0) return 'clear'
@@ -375,13 +301,12 @@ export function mapWeatherCode(code) {
 // ─── LOCATION PARSING ──────────────────────────────────────────────────
 
 /**
- * Extract "from X to Y" from a question.
- * Returns { from, to } or null.
+ * FIXED: proper end-of-string handling for route parsing.
  */
 export function parseFromTo(question) {
   if (!question) return null
   const m = question.match(
-    /\bfrom\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)\s+to\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)(?:\s+(?:on|at|by|for|tomorrow|today|tonight|next|this|the|\?|,|$))/i
+    /\bfrom\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)\s+to\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)(?:\s+(?:on|at|by|for|tomorrow|today|tonight|next|this|the)\b|\s*$|[\?.,])/i
   )
   if (!m) return null
   const from = cleanLocationHint(m[1])
@@ -390,13 +315,10 @@ export function parseFromTo(question) {
   return { from, to }
 }
 
-/**
- * Extract "to X" (destination-only).
- */
 export function parseToOnly(question) {
   if (!question) return null
   const m = question.match(
-    /\bto\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)(?:\s+(?:on|at|by|for|tomorrow|today|tonight|next|this|the|\?|,|$))/i
+    /\bto\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)(?:\s+(?:on|at|by|for|tomorrow|today|tonight|next|this|the)\b|\s*$|[\?.,])/i
   )
   if (!m) return null
   const hint = cleanLocationHint(m[1])
@@ -404,13 +326,10 @@ export function parseToOnly(question) {
   return stripStopword(hint)
 }
 
-/**
- * Extract "in X" / "at X" location hint.
- */
 export function parseInLocation(question) {
   if (!question) return null
   const m = question.match(
-    /\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)(?:\s+(?:on|at|by|for|tomorrow|today|tonight|next|this|the|\?|,|$))/i
+    /\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s,'-]{1,40}?)(?:\s+(?:on|at|by|for|tomorrow|today|tonight|next|this|the)\b|\s*$|[\?.,])/i
   )
   if (!m) return null
   const hint = cleanLocationHint(m[1])
@@ -419,18 +338,16 @@ export function parseInLocation(question) {
 }
 
 /**
- * Detect a comparison question.
- * Returns { type, time1, time2 } | { type, locations: [...] } | null
+ * FIXED: comparison now detects unsaved locations too.
  */
 export function detectComparison(question, savedLocations = []) {
   if (!question) return null
   const q = question.toLowerCase()
 
-  // Must contain a comparison trigger
   const hasCompare = /\b(vs|versus|compare|or|better|best|which|difference|rather)\b/i.test(q)
   if (!hasCompare) return null
 
-  // ─── Time comparison ───────────────────────────────────────────────
+  // ─── Time comparison ─────────────────────────────────────────────
   const timeWords = [
     'today', 'tomorrow', 'yesterday',
     'morning', 'afternoon', 'evening', 'night', 'tonight',
@@ -442,8 +359,10 @@ export function detectComparison(question, savedLocations = []) {
     return { type: 'time', time1: foundTimes[0], time2: foundTimes[1] }
   }
 
-  // ─── Location comparison ───────────────────────────────────────────
+  // ─── Location comparison ─────────────────────────────────────────
   const foundLocations = []
+
+  // (a) Check saved locations
   for (const loc of savedLocations || []) {
     const label = (loc.label || '').toLowerCase()
     const name = (loc.name || '').toLowerCase()
@@ -452,14 +371,41 @@ export function detectComparison(question, savedLocations = []) {
       foundLocations.push(loc.label || loc.name)
     }
   }
-  // Also catch "in X vs in Y" pattern
-  const inMatches = [...q.matchAll(/\bin\s+([a-z][a-z\s,'-]{1,30}?)(?=\s+(?:vs|versus|or|,)|$)/gi)]
+
+  // (b) "in X" / "at X" — catches unsaved locations
+  const inMatches = [...q.matchAll(/\b(?:in|at)\s+([a-z][a-z\s,'-]{1,30}?)(?=\s+(?:vs|versus|or|and|,|tomorrow|today|tonight|\?)|$)/gi)]
   inMatches.forEach(m => {
     const hint = cleanLocationHint(m[1])
-    if (hint && !LOCATION_STOPWORDS.has(hint.toLowerCase())) {
+    if (hint && !LOCATION_STOPWORDS.has(hint.toLowerCase()) && !foundLocations.includes(hint)) {
       foundLocations.push(hint)
     }
   })
+
+  // (c) Comma-separated list: "London, Paris and Tokyo"
+  const commaListMatch = q.match(
+    /\b([a-z]+(?:\s+[a-z]+)?)\s*,\s*([a-z]+(?:\s+[a-z]+)?)(?:\s*,\s*([a-z]+(?:\s+[a-z]+)?))?(?:\s*,?\s*and\s+([a-z]+(?:\s+[a-z]+)?))?/i
+  )
+  if (commaListMatch) {
+    const parts = [commaListMatch[1], commaListMatch[2], commaListMatch[3], commaListMatch[4]]
+      .filter(Boolean)
+      .map(s => s.trim())
+    parts.forEach(p => {
+      const clean = p.split(/\s+/).slice(0, 2).join(' ')
+      if (clean && !LOCATION_STOPWORDS.has(clean.toLowerCase()) && !foundLocations.includes(clean)) {
+        foundLocations.push(clean)
+      }
+    })
+  }
+
+  // (d) "X vs Y" / "X versus Y" / "X and Y"
+  const pairMatch = q.match(/\b([a-z][a-z\s,'-]{1,25}?)\s+(?:vs\.?|versus|and)\s+([a-z][a-z\s,'-]{1,25}?)(?:\s+(?:tomorrow|today|tonight|\?)|$)/i)
+  if (pairMatch) {
+    const a = cleanLocationHint(pairMatch[1])
+    const b = cleanLocationHint(pairMatch[2])
+    if (a && !LOCATION_STOPWORDS.has(a.toLowerCase()) && !foundLocations.includes(a)) foundLocations.push(a)
+    if (b && !LOCATION_STOPWORDS.has(b.toLowerCase()) && !foundLocations.includes(b)) foundLocations.push(b)
+  }
+
   const unique = [...new Set(foundLocations)]
   if (unique.length >= 2) {
     return { type: 'location', locations: unique.slice(0, 3) }
@@ -470,16 +416,10 @@ export function detectComparison(question, savedLocations = []) {
 
 // ─── SAVED LOCATION MATCHING ───────────────────────────────────────────
 
-/**
- * Match a hint against saved locations + home.
- * Returns { lat, lon, label, country_code } or { label, needsGeocode: true }
- * or null.
- */
 export function matchSavedLocation(hint, savedLocations = [], homeLocation = null) {
   if (!hint) return null
   const lower = hint.toLowerCase().trim()
 
-  // ─── Home aliases → homeLocation ───────────────────────────────────
   if (HOME_ALIASES.has(lower) && homeLocation?.lat != null) {
     return {
       lat: homeLocation.lat,
@@ -490,7 +430,6 @@ export function matchSavedLocation(hint, savedLocations = [], homeLocation = nul
     }
   }
 
-  // ─── Direct saved-location match ───────────────────────────────────
   const all = []
   if (homeLocation?.lat != null) {
     all.push({
@@ -511,15 +450,12 @@ export function matchSavedLocation(hint, savedLocations = [], homeLocation = nul
     })
   }
 
-  // Exact label match
   let match = all.find(l => (l.label || '').toLowerCase() === lower)
   if (match) return match
 
-  // Exact name match
   match = all.find(l => (l.name || '').toLowerCase() === lower)
   if (match) return match
 
-  // Work aliases → saved location labelled work/office
   if (WORK_ALIASES.has(lower)) {
     match = all.find(l => {
       const lbl = (l.label || '').toLowerCase()
@@ -530,30 +466,23 @@ export function matchSavedLocation(hint, savedLocations = [], homeLocation = nul
     if (match) return match
   }
 
-  // Partial label match
   match = all.find(l => {
     const lbl = (l.label || '').toLowerCase()
     return lbl && (lbl.includes(lower) || lower.includes(lbl))
   })
   if (match) return match
 
-  // Partial name match
   match = all.find(l => {
     const nm = (l.name || '').toLowerCase()
     return nm && (nm.includes(lower) || lower.includes(nm))
   })
   if (match) return match
 
-  // No saved match → needs geocode
   return { label: hint, needsGeocode: true }
 }
 
 // ─── GEOCODING ─────────────────────────────────────────────────────────
 
-/**
- * Geocode a place name via Open-Meteo geocoding API.
- * Result cached for 24h via weatherCache (kind = 'geocode').
- */
 export async function geocodeLocation(name) {
   if (!name) return null
   try {
@@ -577,14 +506,8 @@ export async function geocodeLocation(name) {
   }
 }
 
-/**
- * Full resolve: try saved match, else geocode.
- * Returns a fully-resolved location object or null.
- */
 export async function resolveLocation(hint, savedLocations = [], homeLocation = null) {
   if (!hint) return null
-
-  // If hint is already a resolved object (e.g. from UI dropdown), pass through
   if (typeof hint === 'object' && hint.lat != null) return hint
 
   const matched = matchSavedLocation(hint, savedLocations, homeLocation)
@@ -619,9 +542,6 @@ const MODE_TO_ORS_PROFILE = {
   wheelchair: 'wheelchair',
 }
 
-/**
- * Detect transport mode from a question. Default 'car'.
- */
 export function detectMode(question) {
   const q = (question || '').toLowerCase()
   if (/\b(walk|walking|on foot)\b/.test(q)) return 'walking'
@@ -632,10 +552,6 @@ export function detectMode(question) {
   return 'car'
 }
 
-/**
- * Fetch a route via OpenRouteService.
- * Returns { distance, duration, steps, coordinates } or null.
- */
 export async function fetchRoute(from, to, mode = 'car') {
   if (!from?.lat || !to?.lat) return null
   const profile = MODE_TO_ORS_PROFILE[mode] || 'driving-car'
@@ -660,7 +576,6 @@ export async function fetchRoute(from, to, mode = 'car') {
       way_points: s.way_points,
     }))
 
-    // Sample waypoints from the route geometry for weather along the way
     const coords = feature.geometry?.coordinates || []
     const waypoints = sampleWaypoints(coords, 4)
 
@@ -677,10 +592,6 @@ export async function fetchRoute(from, to, mode = 'car') {
   }
 }
 
-/**
- * Sample N evenly-spaced points from a route's coordinate list.
- * Skips start and end (they're added separately).
- */
 function sampleWaypoints(coords, maxPoints = 4) {
   if (!Array.isArray(coords) || coords.length < 2) return []
   const total = coords.length
@@ -696,19 +607,6 @@ function sampleWaypoints(coords, maxPoints = 4) {
 
 // ─── MAIN RESOLVER ─────────────────────────────────────────────────────
 
-/**
- * The main entry point. Given a question and base context, returns
- * clean bundle(s) ready for intent modules.
- *
- * @param {Object} params
- * @param {string} params.question — the raw user question (already in English)
- * @param {Object} params.baseWeather — current weather at user's location (for fallback)
- * @param {Object} params.location — user's current location
- * @param {Array}  params.savedLocations — user's saved places
- * @param {Object} params.homeLocation — auto-created home
- * @param {Object} [params.baseAqi] — current AQI at user's location
- * @returns {Promise<Object>} — { type, bundle(s), context }
- */
 export async function resolveWeatherContext({
   question,
   baseWeather,
@@ -723,16 +621,14 @@ export async function resolveWeatherContext({
     location: location?.name || homeLocation?.name || null,
   }
 
-  // ─── 1. Comparison? ────────────────────────────────────────────────
+  // ─── 1. Comparison ────────────────────────────────────────────────
   const comparison = detectComparison(question, savedLocations)
   if (comparison) {
     if (comparison.type === 'time') {
-      // Same location, two different times
       const baseLat = location?.lat
       const baseLon = location?.lon
-      if (baseLat == null) {
-        return { type: 'single', bundle: null, context }
-      }
+      if (baseLat == null) return { type: 'single', bundle: null, context }
+
       const weather = baseWeather || await fetchWeather(baseLat, baseLon)
       if (!weather) return { type: 'single', bundle: null, context }
 
@@ -750,7 +646,6 @@ export async function resolveWeatherContext({
       }
     }
     if (comparison.type === 'location') {
-      // Resolve each location, then batch-fetch
       const resolved = []
       for (const hint of comparison.locations) {
         const loc = await resolveLocation(hint, savedLocations, homeLocation)
@@ -759,13 +654,18 @@ export async function resolveWeatherContext({
       if (resolved.length < 2) {
         return { type: 'single', bundle: null, context }
       }
-      const weathers = await fetchWeatherBatch(resolved)
+      const coords = resolved.map(r => ({ lat: r.lat, lon: r.lon }))
+      const weathers = await fetchWeatherBatch(coords)
       const timeRef = parseTimeReference(question, now)
       const items = resolved.map((loc, i) => ({
         label: loc.label || loc.name,
         bundle: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
         location: loc,
       }))
+
+      // Context: use the first resolved location so header isn't "Lagos"
+      context.location = resolved.map(r => r.label || r.name).join(' vs ')
+
       return {
         type: 'comparison',
         comparisonType: 'location',
@@ -775,21 +675,23 @@ export async function resolveWeatherContext({
     }
   }
 
-  // ─── 2. Route? ─────────────────────────────────────────────────────
+  // ─── 2. Route ─────────────────────────────────────────────────────
   const fromTo = parseFromTo(question)
   if (fromTo) {
     const fromLoc = await resolveLocation(fromTo.from, savedLocations, homeLocation)
     const toLoc = await resolveLocation(fromTo.to, savedLocations, homeLocation)
+
     if (fromLoc?.lat != null && toLoc?.lat != null) {
       const mode = detectMode(question)
       const route = await fetchRoute(fromLoc, toLoc, mode)
+
       if (route) {
-        // Build waypoint list: from + samples + to
         const allPoints = [
           { ...fromLoc, role: 'from' },
-          ...route.waypoints,
+          ...route.waypoints.map(wp => ({ ...wp, label: wp.label || 'Waypoint', role: 'waypoint' })),
           { ...toLoc, role: 'to' },
         ]
+
         const coords = allPoints.map(p => ({ lat: p.lat, lon: p.lon }))
         const weathers = await fetchWeatherBatch(coords)
         const timeRef = parseTimeReference(question, now)
@@ -801,7 +703,6 @@ export async function resolveWeatherContext({
           weather: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
         }))
 
-        // Primary bundle = destination weather (for the main advice)
         const destWeather = waypoints[waypoints.length - 1]?.weather
 
         return {
@@ -819,7 +720,8 @@ export async function resolveWeatherContext({
           context,
         }
       }
-      // Route fetch failed — fall back to single weather at destination
+
+      // Route fetch failed — fall back to destination weather
       const destWeather = await fetchWeather(toLoc.lat, toLoc.lon)
       const timeRef = parseTimeReference(question, now)
       return {
@@ -831,8 +733,7 @@ export async function resolveWeatherContext({
     }
   }
 
-  // ─── 3. Single location? ───────────────────────────────────────────
-  // Try "to X", "in X", "at X"
+  // ─── 3. Single location ──────────────────────────────────────────
   const hint = parseInLocation(question) || parseToOnly(question)
 
   if (hint) {
@@ -841,9 +742,13 @@ export async function resolveWeatherContext({
       const weather = await fetchWeather(loc.lat, loc.lon)
       const timeRef = parseTimeReference(question, now)
       const bundle = weather ? sliceWeatherByTime(weather, timeRef, now) : null
-      if (bundle) bundle.city = loc.label || loc.name
-      if (bundle) bundle.lat = loc.lat
-      if (bundle) bundle.lon = loc.lon
+      if (bundle) {
+        bundle.city = loc.label || loc.name
+        bundle.lat = loc.lat
+        bundle.lon = loc.lon
+      }
+      context.location = loc.label || loc.name
+
       return {
         type: 'single',
         bundle,
@@ -853,24 +758,16 @@ export async function resolveWeatherContext({
     }
   }
 
-  // ─── 4. No location — use current ──────────────────────────────────
+  // ─── 4. No location — current ─────────────────────────────────────
   let weather = baseWeather
   const timeRef = parseTimeReference(question, now)
-
-  // If time reference is beyond today and we don't have full forecast, refetch
-  const needsForecast =
-    timeRef.isFuture ||
-    timeRef.daysAhead > 0 ||
-    !weather?.hourly?.time?.length
+  const needsForecast = timeRef.isFuture || timeRef.daysAhead > 0 || !weather?.hourly?.time?.length
 
   if (needsForecast && location?.lat != null) {
     weather = await fetchWeather(location.lat, location.lon) || weather
   }
 
-  const bundle = weather
-    ? sliceWeatherByTime(weather, timeRef, now)
-    : null
-
+  const bundle = weather ? sliceWeatherByTime(weather, timeRef, now) : null
   if (bundle) {
     bundle.city = location?.name
     bundle.lat = location?.lat
@@ -881,15 +778,8 @@ export async function resolveWeatherContext({
     bundle.homeName = homeLocation?.name
   }
 
-  return {
-    type: 'single',
-    bundle,
-    location,
-    context,
-  }
+  return { type: 'single', bundle, location, context }
 }
-
-// ─── DEFAULT EXPORT ────────────────────────────────────────────────────
 
 export default {
   resolveWeatherContext,
