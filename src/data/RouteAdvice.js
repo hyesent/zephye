@@ -1,852 +1,442 @@
+;// ============================================================================
+// ROUTE ADVICE — Full directions, all modes, weather-along-the-way
+//
+// The weather resolver + response merger do the heavy lifting:
+//   - resolver: parses from/to, geocodes, fetches route via ORS,
+//               samples waypoints, batch-fetches weather
+//   - merger:   runs this module with { _route, _waypoints } pre-populated
+//
+// This module just narrates. No fetching. No parsing. No truncation.
 // ============================================================================
-// ROUTE ADVICE — Full Route Calculation with Traffic + Saved Locations
-// ============================================================================
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── CONSTANTS ──────────────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── SAFE HELPERS ──────────────────────────────────────────────────────
 
-const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjkzZGIxMDYzZDZmOTQyOGZiZGFlMzk2OTA3ZWJkZjA4IiwiaCI6Im11cm11cjY0In0="
-const MAPBOX_KEY = "pk.eyJ1IjoiaHllc2VudCIsImEiOiJjbXNkd2Fsd20wMTRjMndxeHZ1MXZkdWk5In0.oo-poQNG7epNSEADCQFZPQ"
-
-const TRAFFIC_CACHE_TTL = 8 * 60 * 60 * 1000 // 8 hours
-const ROUTE_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
-
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── SAMPLE QUESTIONS ──────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-export const sampleQuestions = [
-  // BASIC ROUTES
-  "How do I get to Lagos?",
-  "What's the route from Abuja to Kano?",
-  "How long will it take to drive to work?",
-  "What's the distance between Lagos and Ibadan?",
-  "Give me directions to the airport",
-  "Route from home to school",
-  "Traffic on my way to work",
-  "How long to get to the office?",
-  "Show me the route with traffic",
-  "What's the fastest way to get there?",
-  
-  // ADVANCED
-  "Is there a faster route to the mall?",
-  "Should I take the highway or local roads?",
-  "What's the best route during rush hour?",
-  "Can I avoid toll roads?",
-  "Show me a scenic route to the coast",
-  "What's the shortest route to the city center?",
-  "Is there traffic on the expressway?",
-  "How long is the drive to the beach?",
-  
-  // SAVED LOCATIONS
-  "Route from home to my office",
-  "Directions from work to the gym",
-  "How to get from home to the supermarket?",
-  "Traffic from home to school",
-  "Route from my saved location to the airport",
-  
-  // MULTI-STOP
-  "Can I go from home to work and then to the store?",
-  "Route with stops at the bank and pharmacy",
-  "Best route with multiple stops",
-  "How to get from point A to B to C?",
-  
-  // COMPARISON
-  "Compare driving time vs public transport",
-  "Is it faster to drive or take the train?",
-  "Should I drive or take a taxi?",
-  "Which route has less traffic?"
-]
-
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── CACHE HELPERS ─────────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-const getTrafficCacheKey = (lat, lon) => {
-  const roundedLat = Math.round(lat * 100) / 100
-  const roundedLon = Math.round(lon * 100) / 100
-  return `zephye_traffic_incidents_${roundedLat}_${roundedLon}`
+function safeStr(v, fallback = '') {
+  if (v == null) return fallback
+  if (typeof v === 'string') return v
+  try { return String(v) } catch { return fallback }
 }
 
-const getRouteCacheKey = (startLat, startLon, endLat, endLon) => {
-  const slat = Math.round(startLat * 100) / 100
-  const slon = Math.round(startLon * 100) / 100
-  const elat = Math.round(endLat * 100) / 100
-  const elon = Math.round(endLon * 100) / 100
-  return `zephye_route_${slat}_${slon}_${elat}_${elon}`
+function formatDuration(seconds) {
+  if (seconds == null || isNaN(seconds)) return null
+  const totalMin = Math.round(seconds / 60)
+  if (totalMin < 1) return 'less than a minute'
+  if (totalMin < 60) return `${totalMin} min`
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
 }
 
-const getCachedTraffic = (lat, lon) => {
-  try {
-    const key = getTrafficCacheKey(lat, lon)
-    const cached = localStorage.getItem(key)
-    if (!cached) return null
-
-    const data = JSON.parse(cached)
-    if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
-      localStorage.removeItem(key)
-      return null
-    }
-    return data.value
-  } catch {
-    return null
-  }
-}
-
-const setCachedTraffic = (lat, lon, incidents) => {
-  try {
-    const key = getTrafficCacheKey(lat, lon)
-    localStorage.setItem(key, JSON.stringify({
-      value: incidents,
-      timestamp: Date.now()
-    }))
-  } catch {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('zephye_traffic_')) {
-        try {
-          const data = JSON.parse(localStorage.getItem(k))
-          if (Date.now() - data.timestamp > TRAFFIC_CACHE_TTL) {
-            localStorage.removeItem(k)
-          }
-        } catch {}
-      }
-    })
-  }
-}
-
-const getCachedRoute = (startLat, startLon, endLat, endLon) => {
-  try {
-    const key = getRouteCacheKey(startLat, startLon, endLat, endLon)
-    const cached = localStorage.getItem(key)
-    if (!cached) return null
-
-    const data = JSON.parse(cached)
-    if (Date.now() - data.timestamp > ROUTE_CACHE_TTL) {
-      localStorage.removeItem(key)
-      return null
-    }
-    return data.value
-  } catch {
-    return null
-  }
-}
-
-const setCachedRoute = (startLat, startLon, endLat, endLon, routeData) => {
-  try {
-    const key = getRouteCacheKey(startLat, startLon, endLat, endLon)
-    localStorage.setItem(key, JSON.stringify({
-      value: routeData,
-      timestamp: Date.now()
-    }))
-  } catch {}
-}
-
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── ENHANCED HELPERS ──────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-/**
- * Geocode a location name to coordinates with multiple attempts
- */
-const geocodeLocation = async (locationName) => {
-  if (!locationName) return null
-  
-  try {
-    // Try Open-Meteo geocoding first
-    const res = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationName)}&count=1&language=en&format=json`
-    )
-    const data = await res.json()
-    
-    if (data.results && data.results.length > 0) {
-      const r = data.results[0]
-      return {
-        lat: r.latitude,
-        lon: r.longitude,
-        name: `${r.name}${r.admin1 ? `, ${r.admin1}` : ''}, ${r.country}`,
-        admin1: r.admin1,
-        country: r.country,
-        country_code: r.country_code,
-        population: r.population || 0,
-        timezone: r.timezone || 'unknown',
-        elevation: r.elevation || 0
-      }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Enhanced location resolution with multiple strategies
- */
-const resolveLocation = async (locationName, savedLocations, currentLocation) => {
-  if (!locationName) return null
-  
-  // Check if it's a saved location
-  const saved = findSavedLocation(locationName, savedLocations)
-  if (saved) return saved
-  
-  // Check for common references
-  const lower = locationName.toLowerCase().trim()
-  if (lower === 'home' || lower === 'my place') {
-    return currentLocation ? { ...currentLocation, isSaved: true } : null
-  }
-  if (lower === 'work' || lower === 'office') {
-    const work = savedLocations.find(l => 
-      l.label?.toLowerCase().includes('work') || 
-      l.label?.toLowerCase().includes('office')
-    )
-    if (work) return work
-  }
-  
-  // Try geocoding
-  return await geocodeLocation(locationName)
-}
-
-/**
- * Enhanced saved location search
- */
-const findSavedLocation = (name, savedLocations) => {
-  if (!savedLocations || savedLocations.length === 0) return null
-  
-  const lowerName = name.toLowerCase().trim()
-  
-  // Exact match on label
-  let match = savedLocations.find(loc => 
-    loc.label && loc.label.toLowerCase() === lowerName
-  )
-  if (match) return match
-  
-  // Contains match
-  match = savedLocations.find(loc => {
-    const label = loc.label?.toLowerCase() || ''
-    const locName = loc.name?.toLowerCase() || ''
-    return label.includes(lowerName) || locName.includes(lowerName)
-  })
-  
-  return match || null
-}
-
-/**
- * Get traffic incidents with enhanced details
- */
-const fetchTrafficIncidents = async (lat, lon) => {
-  const cached = getCachedTraffic(lat, lon)
-  if (cached) {
-    console.log('Using cached traffic data for', lat, lon)
-    return cached
-  }
-
-  try {
-    const destLat = lat + 0.1
-    const destLon = lon + 0.1
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon},${lat};${destLon},${destLat}?` +
-      `annotations=congestion,incidents&` +
-      `access_token=${MAPBOX_KEY}`
-
-    const response = await fetch(url)
-    const data = await response.json()
-
-    let incidents = []
-
-    if (data.routes && data.routes.length > 0) {
-      incidents = data.routes[0].incidents || []
-    }
-
-    if (incidents.length === 0) {
-      const widerUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${lon - 0.2},${lat - 0.2};${lon + 0.2},${lat + 0.2}?` +
-        `annotations=incidents&` +
-        `access_token=${MAPBOX_KEY}`
-
-      const widerResponse = await fetch(widerUrl)
-      const widerData = await widerResponse.json()
-
-      if (widerData.routes && widerData.routes.length > 0) {
-        incidents = widerData.routes[0].incidents || []
-      }
-    }
-
-    setCachedTraffic(lat, lon, incidents)
-    return incidents
-
-  } catch (error) {
-    console.error('Failed to fetch traffic incidents:', error)
-    return []
-  }
-}
-
-/**
- * Get traffic incidents for a specific route
- */
-const getRouteTraffic = async (startLat, startLon, endLat, endLon) => {
-  try {
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startLon},${startLat};${endLon},${endLat}?` +
-      `annotations=congestion,incidents&` +
-      `access_token=${MAPBOX_KEY}`
-
-    const response = await fetch(url)
-    const data = await response.json()
-
-    if (!data.routes || data.routes.length === 0) {
-      return { incidents: [], delay: 0, congestion: [] }
-    }
-
-    const route = data.routes[0]
-    const incidents = route.incidents || []
-    const congestion = route.legs?.[0]?.annotation?.congestion || []
-    
-    // Calculate traffic delay
-    let delay = 0
-    if (route.duration) {
-      // Compare with typical duration (estimate based on distance and speed)
-      const typicalSpeed = 50 // km/h average
-      const distance = route.distance / 1000 // km
-      const typicalDuration = (distance / typicalSpeed) * 60 // minutes
-      const actualDuration = route.duration / 60 // minutes
-      delay = Math.max(0, Math.round(actualDuration - typicalDuration))
-    }
-
-    return { incidents, delay, congestion }
-  } catch {
-    return { incidents: [], delay: 0, congestion: [] }
-  }
-}
-
-/**
- * Enhanced route calculation with multiple options
- */
-const calculateRoute = async (startLat, startLon, endLat, endLon, options = {}) => {
-  const cacheKey = getRouteCacheKey(startLat, startLon, endLat, endLon)
-  const cached = getCachedRoute(startLat, startLon, endLat, endLon)
-  if (cached && !options.forceRefresh) {
-    return cached
-  }
-
-  try {
-    let url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
-      `api_key=${ORS_API_KEY}&` +
-      `start=${startLon},${startLat}&` +
-      `end=${endLon},${endLat}`
-
-    // Add preferences
-    if (options.avoidTolls) {
-      url += `&options={"avoid_features":["toll"]}`
-    }
-    if (options.avoidHighways) {
-      url += `&options={"avoid_features":["highway"]}`
-    }
-    if (options.avoidFerries) {
-      url += `&options={"avoid_features":["ferry"]}`
-    }
-
-    const response = await fetch(url)
-    const data = await response.json()
-
-    if (data.features && data.features.length > 0) {
-      setCachedRoute(startLat, startLon, endLat, endLon, data)
-      return data
-    }
-
-    return null
-  } catch (error) {
-    console.error('Route calculation failed:', error)
-    return null
-  }
-}
-
-/**
- * Calculate alternative routes
- */
-const calculateAlternativeRoutes = async (startLat, startLon, endLat, endLon) => {
-  try {
-    // ORS doesn't provide multiple routes directly, so we'll use Mapbox
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startLon},${startLat};${endLon},${endLat}?` +
-      `alternatives=true&` +
-      `steps=true&` +
-      `access_token=${MAPBOX_KEY}`
-
-    const response = await fetch(url)
-    const data = await response.json()
-
-    if (data.routes && data.routes.length > 1) {
-      return data.routes.slice(1).map(route => ({
-        distance: route.distance / 1000,
-        duration: route.duration / 60,
-        geometry: route.geometry,
-        legs: route.legs
-      }))
-    }
-
-    return []
-  } catch {
-    return []
-  }
-}
-
-/**
- * Calculate route summary for multiple destinations
- */
-const calculateMultiStopRoute = async (stops) => {
-  if (stops.length < 2) return null
-
-  try {
-    // Build coordinate string for ORS
-    const coords = stops.map(s => `${s.lon},${s.lat}`).join(';')
-    const url = `https://api.openrouteservice.org/v2/directions/driving-car?` +
-      `api_key=${ORS_API_KEY}&` +
-      `start=${coords}&` +
-      `end=${coords}`
-
-    const response = await fetch(url)
-    const data = await response.json()
-
-    if (data.features && data.features.length > 0) {
-      return data.features[0]
-    }
-
-    return null
-  } catch {
-    return null
-  }
-}
-
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── FORMATTING FUNCTIONS ──────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-/**
- * Format duration in a readable way
- */
-const formatDuration = (minutes) => {
-  if (minutes < 1) return 'less than a minute'
-  if (minutes < 60) return `${Math.round(minutes)} minutes`
-  const hours = Math.floor(minutes / 60)
-  const mins = Math.round(minutes % 60)
-  if (mins === 0) return `${hours} hour${hours > 1 ? 's' : ''}`
-  return `${hours}h ${mins}m`
-}
-
-/**
- * Format duration with more detail
- */
-const formatDurationDetailed = (minutes) => {
-  if (minutes < 1) return 'less than a minute'
-  if (minutes < 60) return `${Math.round(minutes)} minutes`
-  const hours = Math.floor(minutes / 60)
-  const mins = Math.round(minutes % 60)
-  let result = `${hours} hour${hours > 1 ? 's' : ''}`
-  if (mins > 0) {
-    result += ` and ${mins} minute${mins > 1 ? 's' : ''}`
-  }
-  return result
-}
-
-/**
- * Format distance in a readable way
- */
-const formatDistance = (km) => {
-  if (km < 1) return `${Math.round(km * 1000)} meters`
+function formatDistance(meters) {
+  if (meters == null || isNaN(meters)) return null
+  const km = meters / 1000
+  if (km < 1) return `${Math.round(meters)} m`
   if (km < 10) return `${km.toFixed(1)} km`
   return `${Math.round(km)} km`
 }
 
-/**
- * Format speed in a readable way
- */
-const formatSpeed = (kmh) => {
-  if (kmh < 10) return `${Math.round(kmh * 10) / 10} km/h (slow)`
-  if (kmh < 30) return `${Math.round(kmh)} km/h (moderate)`
-  if (kmh < 50) return `${Math.round(kmh)} km/h (normal)`
-  if (kmh < 70) return `${Math.round(kmh)} km/h (fast)`
-  return `${Math.round(kmh)} km/h (very fast)`
+f'\
+  [unction modeLabel(mode) {
+  const map = {
+    car: 'Car', driving: 'Car',
+    hgv: 'Truck', truck: 'Truck',
+    walk: 'Walking', walking: 'Walking', foot: 'Walking',
+    hike: 'Hiking', hiking: 'Hiking',
+    cycle: 'Cycling', cycling: 'Cycling', bike: 'Cycling', bicycle: 'Cycling',
+    roadbike: 'Road Cycling', mtb: 'Mountain Biking', ebike: 'E-Bike',
+    wheelchair: 'Wheelchair',
+  }
+  return map[mode] || 'Driving'
 }
 
-/**
- * Get time of day greeting
- */
-const getTimeGreeting = () => {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
+function modeEmoji(mode) {
+  const map = {
+    car: '🚗', driving: '🚗',
+    hgv: '🚚', truck: '🚚',
+    walk: '🚶', walking: '🚶', foot: '🚶',
+    hike: '🥾', hiking: '🥾',
+    cycle: '🚴', cycling: '🚴', bike: '🚴', bicycle: '🚴',
+    roadbike: '🚴', mtb: '🚵', ebike: '⚡🚴',
+    wheelchair: '♿',
+  }
+  return map[mode] || '🚗'
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── MAIN FUNCTION ─────────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+function weatherEmoji(code) {
+  if (code === 0) return '☀️'
+  if (code === 1) return '🌤️'
+  if (code === 2) return '⛅'
+  if (code === 3) return '☁️'
+  if (code === 45 || code === 48) return '🌫️'
+  if (code >= 51 && code <= 57) return '🌦️'
+  if (code >= 61 && code <= 67) return '🌧️'
+  if (code >= 71 && code <= 77) return '❄️'
+  if (code >= 80 && code <= 82) return '🌧️'
+  if (code >= 85 && code <= 86) return '❄️'
+  if (code >= 95) return '⛈️'
+  return '🌡️'
+}
 
-export const getRouteAdvice = async (data, question, options = {}) => {
-  const q = question.toLowerCase()
-  const { 
-    lat, lon, city, 
-    homeLat, homeLon, homeName, 
-    savedLocations = [],
-    condition,
-    temp,
-    wind,
-    precipitation
-  } = data
+function isWetCode(code) {
+  if (code == null) return false
+  return (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95
+}
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── PARSE LOCATIONS FROM QUESTION ──────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+function isStormCode(code) {
+  return code != null && code >= 95
+}
 
-  let fromLocation = options.from || 'home'
-  let toLocation = options.to || null
-  let isMultiStop = false
-  let stops = []
+function isSnowCode(code) {
+  return code != null && ((code >= 71 && code <= 77) || code === 85 || code === 86)
+}
 
-  // Check for multi-stop routes
-  const stopMatch = q.match(/(?:from|starting|start)\s+([\w\s]+?)\s+(?:to|via|through)\s+([\w\s]+?)\s+(?:then|and|to)\s+([\w\s]+?)(?:\s*$|[\?\.])/i)
-  if (stopMatch) {
-    isMultiStop = true
-    stops = [stopMatch[1].trim(), stopMatch[2].trim(), stopMatch[3].trim()]
-  }
+// ─── MULTI-STOP WEATHER DIAGRAM ────────────────────────────────────────
 
-  // Parse destination
-  if (!toLocation) {
-    const toMatch = q.match(/to\s+([\w\s]+?)(?:\s*$|[\?\.]|,)/i)
-    if (toMatch) toLocation = toMatch[1].trim()
-  }
+/**
+ * Build a one-line diagram showing weather at each waypoint.
+ *
+ *   Home → ☀️ → Stop 1 → 🌧️ → Stop 2 → ⛅ → Work
+ */
+function buildWeatherDiagram(waypoints) {
+  if (!Array.isArray(waypoints) || waypoints.length === 0) return ''
 
-  // Parse origin
-  if (!fromLocation || fromLocation === 'home' || fromLocation === 'my location' || fromLocation === 'here') {
-    const fromMatch = q.match(/from\s+([\w\s]+?)(?:\s+to|\s*$)/i)
-    if (fromMatch) fromLocation = fromMatch[1].trim()
-  }
+  const parts = []
+  waypoints.forEach((wp, i) => {
+    const emoji = weatherEmoji(wp.weather?.conditionCode)
+    const label = safeStr(wp.label || `Stop ${i + 1}`).trim()
+    parts.push(label)
+    parts.push(emoji)
+  })
 
-  // Check for route preferences
-  const avoidTolls = q.includes('avoid toll') || q.includes('no toll')
-  const avoidHighways = q.includes('avoid highway') || q.includes('no highway') || q.includes('local roads')
-  const scenicRoute = q.includes('scenic') || q.includes('beautiful') || q.includes('coastal')
-  const fastestRoute = q.includes('fastest') || q.includes('quickest') || q.includes('shortest time')
-  const shortestRoute = q.includes('shortest distance') || q.includes('closest')
+  // Trailing destination label without an emoji
+  return parts.join(' → ')
+}
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── RESOLVE LOCATIONS ──────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── WEATHER ALONG THE ROUTE SUMMARY ───────────────────────────────────
 
-  const currentLocation = { lat: homeLat || lat, lon: homeLon || lon, name: homeName || city || 'Your Location' }
-  
-  // Resolve start
-  let startResolved = null
-  if (typeof fromLocation === 'object' && fromLocation.isSaved) {
-    startResolved = fromLocation
-  } else if (typeof fromLocation === 'string') {
-    startResolved = await resolveLocation(fromLocation, savedLocations, currentLocation)
-  }
+function buildWeatherNarrative(waypoints) {
+  if (!Array.isArray(waypoints) || waypoints.length === 0) return ''
 
-  // Resolve destination
-  let endResolved = null
-  if (typeof toLocation === 'object' && toLocation.isSaved) {
-    endResolved = toLocation
-  } else if (typeof toLocation === 'string') {
-    endResolved = await resolveLocation(toLocation, savedLocations, currentLocation)
-  }
+  const wetIndices = []
+  const snowIndices = []
+  const stormIndices = []
 
-  // Resolve multi-stop locations
-  let stopLocations = []
-  if (isMultiStop && stops.length > 0) {
-    for (const stopName of stops) {
-      const resolved = await resolveLocation(stopName, savedLocations, currentLocation)
-      if (resolved) {
-        stopLocations.push(resolved)
-      }
-    }
-  }
+  waypoints.forEach((wp, i) => {
+    const code = wp.weather?.conditionCode
+    const rain = wp.weather?.precipitationProb ?? 0
+    if (isStormCode(code)) stormIndices.push(i)
+    else if (isSnowCode(code)) snowIndices.push(i)
+    else if (isWetCode(code) || rain > 60) wetIndices.push(i)
+  })
 
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── HANDLE MISSING LOCATIONS ───────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+  const parts = []
 
-  if (!startResolved) {
-    return `I couldn't find the starting location "${fromLocation}". Please specify a valid location or use "home".`
-  }
-
-  if (!endResolved && !isMultiStop) {
-    return `I couldn't find the destination "${toLocation}". Please specify where you want to go.`
-  }
-
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── MULTI-STOP ROUTE ──────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-  if (isMultiStop && stopLocations.length >= 2) {
-    const allStops = [startResolved, ...stopLocations]
-    const route = await calculateMultiStopRoute(allStops)
-    
-    if (route) {
-      const segments = route.properties.segments || []
-      let totalDistance = 0
-      let totalDuration = 0
-      let stepList = []
-
-      segments.forEach((seg, idx) => {
-        totalDistance += seg.distance || 0
-        totalDuration += seg.duration || 0
-        const steps = seg.steps || []
-        steps.forEach(step => {
-          if (step.instruction) {
-            stepList.push(`  ${stepList.length + 1}. ${step.instruction}`)
-          }
-        })
-      })
-
-      const distanceKm = totalDistance / 1000
-      const durationMin = totalDuration / 60
-
-      let response = `MULTI-STOP ROUTE:\n\n`
-      response += `Start: ${startResolved.label || startResolved.name}\n`
-      stopLocations.forEach((loc, i) => {
-        response += `Stop ${i + 1}: ${loc.label || loc.name}\n`
-      })
-      response += `\nTotal distance: ${formatDistance(distanceKm)}\n`
-      response += `Total estimated time: ${formatDuration(durationMin)}\n\n`
-      response += `Directions:\n`
-      stepList.slice(0, 15).forEach(s => response += `${s}\n`)
-      if (stepList.length > 15) {
-        response += `  ... and ${stepList.length - 15} more steps.\n`
-      }
-      return response
-    }
-  }
-
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── SINGLE ROUTE CALCULATION ──────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-  const routePrefs = {
-    avoidTolls: avoidTolls || false,
-    avoidHighways: avoidHighways || false,
-    scenic: scenicRoute || false
-  }
-
-  const routeData = await calculateRoute(
-    startResolved.lat, startResolved.lon,
-    endResolved.lat, endResolved.lon,
-    { forceRefresh: false, ...routePrefs }
-  )
-
-  if (!routeData) {
-    return `Could not find a route from ${startResolved.label || startResolved.name} to ${endResolved.label || endResolved.name}. Please try different locations.`
-  }
-
-  const feature = routeData.features[0]
-  const properties = feature.properties
-  const segments = properties.segments || []
-
-  if (segments.length === 0) {
-    return `No route found between these locations.`
-  }
-
-  const segment = segments[0]
-  const distance = segment.distance || 0
-  const duration = segment.duration || 0
-  const steps = segment.steps || []
-
-  const distanceKm = distance / 1000
-  const durationMin = duration / 60
-  const avgSpeed = durationMin > 0 ? (distanceKm / (durationMin / 60)) : 0
-
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── GET TRAFFIC DATA ──────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-  const traffic = await getRouteTraffic(
-    startResolved.lat, startResolved.lon,
-    endResolved.lat, endResolved.lon
-  )
-
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── GET ALTERNATIVE ROUTES ────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-  const alternatives = await calculateAlternativeRoutes(
-    startResolved.lat, startResolved.lon,
-    endResolved.lat, endResolved.lon
-  )
-
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-  // ─── BUILD RESPONSE ────────────────────────────────────────────────────
-  // ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-
-  let response = `=== ROUTE ADVISORY ===\n`
-  response += `${getTimeGreeting()}\n\n`
-
-  // Route summary
-  response += `ROUTE SUMMARY:\n`
-  response += `  From: ${startResolved.label || startResolved.name}\n`
-  response += `  To: ${endResolved.label || endResolved.name}\n`
-  response += `  Distance: ${formatDistance(distanceKm)}\n`
-  response += `  Estimated time: ${formatDuration(durationMin)}\n`
-  if (avgSpeed > 0) {
-    response += `  Average speed: ${formatSpeed(avgSpeed)}\n`
-  }
-  if (startResolved.isSaved) {
-    response += `  Start location is saved\n`
-  }
-  if (endResolved.isSaved) {
-    response += `  Destination is saved\n`
-  }
-
-  // Traffic info
-  if (traffic.incidents.length > 0) {
-    response += `\nTRAFFIC INCIDENTS (${traffic.incidents.length}):\n`
-    traffic.incidents.slice(0, 5).forEach((inc, i) => {
-      const type = inc.type || inc.iconCategory || 'unknown'
-      const desc = inc.description || inc.properties?.description || 'Incident reported'
-      const severity = inc.severity || inc.properties?.severity || ''
-      const severityText = severity ? ` (${severity})` : ''
-      response += `  ${i + 1}. ${type.charAt(0).toUpperCase() + type.slice(1)}${severityText}\n`
-      response += `     ${desc}\n`
-      if (inc.length) {
-        response += `     Affects: ${Math.round(inc.length)}m\n`
-      }
-      if (inc.lanesBlocked) {
-        response += `     Lanes blocked: ${inc.lanesBlocked}\n`
-      }
-    })
-    if (traffic.incidents.length > 5) {
-      response += `  ... and ${traffic.incidents.length - 5} more incidents.\n`
-    }
-    if (traffic.delay > 5) {
-      response += `\n  Estimated delay: ${traffic.delay} minutes\n`
+  if (stormIndices.length === waypoints.length) {
+    parts.push('Thunderstorms throughout the route — postpone if possible.')
+  } else if (stormIndices.length > 0) {
+    const labels = stormIndices.map(i => waypoints[i].label).filter(Boolean)
+    parts.push(`Thunderstorms around ${labels.join(', ')}. Take shelter if caught.`)
+  } else if (wetIndices.length === waypoints.length) {
+    parts.push('Rain throughout the journey — wet roads, drive carefully.')
+  } else if (snowIndices.length === waypoints.length) {
+    parts.push('Snow throughout the route — winter tires and slow speeds essential.')
+  } else if (snowIndices.length > 0) {
+    const labels = snowIndices.map(i => waypoints[i].label).filter(Boolean)
+    parts.push(`Snow around ${labels.join(', ')} — allow extra time.`)
+  } else if (wetIndices.length > 0) {
+    const first = waypoints[wetIndices[0]]?.label
+    const last = waypoints[wetIndices[wetIndices.length - 1]]?.label
+    if (wetIndices.length === 1) {
+      parts.push(`Rain expected around ${first}. Watch for wet roads in that section.`)
+    } else if (first === last) {
+      parts.push(`Rain expected around ${first}.`)
+    } else {
+      parts.push(`Rain from ${first} to ${last}. Drive carefully through the wet section.`)
     }
   } else {
-    response += `\nNo major traffic incidents reported on this route.\n`
-  }
-
-  // Route preferences
-  if (avoidTolls) {
-    response += `\n  Toll roads avoided\n`
-  }
-  if (avoidHighways) {
-    response += `\n  Highways avoided\n`
-  }
-  if (scenicRoute) {
-    response += `\n  Scenic route preferred\n`
-  }
-
-  // Alternative routes
-  if (alternatives.length > 0) {
-    response += `\nALTERNATIVE ROUTES:\n`
-    alternatives.slice(0, 2).forEach((alt, i) => {
-      const timeDiff = Math.round(alt.duration - durationMin)
-      const distDiff = Math.round(alt.distance - distanceKm)
-      response += `  Option ${i + 1}: ${formatDistance(alt.distance)}`
-      response += `, ${formatDuration(alt.duration)}`
-      if (timeDiff > 0) {
-        response += ` (${timeDiff} min longer)`
-      } else if (timeDiff < 0) {
-        response += ` (${Math.abs(timeDiff)} min faster)`
+    // No rain anywhere — mention temp spread
+    const temps = waypoints.map(w => w.weather?.temp).filter(t => t != null)
+    if (temps.length > 1) {
+      const min = Math.min(...temps)
+      const max = Math.max(...temps)
+      if (max - min >= 5) {
+        parts.push(`Temperatures range from ${Math.round(min)}°C to ${Math.round(max)}°C along the route.`)
+      } else {
+        parts.push(`Consistent conditions throughout — around ${Math.round((min + max) / 2)}°C.`)
       }
-      if (distDiff > 0) {
-        response += `, ${distDiff} km longer`
-      } else if (distDiff < 0) {
-        response += `, ${Math.abs(distDiff)} km shorter`
-      }
-      response += `\n`
-    })
-    response += `  Ask "show alternative route" for more options.\n`
-  }
-
-  // Step-by-step directions
-  if (steps && steps.length > 0) {
-    response += `\nDIRECTIONS:\n`
-    const maxSteps = 20
-    steps.slice(0, maxSteps).forEach((step, i) => {
-      const instruction = step.instruction || step.maneuver?.instruction || ''
-      const stepDist = step.distance ? ` (${formatDistance(step.distance / 1000)})` : ''
-      if (instruction) {
-        response += `  ${i + 1}. ${instruction}${stepDist}\n`
-      }
-    })
-    if (steps.length > maxSteps) {
-      response += `  ... and ${steps.length - maxSteps} more steps.\n`
-      response += `  Ask "show full directions" for all steps.\n`
+    } else if (temps.length === 1) {
+      parts.push(`Around ${Math.round(temps[0])}°C along the route.`)
     }
   }
 
-  // Weather impact
-  if (condition) {
-    const cond = condition.toLowerCase()
-    let weatherNote = false
-    if (cond.includes('rain') || cond.includes('storm') || cond.includes('thunder')) {
-      response += `\nWEATHER WARNING: ${condition} conditions\n`
-      response += `  Drive with extra caution. Reduce speed. Increase following distance.\n`
-      weatherNote = true
-    }
-    if (temp && temp < 5) {
-      response += `\nCOLD WEATHER: ${Math.round(temp)}°C\n`
-      response += `  Roads may be icy in shaded areas. Watch for black ice on bridges.\n`
-      weatherNote = true
-    }
-    if (temp && temp > 35) {
-      response += `\nHOT WEATHER: ${Math.round(temp)}°C\n`
-      response += `  Ensure your vehicle is cooled. Carry water. Check tire pressure.\n`
-      weatherNote = true
-    }
-    if (!weatherNote) {
-      response += `\nWeather conditions are favorable for driving.\n`
-    }
+  // Wind warning
+  const windyWaypoints = waypoints.filter(wp => (wp.weather?.wind ?? 0) > 40)
+  if (windyWaypoints.length > 0) {
+    const labels = windyWaypoints.map(w => w.label).filter(Boolean)
+    parts.push(`Strong wind near ${labels.join(', ')} — expect crosswinds.`)
   }
 
-  // Travel tips
-  response += `\nTRAVEL TIPS:\n`
-  
-  if (distanceKm > 200) {
-    response += `  • Long journey — plan for breaks every 2-3 hours.\n`
-    response += `  • Check your fuel level before leaving.\n`
-    response += `  • Pack snacks and water for the trip.\n`
-  } else if (distanceKm > 100) {
-    response += `  • Consider a break halfway for refreshments.\n`
-    response += `  • Check your fuel level before leaving.\n`
+  // Fog warning
+  const foggyWaypoints = waypoints.filter(wp => wp.weather?.visibility != null && wp.weather.visibility < 1)
+  if (foggyWaypoints.length > 0) {
+    const labels = foggyWaypoints.map(w => w.label).filter(Boolean)
+    parts.push(`Low visibility near ${labels.join(', ')} — reduce speed.`)
   }
 
-  if (durationMin > 120) {
-    response += `  • Stretch your legs during rest stops.\n`
-    response += `  • Share your route and ETA with someone.\n`
-  } else if (durationMin > 60) {
-    response += `  • Allow extra time for unexpected delays.\n`
-  }
-
-  if (traffic.delay > 15) {
-    response += `  • Significant delays expected. Consider leaving earlier.\n`
-  }
-
-  // Nearest saved location
-  if (savedLocations.length > 0) {
-    const nearest = savedLocations.reduce((nearest, loc) => {
-      const dist = Math.sqrt(
-        Math.pow(loc.lat - endResolved.lat, 2) + 
-        Math.pow(loc.lon - endResolved.lon, 2)
-      )
-      if (!nearest || dist < nearest.dist) {
-        return { ...loc, dist }
-      }
-      return nearest
-    }, null)
-    
-    if (nearest && nearest.dist < 0.5) {
-      response += `\nYou are near "${nearest.label || nearest.name}" — a saved location.\n`
-    }
-  }
-
-  // Arrival time estimate
-  const arrivalTime = new Date(Date.now() + durationMin * 60000 + (traffic.delay || 0) * 60000)
-  response += `\nEstimated arrival: ${arrivalTime.toLocaleTimeString()}\n`
-
-  // Final advice
-  response += `\nDrive safely and enjoy the journey!`
-
-  return response
+  return parts.join(' ')
 }
 
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
-// ─── EXPORT ────────────────────────────────────────────────────────────────
-// ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ───
+// ─── MODE-SPECIFIC ADVICE ──────────────────────────────────────────────
+
+function buildModeAdvice(mode, route, waypoints) {
+  const advice = []
+  const m = (mode || 'car').toLowerCase()
+
+  // Extract weather signals from waypoints
+  const anyRain = waypoints.some(w => isWetCode(w.weather?.conditionCode) || (w.weather?.precipitationProb ?? 0) > 40)
+  const anySnow = waypoints.some(w => isSnowCode(w.weather?.conditionCode))
+  const maxWind = Math.max(0, ...waypoints.map(w => w.weather?.wind ?? 0))
+  const maxUV = Math.max(0, ...waypoints.map(w => w.weather?.uvIndex ?? 0))
+  const anyHeat = waypoints.some(w => (w.weather?.temp ?? 0) > 30)
+  const anyCold = waypoints.some(w => (w.weather?.temp ?? 0) < 5)
+
+  if (m === 'car' || m === 'driving' || m === 'hgv' || m === 'truck') {
+    if (anyRain) advice.push('Wet roads — reduce speed, increase following distance.')
+    if (anySnow) advice.push('Snow/ice possible — winter tires recommended.')
+    if (maxWind > 40) advice.push('High winds — take care with high-sided vehicles and bridges.')
+    if (waypoints.some(w => (w.weather?.visibility ?? 10) < 2)) {
+      advice.push('Low visibility — use fog lights if fitted.')
+    }
+  }
+
+  if (m === 'walk' || m === 'walking' || m === 'foot' || m === 'hike' || m === 'hiking') {
+    if (anyRain) advice.push('Bring a rain jacket — you will get wet otherwise.')
+    if (maxUV >= 6) advice.push('High UV — sunscreen, hat, sunglasses.')
+    if (anyHeat) advice.push('Hot — carry water, take shade breaks.')
+    if (anyCold) advice.push('Cold — layers recommended.')
+    if (m === 'hike' || m === 'hiking') {
+      advice.push('Sturdy footwear essential — surfaces vary along the trail.')
+    }
+  }
+
+  if (m === 'cycle' || m === 'cycling' || m === 'bike' || m === 'bicycle' ||
+      m === 'roadbike' || m === 'mtb' || m === 'ebike') {
+    if (maxWind > 30) advice.push('Strong headwind possible — expect slower pace.')
+    if (anyRain) advice.push('Wet roads — braking distance increases, take corners carefully.')
+    if (maxUV >= 6) advice.push('High UV — cover exposed skin.')
+    advice.push('High-visibility clothing recommended, especially near traffic.')
+  }
+
+  if (m === 'wheelchair') {
+    if (anyRain) advice.push('Wet surfaces — take extra care on ramps and smooth paths.')
+    if (anySnow) advice.push('Snow/ice — plan for alternative routes if possible.')
+    if (anyHeat) advice.push('Hot surfaces — be aware of metal and pavement heat.')
+  }
+
+  return advice
+}
+
+// ─── STEP EXTRACTION ───────────────────────────────────────────────────
+
+/**
+ * Extract clean step lines from ORS step objects.
+ * Returns array of { instruction, distance } — NEVER truncated.
+ */
+function extractSteps(route) {
+  if (!route?.steps || !Array.isArray(route.steps)) return []
+
+  return route.steps
+    .map(s => {
+      const instruction = safeStr(s?.instruction).trim()
+      if (!instruction) return null
+      return {
+        instruction,
+        distance: s.distance ?? null,
+      }
+    })
+    .filter(Boolean)
+}
+
+// ─── WARNINGS ──────────────────────────────────────────────────────────
+
+function collectWarnings(waypoints, route, mode) {
+  const warnings = []
+
+  waypoints.forEach(wp => {
+    const w = wp.weather
+    if (!w) return
+    const label = wp.label || 'route'
+    if (isStormCode(w.conditionCode)) {
+      warnings.push(`Thunderstorm at ${label}`)
+    }
+    if ((w.wind ?? 0) > 60) {
+      warnings.push(`Dangerous wind at ${label} (${Math.round(w.wind)} km/h)`)
+    }
+    if (w.visibility != null && w.visibility < 0.5) {
+      warnings.push(`Dense fog at ${label}`)
+    }
+    if ((w.temp ?? 0) > 40) {
+      warnings.push(`Extreme heat at ${label} (${Math.round(w.temp)}°C)`)
+    }
+    if ((w.temp ?? 0) < -20) {
+      warnings.push(`Extreme cold at ${label} (${Math.round(w.temp)}°C)`)
+    }
+  })
+
+  if (mode === 'walking' && route?.distance > 15000) {
+    warnings.push('Long walking distance — plan for breaks and hydration.')
+  }
+
+  return [...new Set(warnings)]
+}
+
+// ─── MAIN ENTRY POINT ──────────────────────────────────────────────────
+
+/**
+ * Get route advice.
+ *
+ * The resolver + merger already computed the route and fetched weather
+ * for every waypoint. This module just narrates.
+ *
+ * @param {Object} data — bundle with _route and _waypoints pre-populated
+ * @param {string} question — original question
+ * @returns {Object} — { type, title, from, to, mode, distance, duration,
+ *                       summary, waypoints, directions, warnings }
+ */
+export const getRouteAdvice = (data, question = '') => {
+  if (!data) {
+    return {
+      type: 'route',
+      title: 'Route',
+      from: null,
+      to: null,
+      mode: 'car',
+      distance: null,
+      duration: null,
+      summary: "I don't have route data right now.",
+      waypoints: [],
+      directions: [],
+      warnings: [],
+    }
+  }
+
+  const route = data._route || null
+  const waypoints = Array.isArray(data._waypoints) ? data._waypoints : []
+
+  // ─── No route resolved — return honest failure ─────────────────────
+  if (!route) {
+    return {
+      type: 'route',
+      title: 'Route',
+      from: null,
+      to: null,
+      mode: 'car',
+      distance: null,
+      duration: null,
+      summary: "I couldn't find a route for that. Try rephrasing with a clear origin and destination.",
+      waypoints: [],
+      directions: [],
+      warnings: [],
+    }
+  }
+
+  const mode = route.mode || 'car'
+  const fromLabel = safeStr(route.from?.label || route.from?.name, 'Origin')
+  const toLabel = safeStr(route.to?.label || route.to?.name, 'Destination')
+
+  // ─── Basic info ────────────────────────────────────────────────────
+  const distanceLabel = formatDistance(route.distance)
+  const durationLabel = formatDuration(route.duration)
+
+  // ─── Weather narrative + diagram ───────────────────────────────────
+  const diagram = buildWeatherDiagram(waypoints)
+  const narrative = buildWeatherNarrative(waypoints)
+
+  // ─── Full step list (never truncated) ──────────────────────────────
+  const steps = extractSteps(route)
+  const directions = steps.map(s => {
+    if (s.distance == null) return s.instruction
+    const distLabel = formatDistance(s.distance)
+    return distLabel ? `${s.instruction} (${distLabel})` : s.instruction
+  })
+
+  // ─── Mode-specific advice ──────────────────────────────────────────
+  const modeAdvice = buildModeAdvice(mode, route, waypoints)
+
+  // ─── Warnings ──────────────────────────────────────────────────────
+  const warnings = collectWarnings(waypoints, route, mode)
+
+  // ─── Assemble summary ──────────────────────────────────────────────
+  const summaryParts = []
+  if (narrative) summaryParts.push(narrative)
+  if (modeAdvice.length > 0) summaryParts.push(modeAdvice.join(' '))
+  const summary = summaryParts.join(' ')
+
+  // ─── Full text (used by merger to build the expandable fullText) ───
+  const fullParts = []
+  if (diagram) fullParts.push(diagram)
+
+  if (waypoints.length > 0) {
+    fullParts.push('')
+    fullParts.push('Weather along the way:')
+    waypoints.forEach(wp => {
+      const w = wp.weather || {}
+      const bits = []
+      if (w.temp != null) bits.push(`${Math.round(w.temp)}°C`)
+      if (w.condition) bits.push(w.condition)
+      if (w.precipitationProb > 20) bits.push(`${Math.round(w.precipitationProb)}% rain`)
+      if (w.wind > 20) bits.push(`${Math.round(w.wind)} km/h wind`)
+      fullParts.push(`  ${wp.label} — ${bits.join(' · ')}`)
+    })
+  }
+
+  if (directions.length > 0) {
+    fullParts.push('')
+    fullParts.push(`Directions (${directions.length} steps):`)
+    directions.forEach((step, i) => {
+      fullParts.push(`  ${i + 1}. ${step}`)
+    })
+  }
+
+  if (warnings.length > 0) {
+    fullParts.push('')
+    fullParts.push('Warnings:')
+    warnings.forEach(w => fullParts.push(`  • ${w}`))
+  }
+
+  const fullText = fullParts.join('\n')
+
+  return {
+    type: 'route',
+    title: `${modeEmoji(mode)} ${fromLabel} → ${toLabel}`,
+    from: fromLabel,
+    to: toLabel,
+    mode,
+    modeLabel: modeLabel(mode),
+    distance: distanceLabel,
+    duration: durationLabel,
+    diagram,
+    summary,
+    waypoints: waypoints.map(wp => ({
+      label: wp.label,
+      role: wp.role,
+      weather: wp.weather
+        ? {
+            temp: wp.weather.temp,
+            feelsLike: wp.weather.feelsLike,
+            condition: wp.weather.condition,
+            conditionCode: wp.weather.conditionCode,
+            precipitationProb: wp.weather.precipitationProb,
+            wind: wp.weather.wind,
+            humidity: wp.weather.humidity,
+          }
+        : null,
+    })),
+    directions,
+    warnings,
+    fullText,
+  }
+}
 
 export default getRouteAdvice
