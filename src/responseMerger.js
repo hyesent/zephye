@@ -1,28 +1,17 @@
 // ============================================================================
 // RESPONSE MERGER — Assembles final response from resolver + intent outputs
-//
-// Input:  resolver output (single/comparison/route/multi) + intent results
-// Output: unified response object ready for responseFormatter
-//
-// Never truncates. Never crashes. Always produces something.
 // ============================================================================
-
-// ─── INTENT DISPATCH HELPERS ───────────────────────────────────────────
 
 const ASYNC_INTENTS = new Set([
   'farming', 'stargazing', 'route', 'traffic', 'traveling',
 ])
 
-/**
- * Whether an intent returns a promise.
- */
 export function isAsyncIntent(intentId) {
   return ASYNC_INTENTS.has(intentId)
 }
 
-/**
- * Run a single intent safely. Never throws.
- */
+// ─── INTENT RUNNERS ────────────────────────────────────────────────────
+
 async function runIntent(intent, bundle, question) {
   if (!intent || typeof intent.fn !== 'function') return null
   try {
@@ -36,14 +25,8 @@ async function runIntent(intent, bundle, question) {
   }
 }
 
-/**
- * Run multiple intents in parallel (or sequence for async-only).
- * Returns array of { intent, result } for successful runs.
- */
 async function runIntents(intents, bundle, question) {
   if (!Array.isArray(intents) || intents.length === 0) return []
-
-  // Run all in parallel — async ones return promises, sync ones return values
   const promises = intents.map(intent => runIntent(intent, bundle, question))
   const results = await Promise.all(promises)
   return results.filter(Boolean)
@@ -51,19 +34,12 @@ async function runIntents(intents, bundle, question) {
 
 // ─── CONTENT NORMALIZATION ─────────────────────────────────────────────
 
-/**
- * Normalize any intent output into a common shape:
- * { kind: 'structured'|'string'|'empty', verdict, summary, fullText, details }
- */
 function normalizeContent(result) {
-  if (result == null) {
-    return { kind: 'empty' }
-  }
+  if (result == null) return { kind: 'empty' }
 
   if (typeof result === 'string') {
     const trimmed = result.trim()
     if (!trimmed) return { kind: 'empty' }
-    // Use first line as verdict, rest as fullText
     const lines = trimmed.split('\n')
     return {
       kind: 'string',
@@ -85,7 +61,6 @@ function normalizeContent(result) {
         fullText: result.fullText || '',
       }
     }
-    // Unknown object shape — stringify
     try {
       const str = JSON.stringify(result)
       return { kind: 'string', verdict: str.slice(0, 140), summary: str, fullText: str, details: [] }
@@ -99,11 +74,6 @@ function normalizeContent(result) {
 
 // ─── MERGE: SINGLE ─────────────────────────────────────────────────────
 
-/**
- * Merge multiple intent results into a single response.
- * If only one intent ran, pass its content through.
- * If multiple ran, produce a multi-section response.
- */
 async function mergeSingle(resolverOut, intents, question) {
   const bundle = resolverOut.bundle
   if (!bundle) {
@@ -120,7 +90,6 @@ async function mergeSingle(resolverOut, intents, question) {
   const runs = await runIntents(intents, bundle, question)
 
   if (runs.length === 0) {
-    // No intents matched — fall through to BasicWeather-like fallback
     return {
       verdict: 'Here is the weather.',
       summary: `${bundle.temp ?? '--'}°C · ${bundle.condition ?? 'unknown'}`,
@@ -130,7 +99,6 @@ async function mergeSingle(resolverOut, intents, question) {
     }
   }
 
-  // Single intent — pass through
   if (runs.length === 1) {
     const { intent, result } = runs[0]
     const normalized = normalizeContent(result)
@@ -155,7 +123,6 @@ async function mergeSingle(resolverOut, intents, question) {
     }
   }
 
-  // Multiple intents — build a multi-section response
   const sections = runs.map(({ intent, result }) => {
     const normalized = normalizeContent(result)
     return {
@@ -172,14 +139,13 @@ async function mergeSingle(resolverOut, intents, question) {
     }
   })
 
-  // Also produce a top-level summary combining all verdicts
   const summaryParts = runs.map(({ intent, result }) => {
     const n = normalizeContent(result)
     return `${intent.section || intent.name}: ${n.verdict || n.summary?.slice(0, 80) || 'ok'}`
   })
 
   return {
-    verdict: `Multiple topics covered`,
+    verdict: 'Multiple topics covered',
     summary: summaryParts.join(' · '),
     note: '',
     details: [],
@@ -204,17 +170,11 @@ async function mergeComparison(resolverOut, intents, question) {
     if (!bundle) {
       enriched.push({
         label: item.label,
-        content: {
-          verdict: 'No data',
-          summary: 'Could not fetch weather for this option.',
-          details: [],
-          fullText: '',
-        },
+        content: { verdict: 'No data', summary: 'Could not fetch weather.', details: [], fullText: '' },
       })
       continue
     }
 
-    // Give the bundle its label so intents can reference it
     bundle.city = item.label
     if (item.location?.lat != null) {
       bundle.lat = item.location.lat
@@ -235,7 +195,6 @@ async function mergeComparison(resolverOut, intents, question) {
       continue
     }
 
-    // Merge this side's intents
     const side = await mergeSide(runs)
     enriched.push({ label: item.label, content: side })
   }
@@ -253,27 +212,13 @@ async function mergeComparison(resolverOut, intents, question) {
   }
 }
 
-/**
- * Merge multiple intents for one side of a comparison into a single content block.
- */
 async function mergeSide(runs) {
   if (runs.length === 1) {
     const n = normalizeContent(runs[0].result)
     if (n.kind === 'structured') {
-      return {
-        verdict: n.verdict,
-        summary: n.summary,
-        note: n.note,
-        details: n.details,
-        fullText: n.fullText,
-      }
+      return { verdict: n.verdict, summary: n.summary, note: n.note, details: n.details, fullText: n.fullText }
     }
-    return {
-      verdict: runs[0].intent.section || 'Result',
-      summary: n.summary,
-      details: [],
-      fullText: n.fullText,
-    }
+    return { verdict: runs[0].intent.section || 'Result', summary: n.summary, details: [], fullText: n.fullText }
   }
 
   const sections = runs.map(({ intent, result }) => {
@@ -301,102 +246,69 @@ async function mergeSide(runs) {
   }
 }
 
-/**
- * Build a plain-language takeaway from comparison results.
- * Compares temp, rain probability, wind across sides.
- */
 function buildComparisonTakeaway(enriched, comparisonType) {
   if (enriched.length < 2) return ''
 
-  const pick = (content, key) => {
-    if (!content) return null
-    if (key === 'temp') return content._temp ?? null
-    if (key === 'rain') return content._rain ?? null
-    if (key === 'wind') return content._wind ?? null
-    return null
-  }
-
-  // Fallback: try to extract from details if present
   const extractFromDetails = (content, labelPattern) => {
     if (!content?.details) return null
-    const row = content.details.find(d =>
-      (d.label || '').toLowerCase().includes(labelPattern)
-    )
+    const row = content.details.find(d => (d.label || '').toLowerCase().includes(labelPattern))
     if (!row) return null
     const num = parseFloat(String(row.value || '').replace(/[^\d.-]/g, ''))
     return isNaN(num) ? null : num
   }
 
   const temps = enriched.map(e =>
-    extractFromDetails(e.content, 'temperature') ??
-    extractFromDetails(e.content, 'temp') ??
-    null
+    extractFromDetails(e.content, 'temperature') ?? extractFromDetails(e.content, 'temp') ?? null
   )
   const rains = enriched.map(e =>
-    extractFromDetails(e.content, 'rain') ??
-    extractFromDetails(e.content, 'precip') ??
-    null
+    extractFromDetails(e.content, 'rain') ?? extractFromDetails(e.content, 'precip') ?? null
   )
   const winds = enriched.map(e =>
-    extractFromDetails(e.content, 'wind') ??
-    null
+    extractFromDetails(e.content, 'wind') ?? null
   )
 
   const parts = []
 
-  // Warmest
   const maxTemp = Math.max(...temps.filter(t => t != null))
   if (isFinite(maxTemp)) {
     const warmest = enriched.filter((e, i) => temps[i] === maxTemp).map(e => e.label)
-    if (warmest.length === 1) {
-      parts.push(`${warmest[0]} is warmest at ${Math.round(maxTemp)}°C`)
-    }
+    if (warmest.length === 1) parts.push(`${warmest[0]} is warmest at ${Math.round(maxTemp)}°C`)
   }
 
-  // Driest
   const minRain = Math.min(...rains.filter(r => r != null))
   if (isFinite(minRain)) {
     const driest = enriched.filter((e, i) => rains[i] === minRain).map(e => e.label)
-    if (driest.length === 1) {
-      parts.push(`${driest[0]} is driest at ${Math.round(minRain)}% rain chance`)
-    }
+    if (driest.length === 1) parts.push(`${driest[0]} is driest at ${Math.round(minRain)}% rain chance`)
   }
 
-  // Calmest
   const minWind = Math.min(...winds.filter(w => w != null))
   if (isFinite(minWind)) {
     const calmest = enriched.filter((e, i) => winds[i] === minWind).map(e => e.label)
-    if (calmest.length === 1 && minWind < 20) {
-      parts.push(`${calmest[0]} is calmest at ${Math.round(minWind)} km/h wind`)
-    }
+    if (calmest.length === 1 && minWind < 20) parts.push(`${calmest[0]} is calmest at ${Math.round(minWind)} km/h wind`)
   }
 
   if (parts.length === 0) return ''
   return parts.join(' · ') + '.'
 }
 
-// ─── MERGE: ROUTE ──────────────────────────────────────────────────────
+// ─── MERGE: ROUTE (with traffic) ───────────────────────────────────────
 
 async function mergeRoute(resolverOut, intents, question) {
   const waypoints = resolverOut.waypoints || []
   const route = resolverOut.route || {}
 
-  // Run intents per waypoint (weather advice mostly) — but only if bundle exists
-  // The route intent itself is special: it uses the route object, not the bundle
-  const weatherIntents = intents.filter(i => i.id !== 'route')
   const routeIntent = intents.find(i => i.id === 'route')
+  const trafficIntent = intents.find(i => i.id === 'traffic')
+  const otherIntents = intents.filter(i => i.id !== 'route' && i.id !== 'traffic')
 
-  // Build waypoint narratives
+  // ─── Waypoint narratives (weather) ─────────────────────────────
   const enrichedWaypoints = []
   for (const wp of waypoints) {
     if (!wp.weather) {
       enrichedWaypoints.push({ ...wp, narrative: null })
       continue
     }
-
-    // Run only the weather-relevant intents on each waypoint
-    const simple = weatherIntents.length > 0 ? weatherIntents : []
-    const runs = await runIntents(simple, wp.weather, question)
+    const runs = otherIntents.length > 0 ? await runIntents(otherIntents, wp.weather, question) : []
     const narrative = runs.length > 0
       ? await mergeSide(runs)
       : {
@@ -408,14 +320,12 @@ async function mergeRoute(resolverOut, intents, question) {
     enrichedWaypoints.push({ ...wp, narrative })
   }
 
-  // Build a summary narrative of weather along the way
   const summary = buildRouteWeatherSummary(enrichedWaypoints)
 
-  // Get full route directions via the route intent (if present)
+  // ─── Route directions ──────────────────────────────────────────
   let directions = []
   if (routeIntent && typeof routeIntent.fn === 'function') {
     try {
-      // Route advice uses a special data shape — pass through waypoints + route
       const routeData = {
         ...resolverOut.bundle,
         _route: route,
@@ -423,7 +333,6 @@ async function mergeRoute(resolverOut, intents, question) {
       }
       const result = await routeIntent.fn(routeData, question)
       if (typeof result === 'string') {
-        // Parse step lines from output
         directions = result.split('\n').filter(l => /^\s*\d+\./.test(l)).map(l => l.trim())
       } else if (result?.directions) {
         directions = result.directions
@@ -435,7 +344,39 @@ async function mergeRoute(resolverOut, intents, question) {
     }
   }
 
-  // Format distance and duration human-readable
+  // ─── Traffic on route ──────────────────────────────────────────
+  let traffic = null
+  if (trafficIntent && typeof trafficIntent.fn === 'function') {
+    try {
+      const trafficData = {
+        ...(resolverOut.bundle || {}),
+        _route: route,
+        _waypoints: waypoints.map(wp => ({
+          label: wp.label,
+          lat: wp.location?.lat,
+          lon: wp.location?.lon,
+        })),
+        // If RouteAdvice set these, pass them through
+        fromLat: route.from?.lat,
+        fromLon: route.from?.lon,
+        toLat: route.to?.lat,
+        toLon: route.to?.lon,
+      }
+      const trafficResult = await trafficIntent.fn(trafficData, question)
+      const normalized = normalizeContent(trafficResult)
+      traffic = {
+        verdict: normalized.verdict || '',
+        summary: normalized.summary || '',
+        note: normalized.note || '',
+        details: normalized.details || [],
+        fullText: normalized.fullText || '',
+      }
+    } catch (err) {
+      console.error('[responseMerger] Traffic intent failed:', err)
+    }
+  }
+
+  // ─── Distance / duration formatting ────────────────────────────
   const distanceKm = route.distance ? route.distance / 1000 : null
   const durationMin = route.duration ? route.duration / 60 : null
 
@@ -450,15 +391,79 @@ async function mergeRoute(resolverOut, intents, question) {
       : `${Math.floor(durationMin / 60)}h ${Math.round(durationMin % 60)}m`)
     : null
 
+  // ─── Warnings ──────────────────────────────────────────────────
+  const routeWarnings = extractRouteWarnings(enrichedWaypoints)
+  const trafficWarnings = traffic?.note ? [traffic.note] : []
+  const allWarnings = [...routeWarnings, ...trafficWarnings]
+
+  // ─── Directions block ──────────────────────────────────────────
+  const directionsText = directions.length > 0
+    ? directions.map((step, i) => `${i + 1}. ${step}`).join('\n')
+    : ''
+
+  // ─── Full text (for "more details") ────────────────────────────
+  const fullTextParts = []
+
+  if (distanceLabel || durationLabel) {
+    fullTextParts.push(`Route Summary: ${[distanceLabel, durationLabel].filter(Boolean).join(' · ')}`)
+    fullTextParts.push('')
+  }
+
+  if (summary) {
+    fullTextParts.push('Weather along the way:')
+    fullTextParts.push(summary)
+    fullTextParts.push('')
+  }
+
+  if (enrichedWaypoints.length > 0) {
+    fullTextParts.push('Waypoints:')
+    enrichedWaypoints.forEach(wp => {
+      const w = wp.weather || {}
+      const bits = []
+      if (w.temp != null) bits.push(`${Math.round(w.temp)}°C`)
+      if (w.condition) bits.push(w.condition)
+      if (w.precipitationProb > 20) bits.push(`${Math.round(w.precipitationProb)}% rain`)
+      if (w.wind > 20) bits.push(`${Math.round(w.wind)} km/h wind`)
+      fullTextParts.push(`  ${wp.label} — ${bits.join(' · ')}`)
+    })
+    fullTextParts.push('')
+  }
+
+  if (traffic?.summary) {
+    fullTextParts.push('Traffic:')
+    fullTextParts.push(traffic.summary)
+    if (traffic.fullText && traffic.fullText !== traffic.summary) {
+      fullTextParts.push(traffic.fullText)
+    }
+    fullTextParts.push('')
+  }
+
+  if (directionsText) {
+    fullTextParts.push(`Directions (${directions.length} steps):`)
+    fullTextParts.push(directionsText)
+  }
+
+  // ─── Verdict / summary / note ──────────────────────────────────
+  const verdictLine = `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`
+
+  const summaryParts = []
+  if (distanceLabel && durationLabel) summaryParts.push(`${distanceLabel} · ${durationLabel}`)
+  if (summary) summaryParts.push(summary)
+
+  const noteParts = []
+  if (traffic?.verdict) noteParts.push(traffic.verdict)
+  if (allWarnings.length > 0) noteParts.push(allWarnings.join(' · '))
+
   return {
     type: 'route',
-    title: `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`,
+    title: verdictLine,
     from: route.from?.label || route.from?.name,
     to: route.to?.label || route.to?.name,
     mode: route.mode || 'car',
     distance: distanceLabel,
     duration: durationLabel,
-    summary,
+    summary: summaryParts.join('. '),
+    note: noteParts.join(' · '),
     waypoints: enrichedWaypoints.map(wp => ({
       label: wp.label,
       weather: {
@@ -470,14 +475,12 @@ async function mergeRoute(resolverOut, intents, question) {
       narrative: wp.narrative,
     })),
     directions,
-    warnings: extractRouteWarnings(enrichedWaypoints),
+    warnings: allWarnings,
+    traffic,
+    fullText: fullTextParts.join('\n'),
   }
 }
 
-/**
- * Build a plain-language summary of the weather along the route.
- * "Clear at start, rain in the middle, cloudy at destination."
- */
 function buildRouteWeatherSummary(waypoints) {
   if (waypoints.length === 0) return ''
 
@@ -499,7 +502,6 @@ function buildRouteWeatherSummary(waypoints) {
     return `Rain throughout the entire journey. Wet roads, drive carefully.`
   }
 
-  // Find the wet span
   const wetIndices = conditions.map((c, i) => (c.rain ?? 0) > 40 || isRainCode(c.code) ? i : -1).filter(i => i >= 0)
   const firstWet = wetIndices[0]
   const lastWet = wetIndices[wetIndices.length - 1]
@@ -516,9 +518,6 @@ function isRainCode(code) {
   return (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95
 }
 
-/**
- * Extract any warnings from waypoint narratives or weather extremes.
- */
 function extractRouteWarnings(waypoints) {
   const warnings = []
   for (const wp of waypoints) {
@@ -536,7 +535,6 @@ function extractRouteWarnings(waypoints) {
 // ─── MERGE: MULTI-LOCATION ─────────────────────────────────────────────
 
 async function mergeMulti(resolverOut, intents, question) {
-  // Treat like a comparison with location type, but allow 3+ sides
   return mergeComparison(
     { ...resolverOut, comparisonType: 'location' },
     intents,
@@ -546,14 +544,6 @@ async function mergeMulti(resolverOut, intents, question) {
 
 // ─── MAIN ENTRY POINT ──────────────────────────────────────────────────
 
-/**
- * Merge resolver output + intent results into a final response object.
- *
- * @param {Object} resolverOut — output of resolveWeatherContext
- * @param {Array} intents — matched intents from detectIntents
- * @param {string} question — original question
- * @returns {Promise<Object>} — unified response object
- */
 export async function mergeResponse(resolverOut, intents, question) {
   if (!resolverOut) {
     return {
@@ -587,9 +577,4 @@ export async function mergeResponse(resolverOut, intents, question) {
   }
 }
 
-// ─── DEFAULT EXPORT ────────────────────────────────────────────────────
-
-export default {
-  mergeResponse,
-  isAsyncIntent,
-}
+export default { mergeResponse, isAsyncIntent }
