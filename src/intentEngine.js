@@ -19,12 +19,13 @@ import { getEnergyHomeAdvice } from './data/EnergyHome.js'
 import { getWeatherAdvice } from './data/BasicWeatherAdvice.js'
 import { getTrafficAdvice } from './data/TrafficAdvice.js'
 import { getRouteAdvice } from './data/RouteAdvice.js'
+import { getFlightDelayAdvice } from './data/FlightDelayAdvice.js'
 
 // ─── CONFIG ─────────────────────────────────────────────────────────────
 
 const CONFIG = {
   MAX_INTENTS: 5,
-  MIN_SCORE_THRESHOLD:30,
+  MIN_SCORE_THRESHOLD: 30,
   SECONDARY_THRESHOLD: 0.75,
   SOFT_SECONDARY_THRESHOLD: 0.6,
   EXCLUDE_PENALTY: 30,
@@ -73,6 +74,29 @@ export const INTENT_MAP = [
       'my route',
     ],
     contextBoost: ['route', 'directions', 'get to', 'how far', 'distance', 'drive to', 'navigate'],
+    exclude: [],
+  },
+  {
+    id: 'best_time',
+    name: 'BestTime',
+    priority: 1,
+    section: 'Best Time',
+    fn: getRouteAdvice,
+    keys: [
+      'when should i leave', 'when should i go',
+      'best time to leave', 'best time to go',
+      'what time should i leave', 'what time should i go',
+      'when to leave', 'when to go',
+      'when should i head out', 'when should i head',
+      'best time to head', 'what time to leave',
+      'what time to go', 'when is best to leave',
+      'when is best to go', 'when is the best time',
+      'what time is best', 'good time to leave',
+      'good time to go', 'optimal time',
+      'when should i depart', 'when to depart',
+      'what time should i depart',
+    ],
+    contextBoost: ['leave', 'go', 'depart', 'head out', 'best time', 'what time'],
     exclude: [],
   },
   {
@@ -139,6 +163,30 @@ export const INTENT_MAP = [
     ],
     contextBoost: ['weather', 'forecast', 'temperature', 'rain', 'snow', 'sunny', 'cloudy', 'windy', 'humid', 'storm'],
     exclude: ['crop', 'plant', 'farm', 'sport', 'dog', 'pet', 'skin', 'hair', 'wedding', 'party'],
+  },
+  {
+    id: 'flight_delay',
+    name: 'FlightDelay',
+    priority: 2,
+    section: 'Flight',
+    fn: getFlightDelayAdvice,
+    keys: [
+      'flight delay', 'flight delayed', 'delay my flight',
+      'will my flight be delayed', 'is my flight delayed',
+      'flight cancellation', 'will my flight be cancelled',
+      'flight cancelled', 'flight status',
+      'flight weather', 'flying weather', 'flight conditions',
+      'flight risk', 'flight disruption',
+      'delay risk', 'delayed flight',
+      'plane delay', 'plane weather',
+      'airport weather', 'airport delay',
+      'my flight', 'my flight tomorrow',
+      'flight from', 'flight to',
+      'will my flight',
+      'can i fly', 'safe to fly', 'good to fly',
+    ],
+    contextBoost: ['flight', 'plane', 'airport', 'fly', 'flying', 'delay', 'cancellation'],
+    exclude: [],
   },
   {
     id: 'sports',
@@ -348,9 +396,7 @@ export const INTENT_MAP = [
     fn: getLifestyleAdvice,
     keys: [
       'go for a walk', 'take a walk', 'brisk walk', 'nature walk',
-      'go jogging',
-      'go running',
-      'go hiking',
+      'go jogging', 'go running', 'go hiking',
       'go to the park', 'park visit',
       'have a picnic', 'picnic weather',
       'barbecue', 'cookout',
@@ -582,7 +628,6 @@ export const INTENT_MAP = [
     keys: [
       'travel weather', 'trip weather', 'vacation weather',
       'travel planning', 'trip planning',
-      'flight weather', 'flight delay', 'flight cancellation',
       'connecting flight', 'layover', 'red eye',
       'charter flight', 'business flight',
       'international flight', 'domestic flight',
@@ -744,9 +789,6 @@ export const detectIntents = (question) => {
 
   const primaryScore = results[0].score
 
-  // Multi-intent boost: if the question uses a conjunction word,
-  // relax the secondary threshold so secondary intents that scored
-  // well (>= 60% of primary) also fire.
   const hasConjunction = CONJUNCTION_WORDS.test(question)
   const thresholdRatio = hasConjunction
     ? CONFIG.SOFT_SECONDARY_THRESHOLD
