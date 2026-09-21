@@ -47,7 +47,7 @@ function normalizeContent(result) {
     return {
       kind: 'string',
       verdict: lines[0].slice(0, 140),
-      summary: trimmed.slice(0, 400),
+      summary: trimmed,
       fullText: trimmed,
       details: [],
     }
@@ -173,7 +173,13 @@ async function mergeComparison(resolverOut, intents, question) {
     if (!bundle) {
       enriched.push({
         label: item.label,
-        content: { verdict: 'No data', summary: 'Could not fetch weather.', details: [], fullText: '' },
+        timeLabel: item.timeLabel || bundle?._timeLabel || null,
+        content: {
+          verdict: 'No data',
+          summary: 'Could not fetch weather.',
+          details: [],
+          fullText: '',
+        },
       })
       continue
     }
@@ -185,9 +191,12 @@ async function mergeComparison(resolverOut, intents, question) {
     }
 
     const runs = await runIntents(intents, bundle, question)
+    const timeLabel = bundle._timeLabel || item.timeLabel || null
+
     if (runs.length === 0) {
       enriched.push({
         label: item.label,
+        timeLabel,
         content: {
           verdict: `${bundle.temp ?? '--'}°C · ${bundle.condition ?? 'unknown'}`,
           summary: `Feels like ${bundle.feelsLike ?? bundle.temp ?? '--'}°C.`,
@@ -199,19 +208,23 @@ async function mergeComparison(resolverOut, intents, question) {
     }
 
     const side = await mergeSide(runs)
-    enriched.push({ label: item.label, content: side })
+    enriched.push({ label: item.label, timeLabel, content: side })
   }
 
   const takeaway = buildComparisonTakeaway(enriched, comparisonType)
 
+  const titleLabels = enriched.map(e => e.label)
+  const title = comparisonType === 'time'
+    ? `${titleLabels[0] || 'Time 1'} vs ${titleLabels[1] || 'Time 2'}`
+    : titleLabels.join(' · ')
+
   return {
     type: 'comparison',
     comparisonType,
-    title: comparisonType === 'time'
-      ? `${items[0]?.label || 'Time 1'} vs ${items[1]?.label || 'Time 2'}`
-      : `${enriched.map(e => e.label).join(' vs ')}`,
+    title,
     items: enriched,
     takeaway,
+    _timeLabel: resolverOut._timeLabel || enriched[0]?.timeLabel || null,
   }
 }
 
@@ -294,7 +307,7 @@ function buildComparisonTakeaway(enriched, comparisonType) {
   return parts.join(' · ') + '.'
 }
 
-// ─── ROUTE DIAGRAM HELPERS ─────────────────────────────────────────────
+// ─── ROUTE HELPERS ─────────────────────────────────────────────────────
 
 function weatherEmoji(code) {
   if (code == null) return '🌡️'
@@ -459,20 +472,16 @@ async function mergeRoute(resolverOut, intents, question) {
     }
   }
 
-  // ─── Best time ─────────────────────────────────────────────────
   let bestTime = null
   if (bestTimeIntent) {
     try {
       const result = findBestDepartureWindows(route, enrichedWaypoints, { searchHours: 12 })
-      if (result?.bestWindow) {
-        bestTime = result
-      }
+      if (result?.bestWindow) bestTime = result
     } catch (err) {
       console.error('[responseMerger] BestTime failed:', err)
     }
   }
 
-  // ─── Traffic ───────────────────────────────────────────────────
   let traffic = null
   if (trafficIntent && typeof trafficIntent.fn === 'function') {
     try {
@@ -551,19 +560,8 @@ async function mergeRoute(resolverOut, intents, question) {
     ? directions.map((step, i) => `${i + 1}. ${step}`).join('\n')
     : ''
 
+  // ─── Full text (behind "more details") ───────────────────────
   const fullTextParts = []
-
-  if (distanceLabel || durationLabel) {
-    fullTextParts.push(`Route Summary: ${[distanceLabel, durationLabel].filter(Boolean).join(' · ')}`)
-    fullTextParts.push('')
-  }
-
-  if (bestTime?.bestWindow) {
-    fullTextParts.push('Best time to leave:')
-    fullTextParts.push(`${bestTime.bestWindow.start} – ${bestTime.bestWindow.end}`)
-    if (bestTime.reason) fullTextParts.push(bestTime.reason)
-    fullTextParts.push('')
-  }
 
   if (diagram) {
     fullTextParts.push('Weather along the way:')
@@ -579,6 +577,13 @@ async function mergeRoute(resolverOut, intents, question) {
   if (waypointBlock) {
     fullTextParts.push('Stops:')
     fullTextParts.push(waypointBlock)
+    fullTextParts.push('')
+  }
+
+  if (bestTime?.bestWindow) {
+    fullTextParts.push('Best time to leave:')
+    fullTextParts.push(`${bestTime.bestWindow.start} – ${bestTime.bestWindow.end}`)
+    if (bestTime.reason) fullTextParts.push(bestTime.reason)
     fullTextParts.push('')
   }
 
@@ -606,12 +611,15 @@ async function mergeRoute(resolverOut, intents, question) {
     fullTextParts.push(directionsText)
   }
 
-  const verdictLine = `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`
+  // ─── Bubble content ──────────────────────────────────────────
+  const fromLabel = route.from?.label || route.from?.name || '?'
+  const toLabel = route.to?.label || route.to?.name || '?'
+  const verdictLine = `Route: ${fromLabel} → ${toLabel}`
 
-  const summaryParts = []
-  if (diagram) summaryParts.push(diagram)
-  if (distanceLabel && durationLabel) summaryParts.push(`${distanceLabel} · ${durationLabel}`)
-  if (summary) summaryParts.push(summary)
+  // Summary line: "14 km · 29 min. Rain throughout the entire journey."
+  const bubbleParts = []
+  if (distanceLabel && durationLabel) bubbleParts.push(`${distanceLabel} · ${durationLabel}`)
+  if (summary) bubbleParts.push(summary)
 
   const noteParts = []
   if (bestTime?.bestWindow) {
@@ -623,18 +631,20 @@ async function mergeRoute(resolverOut, intents, question) {
   const otherSummaries = otherSections.map(s => {
     const c = s.content
     const text = typeof c === 'string' ? c : (c.verdict || c.summary || '')
-    return `${s.title}: ${text.slice(0, 80)}`
+    return text.slice(0, 200)
   })
+
+  const summaryString = [...bubbleParts, ...otherSummaries].join(' ')
 
   return {
     type: 'route',
     title: verdictLine,
-    from: route.from?.label || route.from?.name,
-    to: route.to?.label || route.to?.name,
+    from: fromLabel,
+    to: toLabel,
     mode: route.mode || 'car',
     distance: distanceLabel,
     duration: durationLabel,
-    summary: [...summaryParts, ...otherSummaries].join('. '),
+    summary: summaryString,
     note: noteParts.join(' · '),
     diagram,
     bestTime,
@@ -657,6 +667,7 @@ async function mergeRoute(resolverOut, intents, question) {
     journey,
     sections: otherSections.length > 0 ? otherSections : undefined,
     fullText: fullTextParts.join('\n'),
+    _timeLabel: resolverOut.bundle?._timeLabel || null,
   }
 }
 
@@ -664,8 +675,7 @@ async function mergeRoute(resolverOut, intents, question) {
 
 function modeToLabel(mode) {
   const map = {
-    car: 'Drive', driving: 'Drive',
-    hgv: 'Truck', truck: 'Truck',
+    car: 'Drive', driving: 'Drive', hgv: 'Truck', truck: 'Truck',
     walk: 'Walk', walking: 'Walk', foot: 'Walk',
     hike: 'Hike', hiking: 'Hike',
     cycle: 'Cycle', cycling: 'Cycle', bike: 'Cycle', bicycle: 'Cycle',
@@ -677,8 +687,7 @@ function modeToLabel(mode) {
 
 function modeToEmoji(mode) {
   const map = {
-    car: '🚗', driving: '🚗',
-    hgv: '🚚', truck: '🚚',
+    car: '🚗', driving: '🚗', hgv: '🚚', truck: '🚚',
     walk: '🚶', walking: '🚶', foot: '🚶',
     hike: '🥾', hiking: '🥾',
     cycle: '🚴', cycling: '🚴', bike: '🚴', bicycle: '🚴',
@@ -815,6 +824,7 @@ async function mergeRouteComparison(resolverOut, intents, question) {
     title,
     items: sides.map(side => ({
       label: `${side.modeEmoji} ${side.modeLabel}`,
+      timeLabel: null,
       content: {
         verdict: [side.distanceLabel, side.durationLabel].filter(Boolean).join(' · '),
         summary: side.weatherNarrative || '',
