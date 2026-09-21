@@ -1,21 +1,14 @@
 // ============================================================================
 // RESPONSE FORMATTER — One formatter to rule them all
-// Produces beautiful, well-demarcated markdown + plain-text versions of any
-// Zephye response. Used by: copy, share-as-text, share-as-image, schedule
-// push-to-chat, and any place that needs a clean text representation.
-//
-// No truncation. Ever. Complete content only.
 // ============================================================================
-
-// ─── CONSTANTS ──────────────────────────────────────────────────────────
 
 const BRAND = 'Zephye'
 const BRAND_URL = 'zephye.vercel.app'
 
 const WIDTH = 44
-const HEAVY  = '═'.repeat(WIDTH)
-const LIGHT  = '─'.repeat(WIDTH)
-const SHORT  = '─────'
+const HEAVY = '═'.repeat(WIDTH)
+const LIGHT = '─'.repeat(WIDTH)
+const SHORT = '─────'
 
 const LABEL_WIDTH = 20
 
@@ -23,25 +16,16 @@ const LABEL_WIDTH = 20
 
 const isStructured = (x) =>
   x && typeof x === 'object' && !Array.isArray(x) &&
-  (typeof x.verdict === 'string' ||
-   typeof x.summary === 'string' ||
-   Array.isArray(x.details))
+  (typeof x.verdict === 'string' || typeof x.summary === 'string' || Array.isArray(x.details))
 
 const isComparison = (x) =>
-  x && typeof x === 'object' &&
-  x.type === 'comparison' &&
-  Array.isArray(x.items) &&
-  x.items.length > 0
+  x && typeof x === 'object' && x.type === 'comparison' && Array.isArray(x.items) && x.items.length > 0
 
 const isMultiIntent = (x) =>
-  x && typeof x === 'object' &&
-  Array.isArray(x.sections) &&
-  x.sections.length > 0
+  x && typeof x === 'object' && Array.isArray(x.sections) && x.sections.length > 0
 
 const isRoute = (x) =>
-  x && typeof x === 'object' &&
-  x.type === 'route' &&
-  Array.isArray(x.waypoints)
+  x && typeof x === 'object' && x.type === 'route' && Array.isArray(x.waypoints)
 
 const isPlainString = (x) => typeof x === 'string'
 
@@ -51,11 +35,7 @@ function safeStr(v) {
   if (v == null) return ''
   if (typeof v === 'string') return v
   if (typeof v === 'number' || typeof v === 'boolean') return String(v)
-  try {
-    return String(v)
-  } catch {
-    return ''
-  }
+  try { return String(v) } catch { return '' }
 }
 
 function padLabel(label, width = LABEL_WIDTH) {
@@ -64,15 +44,7 @@ function padLabel(label, width = LABEL_WIDTH) {
   return s + ' '.repeat(width - s.length)
 }
 
-function indentBlock(text, indent = '  ') {
-  const str = safeStr(text)
-  if (!str) return []
-  return str.split('\n').map(line =>
-    line.trim() === '' ? '' : `${indent}${line}`
-  )
-}
-
-// ─── SECTION BUILDERS ───────────────────────────────────────────────────
+// ─── HEADER BUILDER ─────────────────────────────────────────────────────
 
 function buildHeader(context, md) {
   const { location, timeLabel, title } = context || {}
@@ -122,9 +94,7 @@ function buildSection(title, body, md) {
     })
   } else {
     const str = safeStr(body)
-    str.split('\n').forEach(line => {
-      lines.push(line)
-    })
+    str.split('\n').forEach(line => lines.push(line))
   }
 
   return lines
@@ -167,7 +137,7 @@ function buildFooter(md) {
   return ['', LIGHT, `via ${BRAND} — ${BRAND_URL}`]
 }
 
-// ─── FORMAT: SINGLE RESPONSE ────────────────────────────────────────────
+// ─── FORMAT: SINGLE ────────────────────────────────────────────────────
 
 function formatSingle(data, context, md) {
   if (data == null) return ''
@@ -214,15 +184,13 @@ function formatSingle(data, context, md) {
     lines.push('')
   }
 
-  while (lines.length > 0 && lines[lines.length - 1] === '') {
-    lines.pop()
-  }
+  while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
 
   lines.push(...buildFooter(md))
   return lines.join('\n')
 }
 
-// ─── FORMAT: COMPARISON ─────────────────────────────────────────────────
+// ─── FORMAT: COMPARISON ────────────────────────────────────────────────
 
 function formatComparison(data, context, md) {
   const lines = []
@@ -233,18 +201,50 @@ function formatComparison(data, context, md) {
 
   data.items.forEach((item, i) => {
     const label = item?.label || `Option ${i + 1}`
+    const timeLabel = item?.timeLabel
     const content = item?.content
 
-    lines.push(...buildSection(label, null, md))
-    lines.push('')
+    // Render item header directly (not via buildSection — no body needed)
+    if (md) {
+      lines.push(`### ${label}`)
+      if (timeLabel) lines.push(`*${timeLabel}*`)
+      lines.push('')
+    } else {
+      const pad = Math.max(0, WIDTH - label.length - 5)
+      lines.push(`── ${label.toUpperCase()} ${'─'.repeat(pad)}`)
+      if (timeLabel) lines.push(`  ${timeLabel}`)
+    }
 
-    const subFormatted = formatSingle(content, {}, md)
-    const subLines = subFormatted
-      .split('\n')
-      .filter(l => l && !l.startsWith('##') && !l.startsWith('═') && !l.startsWith('---'))
-      .filter(l => !l.includes(BRAND_URL))
-
-    subLines.forEach(l => lines.push(md ? l : `  ${l}`))
+    // Render content
+    if (content) {
+      if (typeof content === 'string') {
+        content.split('\n').forEach(l => lines.push(md ? l : `  ${l}`))
+      } else {
+        // Structured content — render verdict + summary + details
+        if (content.verdict) {
+          lines.push(md ? `**${content.verdict}**` : `  ${content.verdict}`)
+          lines.push('')
+        }
+        if (content.summary) {
+          content.summary.split('\n').forEach(l => lines.push(md ? l : `  ${l}`))
+          lines.push('')
+        }
+        if (content.details && content.details.length > 0) {
+          content.details.forEach(d => {
+            const label = safeStr(d?.label)
+            const value = safeStr(d?.value)
+            if (!label && !value) return
+            if (md) lines.push(`- **${label}**: ${value}`)
+            else lines.push(`  ${padLabel(label)}${value}`)
+          })
+          lines.push('')
+        }
+        if (content.fullText && content.fullText !== content.summary) {
+          content.fullText.split('\n').forEach(l => lines.push(md ? l : `  ${l}`))
+          lines.push('')
+        }
+      }
+    }
 
     if (i < data.items.length - 1) {
       lines.push('')
@@ -262,7 +262,7 @@ function formatComparison(data, context, md) {
   return lines.join('\n')
 }
 
-// ─── FORMAT: MULTI-INTENT ───────────────────────────────────────────────
+// ─── FORMAT: MULTI-INTENT ──────────────────────────────────────────────
 
 function formatMultiIntent(data, context, md) {
   const lines = []
@@ -274,16 +274,29 @@ function formatMultiIntent(data, context, md) {
     const title = section?.title || `Section ${i + 1}`
     const content = section?.content
 
-    lines.push(...buildSection(title, null, md))
-    lines.push('')
+    if (md) {
+      lines.push(`### ${title}`)
+      lines.push('')
+    } else {
+      const pad = Math.max(0, WIDTH - title.length - 5)
+      lines.push(`── ${title.toUpperCase()} ${'─'.repeat(pad)}`)
+    }
 
-    const subFormatted = formatSingle(content, {}, md)
-    const subLines = subFormatted
-      .split('\n')
-      .filter(l => l && !l.startsWith('##') && !l.startsWith('═') && !l.startsWith('---'))
-      .filter(l => !l.includes(BRAND_URL))
-
-    subLines.forEach(l => lines.push(md ? l : `  ${l}`))
+    if (typeof content === 'string') {
+      content.split('\n').forEach(l => lines.push(md ? l : `  ${l}`))
+    } else if (content) {
+      if (content.verdict) {
+        lines.push(md ? `**${content.verdict}**` : `  ${content.verdict}`)
+        lines.push('')
+      }
+      if (content.summary) {
+        content.summary.split('\n').forEach(l => lines.push(md ? l : `  ${l}`))
+      }
+      if (content.fullText && content.fullText !== content.summary) {
+        lines.push('')
+        content.fullText.split('\n').forEach(l => lines.push(md ? l : `  ${l}`))
+      }
+    }
 
     if (i < data.sections.length - 1) {
       lines.push('')
@@ -296,7 +309,7 @@ function formatMultiIntent(data, context, md) {
   return lines.join('\n')
 }
 
-// ─── FORMAT: ROUTE ──────────────────────────────────────────────────────
+// ─── FORMAT: ROUTE ─────────────────────────────────────────────────────
 
 function formatRoute(data, context, md) {
   const lines = []
@@ -314,20 +327,8 @@ function formatRoute(data, context, md) {
     lines.push('')
   }
 
-  if (data.waypoints && data.waypoints.length > 0) {
-    lines.push(...buildSection('Weather Along the Way', null, md))
-    data.waypoints.forEach((wp, i) => {
-      const label = wp?.label || `Point ${i + 1}`
-      const weather = wp?.weather || {}
-      const bits = []
-      if (weather.temp != null) bits.push(`${Math.round(weather.temp)}°C`)
-      if (weather.condition) bits.push(weather.condition)
-      if (weather.precipitationProb > 20) bits.push(`${Math.round(weather.precipitationProb)}% rain`)
-      if (weather.wind > 20) bits.push(`wind ${Math.round(weather.wind)} km/h`)
-
-      const line = `  ${label}${bits.length ? ` · ${bits.join(' · ')}` : ''}`
-      lines.push(md ? `- **${label}** — ${bits.join(' · ')}` : line)
-    })
+  if (data.diagram) {
+    lines.push(...buildSection('Weather along the way', [data.diagram], md))
     lines.push('')
   }
 
@@ -336,14 +337,23 @@ function formatRoute(data, context, md) {
     lines.push('')
   }
 
-  if (Array.isArray(data.directions) && data.directions.length > 0) {
-    lines.push(...buildSection('Directions', null, md))
-    data.directions.forEach((step, i) => {
-      const num = i + 1
-      const text = safeStr(step)
-      if (!text) return
-      lines.push(md ? `${num}. ${text}` : `  ${num}. ${text}`)
+  if (data.waypoints && data.waypoints.length > 0) {
+    const wpLines = data.waypoints.map(wp => {
+      const w = wp.weather || {}
+      const bits = []
+      if (w.temp != null) bits.push(`${Math.round(w.temp)}°C`)
+      if (w.condition) bits.push(w.condition)
+      if (w.precipitationProb > 20) bits.push(`${Math.round(w.precipitationProb)}% rain`)
+      if (w.wind > 20) bits.push(`wind ${Math.round(w.wind)} km/h`)
+      return `${wp.label} — ${bits.join(' · ')}`
     })
+    lines.push(...buildSection('Stops', wpLines, md))
+    lines.push('')
+  }
+
+  if (Array.isArray(data.directions) && data.directions.length > 0) {
+    const stepLines = data.directions.map((step, i) => `${i + 1}. ${step}`)
+    lines.push(...buildSection(`Directions (${data.directions.length} steps)`, stepLines, md))
     lines.push('')
   }
 
@@ -352,9 +362,7 @@ function formatRoute(data, context, md) {
     lines.push('')
   }
 
-  while (lines.length > 0 && lines[lines.length - 1] === '') {
-    lines.pop()
-  }
+  while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
 
   lines.push(...buildFooter(md))
   return lines.join('\n')
@@ -362,25 +370,22 @@ function formatRoute(data, context, md) {
 
 // ─── PUBLIC API ─────────────────────────────────────────────────────────
 
-/**
- * Format any response into markdown + plain text.
- */
 export function formatResponse(data, context = {}) {
   let markdown = ''
   let plainText = ''
 
   try {
     if (isRoute(data)) {
-      markdown  = formatRoute(data, context, true)
+      markdown = formatRoute(data, context, true)
       plainText = formatRoute(data, context, false)
     } else if (isComparison(data)) {
-      markdown  = formatComparison(data, context, true)
+      markdown = formatComparison(data, context, true)
       plainText = formatComparison(data, context, false)
     } else if (isMultiIntent(data)) {
-      markdown  = formatMultiIntent(data, context, true)
+      markdown = formatMultiIntent(data, context, true)
       plainText = formatMultiIntent(data, context, false)
     } else {
-      markdown  = formatSingle(data, context, true)
+      markdown = formatSingle(data, context, true)
       plainText = formatSingle(data, context, false)
     }
   } catch (err) {
@@ -392,42 +397,25 @@ export function formatResponse(data, context = {}) {
   return { markdown, plainText }
 }
 
-/**
- * Copy-friendly plain text — complete, demarcated, no truncation.
- */
 export function formatForCopy(data, context = {}) {
   return formatResponse(data, context).plainText
 }
 
-/**
- * Markdown for rich editors / chat apps.
- */
 export function formatForMarkdown(data, context = {}) {
   return formatResponse(data, context).markdown
 }
 
-/**
- * Share-friendly text (markdown-first).
- */
 export function formatForShare(data, context = {}) {
   return formatResponse(data, context).markdown
 }
 
-/**
- * Chat bubble content (markdown).
- */
 export function formatForChat(data, context = {}) {
   return formatResponse(data, context).markdown
 }
 
-/**
- * Image-friendly text (plain, no markdown syntax — for canvas rendering).
- */
 export function formatForImage(data, context = {}) {
   return formatResponse(data, context).plainText
 }
-
-// ─── DEFAULT EXPORT ─────────────────────────────────────────────────────
 
 export default {
   formatResponse,
@@ -435,5 +423,5 @@ export default {
   formatForMarkdown,
   formatForShare,
   formatForChat,
-  formatForImage
+  formatForImage,
 }
