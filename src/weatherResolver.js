@@ -225,15 +225,12 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   const daily = weather.daily || {}
   const times = hourly.time || []
 
-  // Support both API shapes: new (current) and legacy (current_weather)
   const cur = weather.current || {}
   const legacy = weather.current_weather || {}
 
-  // Normalize hourly key names (old API: weathercode; new API: weather_code)
   const hourlyCode = hourly.weather_code || hourly.weathercode || []
   const dailyCode = daily.weather_code || daily.weathercode || []
 
-  // ─── Find hour index ─────────────────────────────────────────────
   let hourIndex = -1
   if (times.length > 0 && timeRef?.hasSpecificHour) {
     const targetMs = timeRef.targetDate.getTime()
@@ -246,7 +243,6 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     if (bestDiff > 2 * 60 * 60 * 1000) hourIndex = -1
   }
 
-  // ─── Find day index ──────────────────────────────────────────────
   let dayIndex = -1
   if (daily.time && daily.time.length > 0) {
     const targetDay = new Date(timeRef?.targetDate ?? now)
@@ -268,78 +264,24 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   bundle._hourIndex = hourIndex
   bundle._dayIndex = dayIndex
 
-  // ─── Hoist primary values with fallbacks ─────────────────────────
-  // Try current → legacy current_weather → hourly[0] → daily[0]
-
   const h0 = (key) => hourly?.[key]?.[0]
   const d0 = (key) => daily?.[key]?.[0]
 
-  bundle.temp = cur.temperature_2m
-    ?? legacy.temperature
-    ?? h0('temperature_2m')
-    ?? null
+  bundle.temp = cur.temperature_2m ?? legacy.temperature ?? h0('temperature_2m') ?? null
+  bundle.feelsLike = cur.apparent_temperature ?? cur.temperature_2m ?? legacy.temperature ?? h0('apparent_temperature') ?? h0('temperature_2m') ?? bundle.temp
+  bundle.humidity = cur.relative_humidity_2m ?? h0('relative_humidity_2m') ?? 50
+  bundle.wind = cur.wind_speed_10m ?? legacy.windspeed ?? h0('wind_speed_10m') ?? 0
+  bundle.windDir = cur.wind_direction_10m ?? legacy.winddirection ?? h0('wind_direction_10m') ?? 0
+  bundle.windGust = cur.wind_gusts_10m ?? h0('wind_gusts_10m') ?? 0
+  bundle.conditionCode = cur.weather_code ?? legacy.weathercode ?? h0('weather_code') ?? hourlyCode[0] ?? d0('weather_code') ?? dailyCode[0] ?? 0
+  bundle.precipitation = cur.precipitation ?? h0('precipitation') ?? 0
+  bundle.precipitationProb = h0('precipitation_probability') ?? d0('precipitation_probability_max') ?? 0
+  bundle.cloudCover = cur.cloud_cover ?? h0('cloud_cover') ?? 0
+  bundle.pressure = cur.pressure_msl ?? h0('pressure_msl') ?? null
+  bundle.visibility = h0('visibility') != null ? h0('visibility') / 1000 : 10
+  bundle.uvIndex = h0('uv_index') ?? d0('uv_index_max') ?? 0
+  bundle.dewPoint = h0('dew_point_2m') ?? null
 
-  bundle.feelsLike = cur.apparent_temperature
-    ?? cur.temperature_2m
-    ?? legacy.temperature
-    ?? h0('apparent_temperature')
-    ?? h0('temperature_2m')
-    ?? bundle.temp
-
-  bundle.humidity = cur.relative_humidity_2m
-    ?? h0('relative_humidity_2m')
-    ?? 50
-
-  bundle.wind = cur.wind_speed_10m
-    ?? legacy.windspeed
-    ?? h0('wind_speed_10m')
-    ?? 0
-
-  bundle.windDir = cur.wind_direction_10m
-    ?? legacy.winddirection
-    ?? h0('wind_direction_10m')
-    ?? 0
-
-  bundle.windGust = cur.wind_gusts_10m
-    ?? h0('wind_gusts_10m')
-    ?? 0
-
-  bundle.conditionCode = cur.weather_code
-    ?? legacy.weathercode
-    ?? h0('weather_code')
-    ?? hourlyCode[0]
-    ?? d0('weather_code')
-    ?? dailyCode[0]
-    ?? 0
-
-  bundle.precipitation = cur.precipitation
-    ?? h0('precipitation')
-    ?? 0
-
-  bundle.precipitationProb = h0('precipitation_probability')
-    ?? d0('precipitation_probability_max')
-    ?? 0
-
-  bundle.cloudCover = cur.cloud_cover
-    ?? h0('cloud_cover')
-    ?? 0
-
-  bundle.pressure = cur.pressure_msl
-    ?? h0('pressure_msl')
-    ?? null
-
-  bundle.visibility = h0('visibility') != null
-    ? h0('visibility') / 1000
-    : 10
-
-  bundle.uvIndex = h0('uv_index')
-    ?? d0('uv_index_max')
-    ?? 0
-
-  bundle.dewPoint = h0('dew_point_2m')
-    ?? null
-
-  // ─── Override with hourly if we have an hour match ───────────────
   if (hourIndex >= 0 && times[hourIndex]) {
     const h = hourly
     const codeArr = hourlyCode
@@ -360,7 +302,6 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     if (h.is_day?.[hourIndex] != null) bundle.isDay = h.is_day[hourIndex]
   }
 
-  // ─── Override with daily if we have a day match ──────────────────
   if (dayIndex >= 0 && daily.time?.[dayIndex]) {
     const d = daily
     const codeArr = dailyCode
@@ -387,6 +328,7 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   bundle.condition = mapWeatherCode(bundle.conditionCode)
   return bundle
 }
+
 // ─── WMO CODE MAP ──────────────────────────────────────────────────────
 
 export function mapWeatherCode(code) {
@@ -641,6 +583,21 @@ export function detectMode(question) {
   return 'car'
 }
 
+export function detectModes(question) {
+  const q = (question || '').toLowerCase()
+  const modes = new Set()
+
+  if (/\b(walk|walking|on foot)\b/.test(q)) modes.add('walking')
+  if (/\b(hike|hiking|trail)\b/.test(q)) modes.add('hiking')
+  if (/\b(cycl|bike|bicycl|biking|mtb|road bike|ebike)\b/.test(q)) modes.add('cycling')
+  if (/\b(truck|hgv|lorry)\b/.test(q)) modes.add('hgv')
+  if (/\b(wheelchair|accessible)\b/.test(q)) modes.add('wheelchair')
+  if (/\b(drive|driving|car|auto|vehicle)\b/.test(q)) modes.add('car')
+
+  if (modes.size === 0) return [detectMode(question)]
+  return [...modes]
+}
+
 function sampleWaypoints(coords, steps = [], maxPoints = 5) {
   if (!Array.isArray(coords) || coords.length < 2) return []
 
@@ -742,10 +699,6 @@ export async function fetchRoute(from, to, mode = 'car') {
 
 // ─── CONTEXT HELPERS ───────────────────────────────────────────────────
 
-/**
- * Determine what context to set based on the resolver output.
- * Returns a new context object or null.
- */
 function buildNewContext(resolverOut, question) {
   if (!resolverOut) return null
 
@@ -754,6 +707,16 @@ function buildNewContext(resolverOut, question) {
       from: resolverOut.route.from,
       to: resolverOut.route.to,
       mode: resolverOut.route.mode,
+      question,
+    })
+  }
+
+  if (resolverOut.type === 'route_comparison' && resolverOut.legs?.length > 0) {
+    const firstLeg = resolverOut.legs[0]
+    return createRouteContext({
+      from: firstLeg.route.from,
+      to: firstLeg.route.to,
+      mode: firstLeg.mode,
       question,
     })
   }
@@ -782,12 +745,6 @@ function buildNewContext(resolverOut, question) {
   return null
 }
 
-/**
- * Apply a context as defaults. Fills in missing pieces without
- * overriding explicit user input.
- *
- * Returns { routeFrom, routeTo, targetLocation, timeRef } — hints for the resolver.
- */
 function applyContext(context, question, now) {
   const hints = {
     routeFrom: null,
@@ -832,6 +789,74 @@ function applyContext(context, question, now) {
   return hints
 }
 
+// ─── ROUTE LEG BUILDER (shared between single + comparison) ────────────
+
+async function buildRouteLeg(fromLoc, toLoc, mode, timeRef, now) {
+  const route = await fetchRoute(fromLoc, toLoc, mode)
+  if (!route) return null
+
+  const rawPoints = [
+    { ...fromLoc, role: 'from', fallbackLabel: fromLoc.label || fromLoc.name || 'Origin' },
+    ...route.waypoints.map((wp, i) => ({
+      ...wp,
+      role: 'waypoint',
+      fallbackLabel: wp.fallbackLabel || wp.label || `Point ${i + 1}`,
+    })),
+    { ...toLoc, role: 'to', fallbackLabel: toLoc.label || toLoc.name || 'Destination' },
+  ]
+
+  const geocodable = rawPoints.filter(p => p.role === 'waypoint')
+  const geocoded = geocodable.length > 0
+    ? await reverseGeocodeBatch(geocodable.map(p => ({
+        lat: p.lat,
+        lon: p.lon,
+        fallbackLabel: p.fallbackLabel,
+      })))
+    : []
+
+  let gIdx = 0
+  const allPoints = rawPoints.map(p => {
+    if (p.role === 'waypoint') {
+      const g = geocoded[gIdx++]
+      const short = g?.short || p.fallbackLabel
+      const medium = g?.medium || short
+      const full = g?.full || medium
+      return { ...p, label: short, labelMedium: medium, labelFull: full }
+    }
+    return {
+      ...p,
+      label: p.fallbackLabel,
+      labelMedium: p.fallbackLabel,
+      labelFull: p.fallbackLabel,
+    }
+  })
+
+  const coords = allPoints.map(p => ({ lat: p.lat, lon: p.lon }))
+  const weathers = await fetchWeatherBatch(coords)
+
+  const waypoints = allPoints.map((p, i) => ({
+    label: p.label,
+    labelMedium: p.labelMedium,
+    labelFull: p.labelFull,
+    role: p.role,
+    location: p,
+    weather: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
+  }))
+
+  return {
+    mode,
+    route: {
+      from: fromLoc,
+      to: toLoc,
+      mode,
+      distance: route.distance,
+      duration: route.duration,
+      steps: route.steps,
+    },
+    waypoints,
+  }
+}
+
 // ─── MAIN RESOLVER ─────────────────────────────────────────────────────
 
 export async function resolveWeatherContext({
@@ -849,7 +874,6 @@ export async function resolveWeatherContext({
     location: location?.name || homeLocation?.name || null,
   }
 
-  // ─── Apply context as defaults ─────────────────────────────────
   const hints = applyContext(context, question, now)
 
   // ─── 1. Comparison ────────────────────────────────────────────────
@@ -912,11 +936,9 @@ export async function resolveWeatherContext({
     }
   }
 
-  // ─── 2. Route (from question OR from context) ────────────────────
+  // ─── 2. Route (single OR comparison) ─────────────────────────────
   let routeFromTo = parseFromTo(question)
   if (!routeFromTo && hints.routeFrom && hints.routeTo) {
-    // Context provides route — only use if question didn't specify one
-    // AND question doesn't specify a new location either
     const hasNewLocation = !!(parseInLocation(question) || parseToOnly(question))
     if (!hasNewLocation) {
       routeFromTo = {
@@ -936,91 +958,60 @@ export async function resolveWeatherContext({
     if (!toLoc) toLoc = await resolveLocation(routeFromTo.to, savedLocations, homeLocation)
 
     if (fromLoc?.lat != null && toLoc?.lat != null) {
-      const mode = hints.mode || detectMode(question)
-      const route = await fetchRoute(fromLoc, toLoc, mode)
-
-      if (route) {
-        const rawPoints = [
-          { ...fromLoc, role: 'from', fallbackLabel: fromLoc.label || fromLoc.name || 'Origin' },
-          ...route.waypoints.map((wp, i) => ({
-            ...wp,
-            role: 'waypoint',
-            fallbackLabel: wp.fallbackLabel || wp.label || `Point ${i + 1}`,
-          })),
-          { ...toLoc, role: 'to', fallbackLabel: toLoc.label || toLoc.name || 'Destination' },
-        ]
-
-        const geocodable = rawPoints.filter(p => p.role === 'waypoint')
-        const geocoded = geocodable.length > 0
-          ? await reverseGeocodeBatch(geocodable.map(p => ({
-              lat: p.lat,
-              lon: p.lon,
-              fallbackLabel: p.fallbackLabel,
-            })))
-          : []
-
-        let gIdx = 0
-        const allPoints = rawPoints.map(p => {
-          if (p.role === 'waypoint') {
-            const g = geocoded[gIdx++]
-            const short = g?.short || p.fallbackLabel
-            const medium = g?.medium || short
-            const full = g?.full || medium
-            return { ...p, label: short, labelMedium: medium, labelFull: full }
-          }
-          return {
-            ...p,
-            label: p.fallbackLabel,
-            labelMedium: p.fallbackLabel,
-            labelFull: p.fallbackLabel,
-          }
-        })
-
-        const coords = allPoints.map(p => ({ lat: p.lat, lon: p.lon }))
-        const weathers = await fetchWeatherBatch(coords)
-
-        // Time ref: explicit in question > hints from context > default
-        let timeRef = parseTimeReference(question, now)
-        if (!timeRef.hasExplicitTime && hints.targetDate) {
-          timeRef = {
-            ...timeRef,
-            targetDate: new Date(hints.targetDate),
-            timePhrase: hints.timeLabel,
-            isFuture: new Date(hints.targetDate).getTime() > now.getTime(),
-          }
+      // Build time reference
+      let timeRef = parseTimeReference(question, now)
+      if (!timeRef.hasExplicitTime && hints.targetDate) {
+        timeRef = {
+          ...timeRef,
+          targetDate: new Date(hints.targetDate),
+          timePhrase: hints.timeLabel,
+          isFuture: new Date(hints.targetDate).getTime() > now.getTime(),
         }
+      }
 
-        const waypoints = allPoints.map((p, i) => ({
-          label: p.label,
-          labelMedium: p.labelMedium,
-          labelFull: p.labelFull,
-          role: p.role,
-          location: p,
-          weather: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
-        }))
+      // Detect modes
+      const detectedModes = detectModes(question)
+      const isComparison = detectedModes.length >= 2 && !hints.mode
 
-        const destWeather = waypoints[waypoints.length - 1]?.weather
+      if (isComparison) {
+        // ─── Route comparison ─────────────────────────────────
+        const legResults = await Promise.all(
+          detectedModes.map(m => buildRouteLeg(fromLoc, toLoc, m, timeRef, now))
+        )
+        const validLegs = legResults.filter(Boolean)
 
+        if (validLegs.length >= 2) {
+          contextMeta.location = `${fromLoc.label || fromLoc.name} → ${toLoc.label || toLoc.name}`
+          const out = {
+            type: 'route_comparison',
+            comparisonType: 'mode',
+            legs: validLegs,
+            context: contextMeta,
+          }
+          out.newContext = buildNewContext(out, question)
+          return out
+        }
+      }
+
+      // ─── Single-mode route ────────────────────────────────
+      const mode = hints.mode || detectedModes[0] || detectMode(question)
+      const leg = await buildRouteLeg(fromLoc, toLoc, mode, timeRef, now)
+
+      if (leg) {
+        const destWeather = leg.waypoints[leg.waypoints.length - 1]?.weather
         const out = {
           type: 'route',
           bundle: destWeather,
-          route: {
-            from: fromLoc,
-            to: toLoc,
-            mode,
-            distance: route.distance,
-            duration: route.duration,
-            steps: route.steps,
-          },
-          waypoints,
+          route: leg.route,
+          waypoints: leg.waypoints,
           context: contextMeta,
         }
         out.newContext = buildNewContext(out, question)
         return out
       }
 
+      // Route fetch failed
       const destWeather = await fetchWeather(toLoc.lat, toLoc.lon)
-      const timeRef = parseTimeReference(question, now)
       const out = {
         type: 'single',
         bundle: destWeather ? sliceWeatherByTime(destWeather, timeRef, now) : null,
@@ -1032,7 +1023,7 @@ export async function resolveWeatherContext({
     }
   }
 
-  // ─── 3. Single location (explicit OR from context) ───────────────
+  // ─── 3. Single location ──────────────────────────────────────────
   let hint = parseInLocation(question) || parseToOnly(question)
   let loc = null
 
@@ -1063,12 +1054,11 @@ export async function resolveWeatherContext({
     contextMeta.location = loc.label || loc.name
 
     const out = { type: 'single', bundle, location: loc, context: contextMeta }
-    // Only set newContext if this was an EXPLICIT location (not from context)
     out.newContext = hint ? buildNewContext(out, question) : null
     return out
   }
 
-  // ─── 4. Current location (fallback) ──────────────────────────────
+  // ─── 4. Current location ─────────────────────────────────────────
   let weather = baseWeather
   let timeRef = parseTimeReference(question, now)
 
@@ -1115,6 +1105,7 @@ export default {
   resolveLocation,
   geocodeLocation,
   detectMode,
+  detectModes,
   fetchRoute,
   mapWeatherCode,
 }
