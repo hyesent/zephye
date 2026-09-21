@@ -8,6 +8,14 @@ import { resolveWeatherContext } from './weatherResolver.js'
 import { mergeResponse } from './responseMerger.js'
 import { formatResponse, formatForCopy } from './responseFormatter.js'
 
+// ─── Context ────────────────────────────────────────────────────────────
+import {
+  isValidContext,
+  getContextChipText,
+  getContextIcon,
+  isClearCommand,
+} from './chatContext.js'
+
 // ─── Recents + Pinned ───────────────────────────────────────────────────
 import { addRecentAsk, getAskChips, pinAsk, unpinAsk } from './recentAsks.js'
 import { getDefaultMode, setDefaultMode } from './preferences.js'
@@ -432,6 +440,9 @@ export default function ZephyeFullScreen({
   const [moonPhase, setMoonPhase] = useState(0)
   const [savedLocations, setSavedLocations] = useState([])
 
+  // 🔥 TEMPORARY CONTEXT — in-memory only, dies on refresh
+  const [chatContext, setChatContext] = useState(null)
+
   // Translation & Voice State
   const [detectedLanguage, setDetectedLanguage] = useState('en')
   const [isTranslating, setIsTranslating] = useState(false)
@@ -499,7 +510,6 @@ export default function ZephyeFullScreen({
     }
   }, [messages.length])
 
-  // Refresh chips
   useEffect(() => {
     if (isOpen) {
       setAskChips(getAskChips())
@@ -556,7 +566,6 @@ export default function ZephyeFullScreen({
         details: [],
         fullText: result.merged || ''
       }
-      // Translate if the user is on non-English
       let content = raw
       if (detectedLanguage !== 'en' && detectedLanguage !== lang) {
         try {
@@ -734,6 +743,12 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
+  // ─── Clear context ──────────────────────────────────────────────
+  const clearContext = useCallback(() => {
+    setChatContext(null)
+  }, [])
+
+  // ─── Route Question (now context-aware) ─────────────────────────
   const routeQuestion = useCallback(async (question) => {
     if (!question || !question.trim()) {
       return {
@@ -752,6 +767,7 @@ export default function ZephyeFullScreen({
         location,
         savedLocations: getSavedLocations(),
         homeLocation: getHomeLocation(),
+        context: chatContext,   // ← pass current context
       })
     } catch (err) {
       console.error('[routeQuestion] resolver failed:', err)
@@ -759,12 +775,10 @@ export default function ZephyeFullScreen({
         verdict: "Couldn't figure out what to look up",
         summary: 'Try rephrasing, or mention a specific place or time.',
         note: '', details: [], fullText: '',
+        _newContext: undefined,
       }
     }
-console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
-    console.log('[routeQuestion] resolverOut.location:', resolverOut?.location)
-    console.log('[routeQuestion] resolverOut.context:', resolverOut?.context)
-    console.log('[routeQuestion] resolverOut.bundle keys:', resolverOut?.bundle ? Object.keys(resolverOut.bundle).slice(0, 20) : null)
+
     let detectedIntents = []
     try {
       detectedIntents = detectIntents(question)
@@ -787,14 +801,9 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
         verdict: 'Unable to assemble response',
         summary: 'Something went wrong while building the answer.',
         note: '', details: [], fullText: '',
+        _newContext: undefined,
       }
     }
- console.log('[routeQuestion] merged.type:', merged?.type)
-    console.log('[routeQuestion] merged has sections?', !!merged?.sections, merged?.sections?.length)
-    console.log('[routeQuestion] merged has traffic?', !!merged?.traffic, merged?.traffic?.summary)
-    console.log('[routeQuestion] merged waypoints count:', merged?.waypoints?.length)
-    console.log('[routeQuestion] merged verdict:', merged?.verdict)
-    console.log('[routeQuestion] merged summary:', merged?.summary?.slice?.(0, 200))
 
     const context = {
       location: resolverOut.context?.location || resolverOut.bundle?.city,
@@ -812,11 +821,35 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
       }
     }
 
-    return flattenForChat(merged, formatted, resolverOut)
-  }, [weatherData, aqi, location])
+    const flattened = flattenForChat(merged, formatted, resolverOut)
+    // Attach newContext for the caller to save
+    flattened._newContext = resolverOut.newContext || null
+    return flattened
+  }, [weatherData, aqi, location, chatContext])
 
   const handleAsk = useCallback(async (question) => {
     if (!question.trim()) return
+
+    // ─── Context clear command ─────────────────────────────────────
+    if (isClearCommand(question)) {
+      clearContext()
+      setMessages(prev => [...prev, {
+        role: 'user',
+        content: question,
+      }])
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: {
+          verdict: 'Context cleared',
+          summary: 'Starting fresh. What would you like to know?',
+          note: '',
+          details: [],
+          fullText: '',
+        },
+      }])
+      setInput('')
+      return
+    }
 
     if (isScheduleCommand(question)) {
       setShowSchedules(true)
@@ -846,7 +879,6 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
       originalLang: detectedLang
     }])
 
-    // Track recent
     if (question.trim().length > 3) {
       try { addRecentAsk(question.trim()) } catch {}
     }
@@ -859,6 +891,7 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
 
     try {
       const answer = await routeQuestion(englishQuestion)
+      const newContext = answer?._newContext ?? null
 
       let finalAnswer = answer
       if (needsTranslation) {
@@ -883,13 +916,22 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
         }
       }
 
+      // Strip internal fields before saving
+      const cleanAnswer = { ...finalAnswer }
+      delete cleanAnswer._newContext
+
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: finalAnswer,
+        content: cleanAnswer,
         originalLang: detectedLang,
         originalEnglish: needsTranslation && typeof answer === 'object' ? answer : null
       }])
       setStreamingText('')
+
+      // 🔥 Save new context — ONLY if the resolver set a new subject
+      if (newContext && isValidContext(newContext)) {
+        setChatContext(newContext)
+      }
 
       if (voiceToUse) speakText(finalAnswer)
 
@@ -903,7 +945,7 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
     } finally {
       setIsLoading(false)
     }
-  }, [routeQuestion, weatherData, voiceToUse, speakText, lang, t])
+  }, [routeQuestion, weatherData, voiceToUse, speakText, lang, t, clearContext])
 
   if (!isOpen) return null
 
@@ -930,6 +972,9 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
   }
 
   const currentMode = (() => { try { return getDefaultMode() } catch { return 'car' } })()
+
+  const contextChipText = getContextChipText(chatContext)
+  const contextIcon = getContextIcon(chatContext)
 
   return (
     <div className="ai-fullscreen">
@@ -1026,6 +1071,33 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
                   <span style={{ fontSize: 15 }}>⏰</span>
                   <span>{t('schedule.menuItem')}</span>
                 </button>
+
+                {chatContext && (
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      clearContext()
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span style={{ fontSize: 15 }}>🧹</span>
+                    <span>Clear context</span>
+                  </button>
+                )}
 
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
 
@@ -1399,6 +1471,52 @@ console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
             onClick={() => setShowScheduleCard(false)}
             className="btn-ghost"
             style={{ padding: 4, fontSize: 18, lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* 🔥 CONTEXT CHIP */}
+      {chatContext && contextChipText && (
+        <div style={{
+          maxWidth: '768px',
+          margin: '0 auto 8px',
+          padding: '8px 12px',
+          background: 'rgba(56,189,248,0.08)',
+          border: '1px solid rgba(56,189,248,0.25)',
+          borderRadius: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginLeft: 16,
+          marginRight: 16,
+        }}>
+          <span style={{ fontSize: 14 }}>{contextIcon}</span>
+          <span style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#7dd3fc',
+            flex: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {contextChipText}
+          </span>
+          <button
+            onClick={clearContext}
+            title="Clear context"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              fontSize: 16,
+              lineHeight: 1,
+              borderRadius: 6,
+            }}
           >
             ×
           </button>
