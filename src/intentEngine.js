@@ -24,7 +24,7 @@ import { getRouteAdvice } from './data/RouteAdvice.js'
 
 const CONFIG = {
   MAX_INTENTS: 5,
-  MIN_SCORE_THRESHOLD: 45,
+  MIN_SCORE_THRESHOLD:30,
   SECONDARY_THRESHOLD: 0.75,
   SOFT_SECONDARY_THRESHOLD: 0.6,
   EXCLUDE_PENALTY: 30,
