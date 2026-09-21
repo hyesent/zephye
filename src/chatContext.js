@@ -1,15 +1,6 @@
 // ============================================================================
 // CHAT CONTEXT — Temporary, session-only memory of "what we're talking about"
-//
-// In-memory only. Dies on page refresh. No localStorage, no persistence.
-//
-// Stores the last "subject" the user asked about (a route, a location,
-// a comparison) so follow-up questions can inherit it as defaults.
-//
-// Pure functions + shape. State lives in ZephyeFullScreen via useState.
 // ============================================================================
-
-// ─── CONTEXT TYPES ──────────────────────────────────────────────────────
 
 export const CONTEXT_TYPES = {
   ROUTE: 'route',
@@ -18,17 +9,29 @@ export const CONTEXT_TYPES = {
   MULTI: 'multi',
 }
 
-// Keywords that clear the current context
 const CLEAR_KEYWORDS = [
   'clear context',
   'clear the context',
+  'clear this',
   'new topic',
   'forget that',
+  'forget about that',
+  'forget this',
   'forget it',
-  'start over',
-  'start fresh',
+  'forget it all',
   'never mind',
   'nevermind',
+  'never mind that',
+  'nevermind that',
+  'ignore that',
+  'ignore this',
+  'scratch that',
+  'cancel that',
+  'drop that',
+  'disregard',
+  'disregard that',
+  'start over',
+  'start fresh',
   'different question',
   'switch topic',
   'change topic',
@@ -38,9 +41,6 @@ const CLEAR_KEYWORDS = [
 
 // ─── FACTORY ────────────────────────────────────────────────────────────
 
-/**
- * Build a route context from resolver output.
- */
 export function createRouteContext({ from, to, mode, question }) {
   if (!from?.lat || !to?.lat) return null
   return {
@@ -57,9 +57,6 @@ export function createRouteContext({ from, to, mode, question }) {
   }
 }
 
-/**
- * Build a location context (single place + optional time).
- */
 export function createLocationContext({ location, targetDate, timeLabel, question }) {
   if (!location?.lat) return null
   const labelParts = [location.label || location.name || '?']
@@ -78,16 +75,13 @@ export function createLocationContext({ location, targetDate, timeLabel, questio
   }
 }
 
-/**
- * Build a comparison context (2-3 places, or same place across 2 times).
- */
-export function createComparisonContext({ comparisonType, items, timeLabel, question }) {
+export function createComparisonContext({ comparisonType, items, timeLabel, targetDate, question }) {
   if (!Array.isArray(items) || items.length < 2) return null
 
   const labels = items.map(it => it.label || '?')
   const label = comparisonType === 'time'
     ? `${labels[0]} vs ${labels[1]}`
-    : labels.join(' vs ')
+    : labels.join(' · ')
 
   return {
     id: `ctx_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -105,13 +99,11 @@ export function createComparisonContext({ comparisonType, items, timeLabel, ques
         timeLabel: it.timeLabel || null,
       })),
       timeLabel: timeLabel || null,
+      targetDate: targetDate || null,
     },
   }
 }
 
-/**
- * Build a multi-stop context (3+ locations on a route).
- */
 export function createMultiContext({ stops, mode, question }) {
   if (!Array.isArray(stops) || stops.length < 2) return null
 
@@ -132,28 +124,19 @@ export function createMultiContext({ stops, mode, question }) {
   }
 }
 
-// ─── SHAPE HELPERS ──────────────────────────────────────────────────────
+// ─── HELPERS ────────────────────────────────────────────────────────────
 
-/**
- * Is this a valid, non-expired context?
- */
 export function isValidContext(ctx) {
   if (!ctx || typeof ctx !== 'object') return false
   if (!ctx.type || !ctx.payload) return false
   return true
 }
 
-/**
- * Short label for the chip UI.
- */
 export function getContextLabel(ctx) {
   if (!isValidContext(ctx)) return null
   return ctx.label || 'Previous topic'
 }
 
-/**
- * Icon for the chip, based on type.
- */
 export function getContextIcon(ctx) {
   if (!isValidContext(ctx)) return '📌'
   switch (ctx.type) {
@@ -165,26 +148,16 @@ export function getContextIcon(ctx) {
   }
 }
 
-/**
- * Full chip string: "Following up: Home → Work"
- */
 export function getContextChipText(ctx) {
   if (!isValidContext(ctx)) return null
   return `Following up: ${ctx.label}`
 }
 
-// ─── CLEAR DETECTION ────────────────────────────────────────────────────
-
-/**
- * Does the user's question say "clear context"?
- */
 export function isClearCommand(question) {
   if (!question) return false
   const q = question.toLowerCase().trim()
   return CLEAR_KEYWORDS.some(k => q.includes(k))
 }
-
-// ─── DEFAULT EXPORT ─────────────────────────────────────────────────────
 
 export default {
   CONTEXT_TYPES,
