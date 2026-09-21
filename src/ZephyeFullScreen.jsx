@@ -80,14 +80,6 @@ const CopyIcon = () => (
   </svg>
 )
 
-const ShareIcon = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-    <polyline points="16 6 12 2 8 6"/>
-    <line x1="12" y1="2" x2="12" y2="15"/>
-  </svg>
-)
-
 const MoreIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="5" r="1.5"/>
@@ -274,6 +266,11 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy, t }) {
 
   const { verdict, summary, note, details, fullText } = data
 
+  const contextParts = []
+  if (data._location) contextParts.push(data._location)
+  if (data._timeLabel) contextParts.push(data._timeLabel)
+  const contextLine = contextParts.length > 0 ? contextParts.join(' · ') : null
+
   const handleShareComparison = () => {
     if (!data._raw || data._type !== 'comparison') return
     const items = (data._raw.items || []).map(item => ({
@@ -288,6 +285,9 @@ function StructuredResponse({ data, onSpeak, isSpeaking, onCopy, t }) {
 
   return (
     <div className="structured-response">
+      {contextLine && (
+        <div className="context-line">📍 {contextLine}</div>
+      )}
       <div className="verdict">{verdict}</div>
       <div className="summary">{summary}</div>
       {note && <div className="note">{note}</div>}
@@ -345,8 +345,12 @@ function flattenForChat(merged, formatted, resolverOut) {
   }
 
   if (merged.type === 'comparison') {
-    const sides = (merged.items || []).map(i => i.label).join(' vs ')
+    const sides = (merged.items || []).map(i => i.label).join(' · ')
     const summary = merged.takeaway || `${merged.items?.length || 0} options compared.`
+    const timeLabel = merged._timeLabel
+      || resolverOut?.items?.[0]?.bundle?._timeLabel
+      || resolverOut?._timeLabel
+      || null
     return {
       verdict: merged.title || `Comparison: ${sides}`,
       summary,
@@ -358,6 +362,8 @@ function flattenForChat(merged, formatted, resolverOut) {
       fullText: formatted.markdown,
       _type: 'comparison',
       _raw: merged,
+      _location: sides,
+      _timeLabel: timeLabel,
     }
   }
 
@@ -366,11 +372,11 @@ function flattenForChat(merged, formatted, resolverOut) {
     if (merged.distance) summaryBits.push(merged.distance)
     if (merged.duration) summaryBits.push(merged.duration)
     const summaryLine = summaryBits.length > 0
-      ? `${summaryBits.join(' · ')}. ${merged.summary || ''}`.trim()
+      ? `${summaryBits.join(' · ')}${merged.summary ? '. ' + merged.summary : ''}`.trim()
       : merged.summary || ''
 
     const warnings = merged.warnings || []
-    const note = warnings.length > 0 ? warnings.join(' · ') : ''
+    const note = merged.note || (warnings.length > 0 ? warnings.join(' · ') : '')
 
     return {
       verdict: merged.title || `Route: ${merged.from} → ${merged.to}`,
@@ -389,6 +395,8 @@ function flattenForChat(merged, formatted, resolverOut) {
       fullText: formatted.markdown,
       _type: 'route',
       _raw: merged,
+      _location: `${merged.from} → ${merged.to}`,
+      _timeLabel: merged._timeLabel || resolverOut?.bundle?._timeLabel || null,
     }
   }
 
@@ -400,6 +408,8 @@ function flattenForChat(merged, formatted, resolverOut) {
       details: merged.details || [],
       fullText: formatted.markdown,
       _sections: merged.sections,
+      _location: resolverOut?.context?.location,
+      _timeLabel: resolverOut?.bundle?._timeLabel || null,
     }
   }
 
@@ -410,7 +420,8 @@ function flattenForChat(merged, formatted, resolverOut) {
     details: merged.details || [],
     fullText: merged.fullText || formatted.markdown || '',
     _city: merged._city || resolverOut?.context?.location,
-    _timeLabel: merged._timeLabel || resolverOut?.bundle?._timeLabel,
+    _timeLabel: merged._timeLabel || resolverOut?.bundle?._timeLabel || null,
+    _location: merged._city || resolverOut?.context?.location,
   }
 }
 
@@ -717,7 +728,7 @@ export default function ZephyeFullScreen({
     if (typeof text === 'object' && text !== null) {
       try {
         copyable = formatForCopy(text, {
-          location: text._city,
+          location: text._location || text._city,
           timeLabel: text._timeLabel,
         })
       } catch {
@@ -743,12 +754,10 @@ export default function ZephyeFullScreen({
     recognition.start()
   }, [lang])
 
-  // ─── Clear context ──────────────────────────────────────────────
   const clearContext = useCallback(() => {
     setChatContext(null)
   }, [])
 
-  // ─── Route Question (now context-aware) ─────────────────────────
   const routeQuestion = useCallback(async (question) => {
     if (!question || !question.trim()) {
       return {
@@ -767,7 +776,7 @@ export default function ZephyeFullScreen({
         location,
         savedLocations: getSavedLocations(),
         homeLocation: getHomeLocation(),
-        context: chatContext,   // ← pass current context
+        context: chatContext,
       })
     } catch (err) {
       console.error('[routeQuestion] resolver failed:', err)
@@ -822,7 +831,6 @@ export default function ZephyeFullScreen({
     }
 
     const flattened = flattenForChat(merged, formatted, resolverOut)
-    // Attach newContext for the caller to save
     flattened._newContext = resolverOut.newContext || null
     return flattened
   }, [weatherData, aqi, location, chatContext])
@@ -916,7 +924,6 @@ export default function ZephyeFullScreen({
         }
       }
 
-      // Strip internal fields before saving
       const cleanAnswer = { ...finalAnswer }
       delete cleanAnswer._newContext
 
@@ -928,7 +935,6 @@ export default function ZephyeFullScreen({
       }])
       setStreamingText('')
 
-      // 🔥 Save new context — ONLY if the resolver set a new subject
       if (newContext && isValidContext(newContext)) {
         setChatContext(newContext)
       }
@@ -1662,6 +1668,15 @@ export default function ZephyeFullScreen({
         }
         .ai-body::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
         .structured-response { width: 100%; }
+        .structured-response .context-line {
+          font-size: 11px;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 6px;
+          font-weight: 600;
+          opacity: 0.8;
+        }
         .structured-response .verdict {
           font-size: 16px; font-weight: 600;
           margin-bottom: 6px; color: var(--text);
