@@ -16,10 +16,11 @@ const PREFIX = 'zephye_cache_'
 
 // TTLs per cache type (ms)
 export const TTL = {
-  WEATHER: 10 * 60 * 1000,      // 10 min — current weather
-  FORECAST: 15 * 60 * 1000,     // 15 min — hourly/daily
-  GEOCODE: 24 * 60 * 60 * 1000, // 24 h  — place names don't move
-  AQI: 15 * 60 * 1000,          // 15 min — air quality
+  WEATHER: 10 * 60 * 1000,
+  FORECAST: 15 * 60 * 1000,
+  GEOCODE: 24 * 60 * 60 * 1000,
+  GEOCODE_REVERSE: 30 * 24 * 60 * 60 * 1000, // 30 days — places don't move
+  AQI: 15 * 60 * 1000,
 }
 
 // Hard cap on cache entry size to avoid localStorage quota explosions
