@@ -572,11 +572,195 @@ function detectBreedCategory(question) {
 }
 
 // ============================================================================
+// JOURNEY CONTEXT READER
+// ============================================================================
+
+/**
+ * Read the journey context injected by the merger when the user asked
+ * about a route. Returns null if no route is in play.
+ */
+function getJourneyFlags(data) {
+  const j = data?._journey;
+  if (!j) return null;
+  return {
+    hasRain: !!j.hasRain,
+    hasHeavyRain: !!j.hasHeavyRain,
+    hasThunderstorm: !!j.hasThunderstorm,
+    hasSnow: !!j.hasSnow,
+    hasIce: !!j.hasIce,
+    hasFog: !!j.hasFog,
+    isWet: !!j.isWetJourney,
+    tempMin: j.tempMin ?? null,
+    tempMax: j.tempMax ?? null,
+    tempSwing: j.tempSwing ?? null,
+    windMax: j.windMax ?? null,
+    rainStart: j.rainStart ?? null,
+    rainEnd: j.rainEnd ?? null,
+    worst: j.worstWaypoint ?? null,
+    best: j.bestWaypoint ?? null,
+    narrative: j.narrative ?? '',
+    duration: j.duration ?? null,
+    distance: j.distance ?? null,
+    mode: j.mode ?? null,
+    from: j.from ?? null,
+    to: j.to ?? null,
+  };
+}
+
+/**
+ * Build journey-aware pet advice. Returns null if there's nothing
+ * meaningful to say (falls through to normal advice).
+ */
+function buildJourneyPetsAdvice(journey, data, question) {
+  const q = (question || '').toLowerCase();
+
+  // ─── Detect pet type from the question ───────────────────────────
+  let petType = 'dog';
+  if (q.includes('cat') || q.includes('kitten')) petType = 'cat';
+  if (q.includes('rabbit') || q.includes('bunny')) petType = 'rabbit';
+  if (q.includes('bird') || q.includes('parrot') || q.includes('aviary')) petType = 'bird';
+  if (q.includes('horse') || q.includes('pony') || q.includes('equine')) petType = 'horse';
+  if (q.includes('fish') || q.includes('pond') || q.includes('koi')) petType = 'fish_pond';
+  if (q.includes('chicken') || q.includes('hen') || q.includes('rooster')) petType = 'chicken';
+
+  const species = PET_SPECIES[petType] || PET_SPECIES.dog;
+
+  // ─── Build the journey advice lists ──────────────────────────────
+  const advice = [];
+  const precautions = [];
+  const gear = [];
+
+  // Rain
+  if (journey.hasThunderstorm) {
+    advice.push('Thunderstorms on the route — pets should stay indoors, and no travel with pets unless unavoidable.');
+    precautions.push('Lightning and panic risk. Keep pets in a secure, quiet room.');
+  } else if (journey.hasHeavyRain) {
+    advice.push('Heavy rain along the way — expect soaked fur and muddy paws at the destination.');
+    gear.push('towel and paw wipes');
+    gear.push('waterproof seat cover or carrier liner');
+  } else if (journey.hasRain) {
+    const span = journey.rainStart && journey.rainEnd && journey.rainStart !== journey.rainEnd
+      ? ` from ${journey.rainStart} to ${journey.rainEnd}`
+      : journey.rainStart ? ` around ${journey.rainStart}` : '';
+    advice.push(`Rain expected${span} — plan for wet paws and a damp coat on arrival.`);
+    gear.push('towel');
+  }
+
+  // Snow / ice
+  if (journey.hasSnow) {
+    advice.push('Snow on the route — cold paws and ice-ball buildup between toes.');
+    gear.push('paw balm or booties');
+    precautions.push('Wipe paws after the trip — ice melt chemicals are toxic if licked.');
+  } else if (journey.hasIce) {
+    advice.push('Icy conditions — slip risk for pets and their humans.');
+    precautions.push('Keep pets leashed near icy patches.');
+  }
+
+  // Temperature swing
+  if (journey.tempSwing != null && journey.tempSwing >= 10) {
+    advice.push(`Temperature varies ${journey.tempMin}°C to ${journey.tempMax}°C across the route — pets feel this more than you do.`);
+    if (journey.tempMin <= species?.coldRisk?.threshold) {
+      gear.push('pet coat or sweater');
+    }
+    if (journey.tempMax >= species?.heatRisk?.threshold) {
+      precautions.push('Bring water and a collapsible bowl. Take shade breaks.');
+    }
+  } else if (journey.tempMin != null && species?.coldRisk && journey.tempMin <= species.coldRisk.threshold) {
+    advice.push(`Cold along the route (${journey.tempMin}°C) — below your pet's comfort threshold.`);
+    gear.push('pet coat or sweater');
+  } else if (journey.tempMax != null && species?.heatRisk && journey.tempMax >= species.heatRisk.threshold) {
+    advice.push(`Warm along the route (${journey.tempMax}°C) — above your pet's heat threshold.`);
+    precautions.push('Travel in the coolest part of the day. Never leave pets in the car.');
+  }
+
+  // Wind
+  if (journey.windMax != null && journey.windMax > 40) {
+    advice.push(`Strong wind (up to ${journey.windMax} km/h) — small pets can be unsettled and debris can spook them.`);
+    precautions.push('Keep small pets leashed and close. Secure carriers.');
+  }
+
+  // Fog
+  if (journey.hasFog) {
+    advice.push('Low visibility on part of the route — walk pets carefully near traffic.');
+  }
+
+  // Dry journey — quick note
+  if (!journey.hasRain && !journey.hasSnow && !journey.hasIce && !journey.hasHeavyRain) {
+    advice.push('Dry journey — no weather-specific pet gear needed.');
+  }
+
+  // Mode-specific extras
+  if (journey.mode === 'cycling' || journey.mode === 'bike' || journey.mode === 'bicycle') {
+    advice.push('Cycling with a pet — keep them in a carrier or trailer, not loose.');
+  } else if (journey.mode === 'walking' || journey.mode === 'foot') {
+    if (journey.hasRain) gear.push('towel for the return leg');
+  } else if (journey.mode === 'car' || journey.mode === 'driving') {
+    precautions.push('Never leave pets unattended in the vehicle, even briefly.');
+  }
+
+  // Nothing meaningful to say? Fall through.
+  if (advice.length === 0) return null;
+
+  // ─── Verdict line ────────────────────────────────────────────────
+  const modeLabel = {
+    car: 'drive', driving: 'drive', hgv: 'drive', truck: 'drive',
+    cycling: 'ride', bike: 'ride', bicycle: 'ride', cycle: 'ride',
+    walking: 'walk', foot: 'walk',
+    hiking: 'hike', trail: 'hike',
+    wheelchair: 'trip',
+  }[journey.mode] || 'trip';
+
+  const summaryMeta = [];
+  if (journey.distance) summaryMeta.push(journey.distance);
+  if (journey.duration) summaryMeta.push(journey.duration);
+  const metaStr = summaryMeta.length > 0 ? ` (${summaryMeta.join(' · ')})` : '';
+
+  const verdict = `For your ${modeLabel} with your ${petType}${metaStr}:`;
+
+  // ─── Details rows ────────────────────────────────────────────────
+  const details = [];
+  if (gear.length > 0) details.push({ label: 'Bring', value: gear.join(', ') });
+  if (precautions.length > 0) details.push({ label: 'Precautions', value: precautions.join(' ') });
+  if (journey.from && journey.to) details.push({ label: 'Route', value: `${journey.from} → ${journey.to}` });
+
+  // ─── Note (worst spot) ───────────────────────────────────────────
+  const note = journey.worst
+    ? `Watch for ${journey.worst.reason} near ${journey.worst.label}.`
+    : '';
+
+  return {
+    verdict,
+    summary: advice.join(' '),
+    note,
+    details,
+    fullText: [
+      verdict,
+      '',
+      ...advice.map(a => `• ${a}`),
+      gear.length > 0 ? `\nBring: ${gear.join(', ')}` : '',
+      precautions.length > 0 ? `Precautions: ${precautions.join(' ')}` : '',
+      note ? `\n${note}` : '',
+    ].filter(Boolean).join('\n'),
+    _journeyAware: true,
+  };
+}
+
+// ============================================================================
 // ENHANCED MAIN PETS ADVICE FUNCTION
 // ============================================================================
 
 export const getPetsAdvice = (data, question = '') => {
   if (!data) return "Loading weather data...";
+
+  // ─── JOURNEY-AWARE BRANCH ──────────────────────────────────────
+  // If the user asked a follow-up to a route question, give advice
+  // for the whole journey with the pet instead of a single snapshot.
+  const journey = getJourneyFlags(data);
+  if (journey) {
+    const journeyAdvice = buildJourneyPetsAdvice(journey, data, question);
+    if (journeyAdvice) return journeyAdvice;
+    // else fall through to normal advice
+  }
 
   const { 
     temp, humidity, wind, uvIndex, aqi, condition, visibility, city,
