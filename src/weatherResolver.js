@@ -225,6 +225,15 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   const daily = weather.daily || {}
   const times = hourly.time || []
 
+  // Support both API shapes: new (current) and legacy (current_weather)
+  const cur = weather.current || {}
+  const legacy = weather.current_weather || {}
+
+  // Normalize hourly key names (old API: weathercode; new API: weather_code)
+  const hourlyCode = hourly.weather_code || hourly.weathercode || []
+  const dailyCode = daily.weather_code || daily.weathercode || []
+
+  // ─── Find hour index ─────────────────────────────────────────────
   let hourIndex = -1
   if (times.length > 0 && timeRef?.hasSpecificHour) {
     const targetMs = timeRef.targetDate.getTime()
@@ -237,6 +246,7 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     if (bestDiff > 2 * 60 * 60 * 1000) hourIndex = -1
   }
 
+  // ─── Find day index ──────────────────────────────────────────────
   let dayIndex = -1
   if (daily.time && daily.time.length > 0) {
     const targetDay = new Date(timeRef?.targetDate ?? now)
@@ -258,27 +268,88 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   bundle._hourIndex = hourIndex
   bundle._dayIndex = dayIndex
 
-  const cur = weather.current || {}
-  bundle.temp = cur.temperature_2m
-  bundle.feelsLike = cur.apparent_temperature
-  bundle.humidity = cur.relative_humidity_2m
-  bundle.wind = cur.wind_speed_10m
-  bundle.windGust = cur.wind_gusts_10m
-  bundle.windDir = cur.wind_direction_10m
-  bundle.conditionCode = cur.weather_code
-  bundle.precipitation = cur.precipitation
-  bundle.cloudCover = cur.cloud_cover
-  bundle.pressure = cur.pressure_msl
+  // ─── Hoist primary values with fallbacks ─────────────────────────
+  // Try current → legacy current_weather → hourly[0] → daily[0]
 
+  const h0 = (key) => hourly?.[key]?.[0]
+  const d0 = (key) => daily?.[key]?.[0]
+
+  bundle.temp = cur.temperature_2m
+    ?? legacy.temperature
+    ?? h0('temperature_2m')
+    ?? null
+
+  bundle.feelsLike = cur.apparent_temperature
+    ?? cur.temperature_2m
+    ?? legacy.temperature
+    ?? h0('apparent_temperature')
+    ?? h0('temperature_2m')
+    ?? bundle.temp
+
+  bundle.humidity = cur.relative_humidity_2m
+    ?? h0('relative_humidity_2m')
+    ?? 50
+
+  bundle.wind = cur.wind_speed_10m
+    ?? legacy.windspeed
+    ?? h0('wind_speed_10m')
+    ?? 0
+
+  bundle.windDir = cur.wind_direction_10m
+    ?? legacy.winddirection
+    ?? h0('wind_direction_10m')
+    ?? 0
+
+  bundle.windGust = cur.wind_gusts_10m
+    ?? h0('wind_gusts_10m')
+    ?? 0
+
+  bundle.conditionCode = cur.weather_code
+    ?? legacy.weathercode
+    ?? h0('weather_code')
+    ?? hourlyCode[0]
+    ?? d0('weather_code')
+    ?? dailyCode[0]
+    ?? 0
+
+  bundle.precipitation = cur.precipitation
+    ?? h0('precipitation')
+    ?? 0
+
+  bundle.precipitationProb = h0('precipitation_probability')
+    ?? d0('precipitation_probability_max')
+    ?? 0
+
+  bundle.cloudCover = cur.cloud_cover
+    ?? h0('cloud_cover')
+    ?? 0
+
+  bundle.pressure = cur.pressure_msl
+    ?? h0('pressure_msl')
+    ?? null
+
+  bundle.visibility = h0('visibility') != null
+    ? h0('visibility') / 1000
+    : 10
+
+  bundle.uvIndex = h0('uv_index')
+    ?? d0('uv_index_max')
+    ?? 0
+
+  bundle.dewPoint = h0('dew_point_2m')
+    ?? null
+
+  // ─── Override with hourly if we have an hour match ───────────────
   if (hourIndex >= 0 && times[hourIndex]) {
     const h = hourly
+    const codeArr = hourlyCode
     if (h.temperature_2m?.[hourIndex] != null) bundle.temp = Math.round(h.temperature_2m[hourIndex])
     if (h.apparent_temperature?.[hourIndex] != null) bundle.feelsLike = Math.round(h.apparent_temperature[hourIndex])
     if (h.relative_humidity_2m?.[hourIndex] != null) bundle.humidity = h.relative_humidity_2m[hourIndex]
     if (h.wind_speed_10m?.[hourIndex] != null) bundle.wind = h.wind_speed_10m[hourIndex]
     if (h.wind_gusts_10m?.[hourIndex] != null) bundle.windGust = h.wind_gusts_10m[hourIndex]
     if (h.wind_direction_10m?.[hourIndex] != null) bundle.windDir = h.wind_direction_10m[hourIndex]
-    if (h.weather_code?.[hourIndex] != null) bundle.conditionCode = h.weather_code[hourIndex]
+    if (codeArr[hourIndex] != null) bundle.conditionCode = codeArr[hourIndex]
     if (h.precipitation?.[hourIndex] != null) bundle.precipitation = h.precipitation[hourIndex]
     if (h.precipitation_probability?.[hourIndex] != null) bundle.precipitationProb = h.precipitation_probability[hourIndex]
     if (h.cloud_cover?.[hourIndex] != null) bundle.cloudCover = h.cloud_cover[hourIndex]
@@ -289,14 +360,16 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     if (h.is_day?.[hourIndex] != null) bundle.isDay = h.is_day[hourIndex]
   }
 
+  // ─── Override with daily if we have a day match ──────────────────
   if (dayIndex >= 0 && daily.time?.[dayIndex]) {
     const d = daily
+    const codeArr = dailyCode
     if (d.temperature_2m_max?.[dayIndex] != null) bundle.tempMax = Math.round(d.temperature_2m_max[dayIndex])
     if (d.temperature_2m_min?.[dayIndex] != null) bundle.tempMin = Math.round(d.temperature_2m_min[dayIndex])
     if (d.apparent_temperature_max?.[dayIndex] != null) bundle.feelsMax = Math.round(d.apparent_temperature_max[dayIndex])
     if (d.apparent_temperature_min?.[dayIndex] != null) bundle.feelsMin = Math.round(d.apparent_temperature_min[dayIndex])
-    if (d.weather_code?.[dayIndex] != null && bundle.conditionCode == null) {
-      bundle.conditionCode = d.weather_code[dayIndex]
+    if (codeArr[dayIndex] != null && bundle.conditionCode == null) {
+      bundle.conditionCode = codeArr[dayIndex]
     }
     if (d.precipitation_sum?.[dayIndex] != null) bundle.precipitationSum = d.precipitation_sum[dayIndex]
     if (d.precipitation_probability_max?.[dayIndex] != null) bundle.precipitationProb = d.precipitation_probability_max[dayIndex]
@@ -314,7 +387,6 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
   bundle.condition = mapWeatherCode(bundle.conditionCode)
   return bundle
 }
-
 // ─── WMO CODE MAP ──────────────────────────────────────────────────────
 
 export function mapWeatherCode(code) {
