@@ -27,7 +27,7 @@ const LOCATION_STOPWORDS = new Set([
   'now', 'later', 'soon', 'outside', 'compare', 'versus', 'vs',
   'weather', 'forecast', 'temperature', 'check', 'show', 'tell',
   'give', 'what', 'how', 'is', 'will', 'be', 'and', 'or', 'in',
-  'at', 'on', 'for', 'to', 'from', 'of',
+  'at', 'on', 'for', 'to', 'from', 'of', 'about',
 ])
 
 const HOME_ALIASES = new Set([
@@ -61,6 +61,15 @@ function isPlausibleLocation(text) {
   if (/^(compare|check|show|tell|give|weather|forecast|what|how|when|where|is|are|will|can|should)\b/.test(t)) return false
   if (t.split(/\s+/).length > 3) return false
   return true
+}
+
+// ─── HOUR LABEL HELPER ──────────────────────────────────────────────────
+
+function formatHourLabel(hour24, minute = 0) {
+  const h12 = hour24 % 12 || 12
+  const ampm = hour24 >= 12 ? 'pm' : 'am'
+  const minStr = minute > 0 ? `:${String(minute).padStart(2, '0')}` : ''
+  return `${h12}${minStr}${ampm}`
 }
 
 // ─── TIME PARSING ───────────────────────────────────────────────────────
@@ -115,6 +124,9 @@ export function parseTimeReference(question, now = new Date()) {
     result.daysAhead = -1
     result.timePhrase = 'yesterday'
     result.hasExplicitTime = true
+  } else if (/\btoday\b/i.test(q)) {
+    result.timePhrase = 'today'
+    result.hasExplicitTime = true
   } else {
     const nextDayMatch = q.match(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
     if (nextDayMatch) {
@@ -158,6 +170,7 @@ export function parseTimeReference(question, now = new Date()) {
     }
   }
 
+  // Explicit "at 5pm" form
   const hourMatch = q.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i)
   if (hourMatch) {
     let hour = parseInt(hourMatch[1], 10)
@@ -170,6 +183,27 @@ export function parseTimeReference(question, now = new Date()) {
       result.explicitMinute = minute
       result.hasSpecificHour = true
       result.hasExplicitTime = true
+    }
+  }
+
+  // Loose "7pm" without "at"
+  if (!result.hasSpecificHour) {
+    const looseHourMatch = q.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
+    if (looseHourMatch) {
+      let hour = parseInt(looseHourMatch[1], 10)
+      const minute = parseInt(looseHourMatch[2], 10) || 0
+      const ampm = looseHourMatch[3]?.toLowerCase()
+      if (ampm === 'pm' && hour < 12) hour += 12
+      if (ampm === 'am' && hour === 12) hour = 0
+      if (hour >= 0 && hour <= 23) {
+        result.explicitHour = hour
+        result.explicitMinute = minute
+        result.hasSpecificHour = true
+        result.hasExplicitTime = true
+        if (!result.timePhrase) {
+          result.timePhrase = formatHourLabel(hour, minute)
+        }
+      }
     }
   }
 
@@ -195,6 +229,11 @@ export function parseTimeReference(question, now = new Date()) {
       result.hasExplicitTime = true
       if (!result.timePhrase) result.timePhrase = 'night'
     }
+  }
+
+  // Combine "tomorrow" + "5pm" into "tomorrow 5pm"
+  if (result.hasSpecificHour && result.timePhrase && !/\d/.test(result.timePhrase)) {
+    result.timePhrase = `${result.timePhrase} ${formatHourLabel(result.explicitHour, result.explicitMinute)}`
   }
 
   if (result.hasSpecificHour) {
@@ -323,6 +362,13 @@ export function sliceWeatherByTime(weather, timeRef, now = new Date()) {
     if (d.relative_humidity_2m_mean?.[dayIndex] != null) {
       bundle.humidityMean = d.relative_humidity_2m_mean[dayIndex]
     }
+  }
+
+  // ─── Day-only questions: use daily max as representative temp ──
+  // Fixes "today vs tomorrow" showing identical values.
+  if (hourIndex === -1 && dayIndex >= 0 && bundle.tempMax != null) {
+    bundle.temp = bundle.tempMax
+    if (bundle.feelsMax != null) bundle.feelsLike = bundle.feelsMax
   }
 
   bundle.condition = mapWeatherCode(bundle.conditionCode)
@@ -729,6 +775,8 @@ function buildNewContext(resolverOut, question) {
     return createComparisonContext({
       comparisonType: resolverOut.comparisonType,
       items,
+      timeLabel: resolverOut._timeLabel || null,
+      targetDate: resolverOut._targetDate || null,
       question,
     })
   }
@@ -786,20 +834,27 @@ function applyContext(context, question, now) {
     }
   }
 
+  // ─── COMPARISON: match a side by name (fixes "what about tokyo") ───
+  if (context.type === CONTEXT_TYPES.COMPARISON) {
+    const q = question.toLowerCase()
+    for (const item of context.payload.items || []) {
+      const label = (item.label || '').toLowerCase()
+      if (label && q.includes(label) && item.location?.lat != null) {
+        hints.location = item.location
+        break
+      }
+    }
+    if (!hasExplicitTime && context.payload.targetDate) {
+      hints.targetDate = context.payload.targetDate
+      hints.timeLabel = context.payload.timeLabel
+    }
+  }
+
   return hints
 }
 
 // ─── COLLAPSE WAYPOINTS TO JOURNEY BUNDLE ──────────────────────────────
 
-/**
- * Collapse N waypoint weather snapshots into ONE bundle shaped exactly
- * like a single-location bundle. Downstream advice modules read the same
- * fields they always read — they just get values that represent the
- * whole journey instead of one point.
- *
- * Worst-case for safety fields (condition, wind, precipitation, visibility, UV, AQI)
- * Average for comfort fields (temp, humidity, pressure, dewPoint)
- */
 export function collapseWaypointsToBundle(waypoints, baseBundle) {
   if (!Array.isArray(waypoints) || waypoints.length === 0) {
     return baseBundle || null
@@ -825,7 +880,6 @@ export function collapseWaypointsToBundle(waypoints, baseBundle) {
   const dews = nums('dewPoint')
   const pressures = nums('pressure')
 
-  // ─── Pick worst waypoint (dominant condition) ──────────────────
   const conditionRank = (w) => {
     const c = w.conditionCode ?? 0
     if (c >= 95) return 100
@@ -846,8 +900,7 @@ export function collapseWaypointsToBundle(waypoints, baseBundle) {
     conditionRank(b) > conditionRank(a) ? b : a
   , weathers[0])
 
-  const bundle = {
-    // Comfort — averages
+  return {
     temp: avg(temps) ?? baseBundle?.temp ?? null,
     feelsLike: avg(feels) ?? baseBundle?.feelsLike ?? null,
     humidity: avg(hums) ?? baseBundle?.humidity ?? null,
@@ -855,7 +908,6 @@ export function collapseWaypointsToBundle(waypoints, baseBundle) {
     dewPoint: avg(dews) ?? baseBundle?.dewPoint ?? null,
     pressure: avg(pressures) ?? baseBundle?.pressure ?? null,
 
-    // Safety — worst case
     tempMin: temps.length ? Math.round(Math.min(...temps)) : baseBundle?.tempMin ?? null,
     tempMax: temps.length ? Math.round(Math.max(...temps)) : baseBundle?.tempMax ?? null,
     windGust: gusts.length ? Math.round(Math.max(...gusts)) : baseBundle?.windGust ?? null,
@@ -866,22 +918,18 @@ export function collapseWaypointsToBundle(waypoints, baseBundle) {
     uvIndex: uvs.length ? Math.round(Math.max(...uvs)) : baseBundle?.uvIndex ?? null,
     aqi: aqis.length ? Math.round(Math.max(...aqis)) : baseBundle?.aqi ?? null,
 
-    // Condition — from worst waypoint
     condition: worst.condition || baseBundle?.condition || 'unknown',
     conditionCode: worst.conditionCode ?? baseBundle?.conditionCode ?? 0,
 
-    // Location identity
     city: baseBundle?.city ?? worst.city ?? null,
     lat: baseBundle?.lat ?? worst.lat ?? null,
     lon: baseBundle?.lon ?? worst.lon ?? null,
 
-    // Preserve hourly/daily for anything that wants it
     hourly: baseBundle?.hourly || {},
     daily: baseBundle?.daily || {},
     sunrise: baseBundle?.sunrise,
     sunset: baseBundle?.sunset,
 
-    // Opt-in context
     _journeyWaypoints: waypoints.map(w => ({
       label: w.label || 'Point',
       temp: w.weather?.temp,
@@ -891,11 +939,9 @@ export function collapseWaypointsToBundle(waypoints, baseBundle) {
       wind: w.weather?.wind,
     })),
   }
-
-  return bundle
 }
 
-// ─── ROUTE LEG BUILDER (shared between single + comparison) ────────────
+// ─── ROUTE LEG BUILDER ─────────────────────────────────────────────────
 
 async function buildRouteLeg(fromLoc, toLoc, mode, timeRef, now) {
   const route = await fetchRoute(fromLoc, toLoc, mode)
@@ -1000,8 +1046,8 @@ export async function resolveWeatherContext({
         type: 'comparison',
         comparisonType: 'time',
         items: [
-          { label: comparison.time1, bundle: sliceWeatherByTime(weather, t1, now) },
-          { label: comparison.time2, bundle: sliceWeatherByTime(weather, t2, now) },
+          { label: comparison.time1, bundle: sliceWeatherByTime(weather, t1, now), timeLabel: t1.timePhrase },
+          { label: comparison.time2, bundle: sliceWeatherByTime(weather, t2, now), timeLabel: t2.timePhrase },
         ],
         context: contextMeta,
       }
@@ -1025,15 +1071,18 @@ export async function resolveWeatherContext({
           label: loc.label || loc.name,
           bundle: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
           location: loc,
+          timeLabel: timeRef.timePhrase,
         })).filter(item => item.bundle != null)
 
         if (items.length >= 2) {
-          contextMeta.location = items.map(it => it.label).join(' vs ')
+          contextMeta.location = items.map(it => it.label).join(' · ')
           const out = {
             type: 'comparison',
             comparisonType: 'location',
             items,
             context: contextMeta,
+            _timeLabel: timeRef.timePhrase,
+            _targetDate: timeRef.targetDate.getTime(),
           }
           out.newContext = buildNewContext(out, question)
           return out
@@ -1078,7 +1127,6 @@ export async function resolveWeatherContext({
       const isComparison = detectedModes.length >= 2 && !hints.mode
 
       if (isComparison) {
-        // ─── Route comparison ─────────────────────────────────
         const legResults = await Promise.all(
           detectedModes.map(m => buildRouteLeg(fromLoc, toLoc, m, timeRef, now))
         )
@@ -1097,15 +1145,15 @@ export async function resolveWeatherContext({
         }
       }
 
-      // ─── Single-mode route ────────────────────────────────
       const mode = hints.mode || detectedModes[0] || detectMode(question)
       const leg = await buildRouteLeg(fromLoc, toLoc, mode, timeRef, now)
 
       if (leg) {
         const destWeather = leg.waypoints[leg.waypoints.length - 1]?.weather
-
-        // ─── Collapse the whole journey into ONE bundle ────
         const journeyBundle = collapseWaypointsToBundle(leg.waypoints, destWeather)
+        if (journeyBundle && timeRef.timePhrase) {
+          journeyBundle._timeLabel = timeRef.timePhrase
+        }
 
         const out = {
           type: 'route',
@@ -1118,7 +1166,6 @@ export async function resolveWeatherContext({
         return out
       }
 
-      // Route fetch failed — fall through to destination weather
       const destWeather = await fetchWeather(toLoc.lat, toLoc.lon)
       const out = {
         type: 'single',
@@ -1158,6 +1205,7 @@ export async function resolveWeatherContext({
       bundle.city = loc.label || loc.name
       bundle.lat = loc.lat
       bundle.lon = loc.lon
+      bundle._timeLabel = timeRef.timePhrase
     }
     contextMeta.location = loc.label || loc.name
 
@@ -1166,7 +1214,7 @@ export async function resolveWeatherContext({
     return out
   }
 
-  // ─── 4. Current location (fallback) ──────────────────────────────
+  // ─── 4. Current location ─────────────────────────────────────────
   let weather = baseWeather
   let timeRef = parseTimeReference(question, now)
 
@@ -1190,6 +1238,7 @@ export async function resolveWeatherContext({
     bundle.city = location?.name
     bundle.lat = location?.lat
     bundle.lon = location?.lon
+    bundle._timeLabel = timeRef.timePhrase
     bundle.savedLocations = savedLocations
     bundle.homeLat = homeLocation?.lat
     bundle.homeLon = homeLocation?.lon
