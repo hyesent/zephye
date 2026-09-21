@@ -786,11 +786,207 @@ function getUVSkinAdvice(uvIndex, skinType, medications = []) {
 }
 
 // ============================================================================
+// JOURNEY CONTEXT READER
+// ============================================================================
+
+/**
+ * Read the journey context injected by the merger when the user asked
+ * about a route. Returns null if no route is in play.
+ */
+function getJourneyFlags(data) {
+  const j = data?._journey;
+  if (!j) return null;
+  return {
+    hasRain: !!j.hasRain,
+    hasHeavyRain: !!j.hasHeavyRain,
+    hasThunderstorm: !!j.hasThunderstorm,
+    hasSnow: !!j.hasSnow,
+    hasIce: !!j.hasIce,
+    hasFog: !!j.hasFog,
+    isWet: !!j.isWetJourney,
+    tempMin: j.tempMin ?? null,
+    tempMax: j.tempMax ?? null,
+    tempSwing: j.tempSwing ?? null,
+    windMax: j.windMax ?? null,
+    rainStart: j.rainStart ?? null,
+    rainEnd: j.rainEnd ?? null,
+    worst: j.worstWaypoint ?? null,
+    best: j.bestWaypoint ?? null,
+    narrative: j.narrative ?? '',
+    duration: j.duration ?? null,
+    distance: j.distance ?? null,
+    mode: j.mode ?? null,
+    from: j.from ?? null,
+    to: j.to ?? null,
+  };
+}
+
+/**
+ * Build journey-aware beauty/skin/hair advice. Returns null if there's
+ * nothing meaningful to say (falls through to normal advice).
+ */
+function buildJourneyBeautyAdvice(journey, data, question) {
+  const q = (question || '').toLowerCase();
+
+  // ─── Detect hair type ────────────────────────────────────────────
+  let hairType = 'wavy';
+  if (q.includes('curly') || q.includes('curl')) hairType = 'curly';
+  if (q.includes('coily') || q.includes('kinky') || q.includes('4c') || q.includes('afro')) hairType = 'coily';
+  if (q.includes('straight') || q.includes('flat iron')) hairType = 'straight';
+  if (q.includes('color') || q.includes('dye') || q.includes('bleach') || q.includes('keratin') || q.includes('relaxer')) hairType = 'chemically_treated';
+  if (q.includes('gray') || q.includes('grey') || q.includes('silver') || q.includes('white hair')) hairType = 'gray_silver';
+
+  // ─── Detect skin type ────────────────────────────────────────────
+  let skinType = 'type3';
+  if (q.includes('oily') || q.includes('acne') || q.includes('breakout')) skinType = 'oily';
+  if (q.includes('dry skin') || q.includes('flake') || q.includes('tight')) skinType = 'dry';
+  if (q.includes('combination') || q.includes('t zone')) skinType = 'combination';
+  if (q.includes('sensitive') || q.includes('rosacea') || q.includes('redness')) skinType = 'sensitive';
+  if (q.includes('mature') || q.includes('aging') || q.includes('wrinkle')) skinType = 'mature';
+  if (q.includes('dark spot') || q.includes('melasma') || q.includes('hyperpigmentation')) skinType = 'hyperpigmentation';
+
+  // ─── Dew point at origin vs destination ──────────────────────────
+  const baseDewPoint = data.dewPoint || calcDewPoint(data.temp, data.humidity);
+
+  // Rough dew point shift with temp swing (saturating air warms/cools)
+  const endDewPoint = journey.tempMax != null && journey.tempMin != null && journey.tempSwing != null
+    ? baseDewPoint + (journey.tempMax - data.temp) * 0.3
+    : baseDewPoint;
+
+  const dewBehavior = getDewPointHairBehavior(endDewPoint, hairType);
+
+  // ─── Build advice lists ──────────────────────────────────────────
+  const advice = [];
+  const hair = [];
+  const skin = [];
+  const makeup = [];
+  const gear = [];
+
+  // ─── HAIR ────────────────────────────────────────────────────────
+  if (journey.hasThunderstorm || journey.hasHeavyRain) {
+    hair.push('Rain on the route will reset your style — protective style or satin-lined hood recommended.');
+    makeup.push('Rain along the way — waterproof mascara and eyeliner only.');
+  } else if (journey.hasRain) {
+    hair.push(`Rain expected${journey.rainStart ? ` around ${journey.rainStart}` : ''} — frizz risk at every stop.`);
+    makeup.push('Light rain — carry a compact umbrella, skip powder foundation today.');
+  }
+
+  if (journey.tempSwing != null && journey.tempSwing >= 10) {
+    advice.push(`Temperature swings ${journey.tempMin}°C to ${journey.tempMax}°C across the route — dew point will shift and hair will react.`);
+    hair.push(`Expect frizz to ${dewBehavior.frizz.split(' - ')[0].toLowerCase()} by arrival.`);
+  } else if (journey.tempMax != null && journey.tempMax >= 30) {
+    advice.push(`Hot at destination (${journey.tempMax}°C) — oil production and sweat will peak.`);
+    skin.push('Blotting papers and mattifying powder for arrival.');
+    makeup.push('Lightweight base only — anything heavy will melt.');
+  } else if (journey.tempMin != null && journey.tempMin <= 5) {
+    advice.push(`Cold along the route (${journey.tempMin}°C) — barrier stress and static hair.`);
+    skin.push('Occlusive balm before departure. Barrier cream after arrival.');
+    hair.push('Anti-static spray or a leave-in oil for ends.');
+  }
+
+  if (journey.windMax != null && journey.windMax > 35) {
+    advice.push(`Strong wind (up to ${journey.windMax} km/h) — windburn and tangles.`);
+    skin.push('Windburn risk — face oil or balm as a wind barrier.');
+    hair.push('Secure hair in a braid or bun. Loose hair will tangle and break.');
+    gear.push('silk scarf or satin-lined hood');
+  }
+
+  if (journey.hasFog) {
+    hair.push('Fog adds moisture to the air — extra frizz on arrival.');
+  }
+
+  if (journey.hasSnow) {
+    skin.push('Snow reflects UV — reapply sunscreen at the destination.');
+  }
+
+  // UV at destination
+  if (data.uvIndex > 6 && journey.duration) {
+    const hours = parseFloat(journey.duration) || 0;
+    if (hours >= 2) {
+      advice.push(`High UV at destination and a ${hours}-hour trip — sunscreen will need reapplication mid-journey.`);
+      skin.push('Reapply SPF at the halfway point. Set a phone reminder.');
+    }
+  }
+
+  // Pollution
+  if (data.aqi > 100) {
+    skin.push(`AQI ${data.aqi} along the route — double cleanse on arrival to remove particulates.`);
+  }
+
+  // Dry journey — quick note
+  if (!journey.hasRain && !journey.hasSnow && !journey.hasIce && !journey.hasHeavyRain) {
+    advice.push('Dry journey — no weather-specific beauty adjustments needed.');
+  }
+
+  // Nothing meaningful? Fall through.
+  if (advice.length === 0 && hair.length === 0 && skin.length === 0 && makeup.length === 0) {
+    return null;
+  }
+
+  // ─── Verdict line ────────────────────────────────────────────────
+  const modeLabel = {
+    car: 'drive', driving: 'drive', hgv: 'drive', truck: 'drive',
+    cycling: 'ride', bike: 'ride', bicycle: 'ride', cycle: 'ride',
+    walking: 'walk', foot: 'walk',
+    hiking: 'hike', trail: 'hike',
+    wheelchair: 'trip',
+  }[journey.mode] || 'trip';
+
+  const summaryMeta = [];
+  if (journey.distance) summaryMeta.push(journey.distance);
+  if (journey.duration) summaryMeta.push(journey.duration);
+  const metaStr = summaryMeta.length > 0 ? ` (${summaryMeta.join(' · ')})` : '';
+
+  const verdict = `For your ${modeLabel}${metaStr}:`;
+
+  // ─── Details rows ────────────────────────────────────────────────
+  const details = [];
+  if (hair.length > 0) details.push({ label: 'Hair', value: hair.join(' ') });
+  if (skin.length > 0) details.push({ label: 'Skin', value: skin.join(' ') });
+  if (makeup.length > 0) details.push({ label: 'Makeup', value: makeup.join(' ') });
+  if (gear.length > 0) details.push({ label: 'Bring', value: gear.join(', ') });
+  if (journey.from && journey.to) details.push({ label: 'Route', value: `${journey.from} → ${journey.to}` });
+
+  // ─── Note (worst spot) ───────────────────────────────────────────
+  const note = journey.worst
+    ? `Watch for ${journey.worst.reason} near ${journey.worst.label}.`
+    : '';
+
+  return {
+    verdict,
+    summary: advice.join(' '),
+    note,
+    details,
+    fullText: [
+      verdict,
+      '',
+      ...advice.map(a => `• ${a}`),
+      hair.length > 0 ? `\nHair: ${hair.join(' ')}` : '',
+      skin.length > 0 ? `Skin: ${skin.join(' ')}` : '',
+      makeup.length > 0 ? `Makeup: ${makeup.join(' ')}` : '',
+      gear.length > 0 ? `Bring: ${gear.join(', ')}` : '',
+      note ? `\n${note}` : '',
+    ].filter(Boolean).join('\n'),
+    _journeyAware: true,
+  };
+}
+
+// ============================================================================
 // ENHANCED MAIN SKIN & HAIR ADVICE FUNCTION
 // ============================================================================
 
 export const getSkinHairAdvice = (data, question = '') => {
   if (!data) return "Loading weather data...";
+
+  // ─── JOURNEY-AWARE BRANCH ──────────────────────────────────────
+  // If the user asked a follow-up to a route question, give advice
+  // for the whole journey instead of a single weather snapshot.
+  const journey = getJourneyFlags(data);
+  if (journey) {
+    const journeyAdvice = buildJourneyBeautyAdvice(journey, data, question);
+    if (journeyAdvice) return journeyAdvice;
+    // else fall through to normal advice
+  }
 
   const { 
     temp, humidity, uvIndex, wind, condition, feelsLike,
