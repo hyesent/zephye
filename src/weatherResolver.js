@@ -789,6 +789,112 @@ function applyContext(context, question, now) {
   return hints
 }
 
+// ─── COLLAPSE WAYPOINTS TO JOURNEY BUNDLE ──────────────────────────────
+
+/**
+ * Collapse N waypoint weather snapshots into ONE bundle shaped exactly
+ * like a single-location bundle. Downstream advice modules read the same
+ * fields they always read — they just get values that represent the
+ * whole journey instead of one point.
+ *
+ * Worst-case for safety fields (condition, wind, precipitation, visibility, UV, AQI)
+ * Average for comfort fields (temp, humidity, pressure, dewPoint)
+ */
+export function collapseWaypointsToBundle(waypoints, baseBundle) {
+  if (!Array.isArray(waypoints) || waypoints.length === 0) {
+    return baseBundle || null
+  }
+
+  const weathers = waypoints.map(w => w.weather).filter(Boolean)
+  if (weathers.length === 0) return baseBundle || null
+  if (weathers.length === 1) return weathers[0]
+
+  const nums = (key) => weathers.map(w => w[key]).filter(v => v != null && !isNaN(v))
+  const avg = (arr) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null
+
+  const temps = nums('temp')
+  const feels = nums('feelsLike')
+  const hums = nums('humidity')
+  const winds = nums('wind')
+  const gusts = nums('windGust')
+  const rains = nums('precipitationProb')
+  const precs = nums('precipitation')
+  const vis = nums('visibility')
+  const uvs = nums('uvIndex')
+  const aqis = nums('aqi')
+  const dews = nums('dewPoint')
+  const pressures = nums('pressure')
+
+  // ─── Pick worst waypoint (dominant condition) ──────────────────
+  const conditionRank = (w) => {
+    const c = w.conditionCode ?? 0
+    if (c >= 95) return 100
+    if (c >= 85 && c <= 86) return 90
+    if (c >= 71 && c <= 77) return 85
+    if (c === 65 || c === 82) return 80
+    if (c >= 61 && c <= 67) return 70
+    if (c === 80 || c === 81) return 65
+    if (c >= 51 && c <= 57) return 50
+    if (c === 45 || c === 48) return 40
+    if (c === 3) return 20
+    if (c === 2) return 15
+    if (c === 1) return 10
+    return 0
+  }
+
+  const worst = weathers.reduce((a, b) =>
+    conditionRank(b) > conditionRank(a) ? b : a
+  , weathers[0])
+
+  const bundle = {
+    // Comfort — averages
+    temp: avg(temps) ?? baseBundle?.temp ?? null,
+    feelsLike: avg(feels) ?? baseBundle?.feelsLike ?? null,
+    humidity: avg(hums) ?? baseBundle?.humidity ?? null,
+    wind: avg(winds) ?? baseBundle?.wind ?? null,
+    dewPoint: avg(dews) ?? baseBundle?.dewPoint ?? null,
+    pressure: avg(pressures) ?? baseBundle?.pressure ?? null,
+
+    // Safety — worst case
+    tempMin: temps.length ? Math.round(Math.min(...temps)) : baseBundle?.tempMin ?? null,
+    tempMax: temps.length ? Math.round(Math.max(...temps)) : baseBundle?.tempMax ?? null,
+    windGust: gusts.length ? Math.round(Math.max(...gusts)) : baseBundle?.windGust ?? null,
+    windMax: winds.length ? Math.round(Math.max(...winds)) : null,
+    precipitationProb: rains.length ? Math.round(Math.max(...rains)) : baseBundle?.precipitationProb ?? null,
+    precipitation: precs.length ? Math.round(Math.max(...precs) * 10) / 10 : baseBundle?.precipitation ?? 0,
+    visibility: vis.length ? Math.round(Math.min(...vis) * 10) / 10 : baseBundle?.visibility ?? null,
+    uvIndex: uvs.length ? Math.round(Math.max(...uvs)) : baseBundle?.uvIndex ?? null,
+    aqi: aqis.length ? Math.round(Math.max(...aqis)) : baseBundle?.aqi ?? null,
+
+    // Condition — from worst waypoint
+    condition: worst.condition || baseBundle?.condition || 'unknown',
+    conditionCode: worst.conditionCode ?? baseBundle?.conditionCode ?? 0,
+
+    // Location identity
+    city: baseBundle?.city ?? worst.city ?? null,
+    lat: baseBundle?.lat ?? worst.lat ?? null,
+    lon: baseBundle?.lon ?? worst.lon ?? null,
+
+    // Preserve hourly/daily for anything that wants it
+    hourly: baseBundle?.hourly || {},
+    daily: baseBundle?.daily || {},
+    sunrise: baseBundle?.sunrise,
+    sunset: baseBundle?.sunset,
+
+    // Opt-in context
+    _journeyWaypoints: waypoints.map(w => ({
+      label: w.label || 'Point',
+      temp: w.weather?.temp,
+      condition: w.weather?.condition,
+      conditionCode: w.weather?.conditionCode,
+      precipitationProb: w.weather?.precipitationProb,
+      wind: w.weather?.wind,
+    })),
+  }
+
+  return bundle
+}
+
 // ─── ROUTE LEG BUILDER (shared between single + comparison) ────────────
 
 async function buildRouteLeg(fromLoc, toLoc, mode, timeRef, now) {
@@ -958,7 +1064,6 @@ export async function resolveWeatherContext({
     if (!toLoc) toLoc = await resolveLocation(routeFromTo.to, savedLocations, homeLocation)
 
     if (fromLoc?.lat != null && toLoc?.lat != null) {
-      // Build time reference
       let timeRef = parseTimeReference(question, now)
       if (!timeRef.hasExplicitTime && hints.targetDate) {
         timeRef = {
@@ -969,7 +1074,6 @@ export async function resolveWeatherContext({
         }
       }
 
-      // Detect modes
       const detectedModes = detectModes(question)
       const isComparison = detectedModes.length >= 2 && !hints.mode
 
@@ -999,9 +1103,13 @@ export async function resolveWeatherContext({
 
       if (leg) {
         const destWeather = leg.waypoints[leg.waypoints.length - 1]?.weather
+
+        // ─── Collapse the whole journey into ONE bundle ────
+        const journeyBundle = collapseWaypointsToBundle(leg.waypoints, destWeather)
+
         const out = {
           type: 'route',
-          bundle: destWeather,
+          bundle: journeyBundle,
           route: leg.route,
           waypoints: leg.waypoints,
           context: contextMeta,
@@ -1010,7 +1118,7 @@ export async function resolveWeatherContext({
         return out
       }
 
-      // Route fetch failed
+      // Route fetch failed — fall through to destination weather
       const destWeather = await fetchWeather(toLoc.lat, toLoc.lon)
       const out = {
         type: 'single',
@@ -1058,7 +1166,7 @@ export async function resolveWeatherContext({
     return out
   }
 
-  // ─── 4. Current location ─────────────────────────────────────────
+  // ─── 4. Current location (fallback) ──────────────────────────────
   let weather = baseWeather
   let timeRef = parseTimeReference(question, now)
 
@@ -1108,4 +1216,5 @@ export default {
   detectModes,
   fetchRoute,
   mapWeatherCode,
+  collapseWaypointsToBundle,
 }
