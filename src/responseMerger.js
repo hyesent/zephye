@@ -291,194 +291,58 @@ function buildComparisonTakeaway(enriched, comparisonType) {
   return parts.join(' · ') + '.'
 }
 
-// ─── MERGE: ROUTE (with traffic) ───────────────────────────────────────
+// ─── ROUTE DIAGRAM HELPERS ─────────────────────────────────────────────
 
-async function mergeRoute(resolverOut, intents, question) {
-  const waypoints = resolverOut.waypoints || []
-  const route = resolverOut.route || {}
+function weatherEmoji(code) {
+  if (code == null) return '🌡️'
+  if (code === 0) return '☀️'
+  if (code === 1) return '🌤️'
+  if (code === 2) return '⛅'
+  if (code === 3) return '☁️'
+  if (code === 45 || code === 48) return '🌫️'
+  if (code >= 51 && code <= 57) return '🌦️'
+  if (code >= 61 && code <= 67) return '🌧️'
+  if (code >= 71 && code <= 77) return '❄️'
+  if (code >= 80 && code <= 82) return '🌧️'
+  if (code >= 85 && code <= 86) return '❄️'
+  if (code >= 95) return '⛈️'
+  return '🌡️'
+}
 
-  const routeIntent = intents.find(i => i.id === 'route')
-  const trafficIntent = intents.find(i => i.id === 'traffic')
-  const otherIntents = intents.filter(i => i.id !== 'route' && i.id !== 'traffic')
+function buildRouteDiagram(waypoints) {
+  if (!Array.isArray(waypoints) || waypoints.length === 0) return ''
 
-  // ─── Waypoint narratives (weather) ─────────────────────────────
-  const enrichedWaypoints = []
+  const parts = []
+  for (let i = 0; i < waypoints.length; i++) {
+    const wp = waypoints[i]
+    const label = wp.label || `Point ${i + 1}`
+    const code = wp.weather?.conditionCode
+    const emoji = weatherEmoji(code)
+    const rain = wp.weather?.precipitationProb
+    const rainBadge = (rain != null && rain >= 60) ? `${Math.round(rain)}%` : ''
+    parts.push(`${label} ${emoji}${rainBadge}`)
+  }
+
+  return parts.join(' → ')
+}
+
+function buildRouteWaypointBlock(waypoints) {
+  if (!Array.isArray(waypoints) || waypoints.length === 0) return ''
+
+  const lines = []
   for (const wp of waypoints) {
-    if (!wp.weather) {
-      enrichedWaypoints.push({ ...wp, narrative: null })
-      continue
-    }
-    const runs = otherIntents.length > 0 ? await runIntents(otherIntents, wp.weather, question) : []
-    const narrative = runs.length > 0
-      ? await mergeSide(runs)
-      : {
-          verdict: `${wp.weather.temp ?? '--'}°C · ${wp.weather.condition ?? 'unknown'}`,
-          summary: '',
-          details: [],
-          fullText: '',
-        }
-    enrichedWaypoints.push({ ...wp, narrative })
+    const label = wp.labelMedium || wp.label || 'Point'
+    const w = wp.weather || {}
+    const temp = w.temp != null ? `${Math.round(w.temp)}°C` : '—'
+    const emoji = weatherEmoji(w.conditionCode)
+    const rain = w.precipitationProb != null ? `${Math.round(w.precipitationProb)}% rain` : ''
+    const wind = (w.wind != null && w.wind > 20) ? `${Math.round(w.wind)} km/h` : ''
+
+    const bits = [temp, w.condition || '', rain, wind].filter(Boolean)
+    lines.push(`${emoji} ${label} — ${bits.join(' · ')}`)
   }
 
-  const summary = buildRouteWeatherSummary(enrichedWaypoints)
-
-  // ─── Route directions ──────────────────────────────────────────
-  let directions = []
-  if (routeIntent && typeof routeIntent.fn === 'function') {
-    try {
-      const routeData = {
-        ...resolverOut.bundle,
-        _route: route,
-        _waypoints: enrichedWaypoints,
-      }
-      const result = await routeIntent.fn(routeData, question)
-      if (typeof result === 'string') {
-        directions = result.split('\n').filter(l => /^\s*\d+\./.test(l)).map(l => l.trim())
-      } else if (result?.directions) {
-        directions = result.directions
-      } else if (result?.fullText) {
-        directions = result.fullText.split('\n').filter(l => /^\s*\d+\./.test(l)).map(l => l.trim())
-      }
-    } catch (err) {
-      console.error('[responseMerger] Route intent failed:', err)
-    }
-  }
-
-  // ─── Traffic on route ──────────────────────────────────────────
-  let traffic = null
-  if (trafficIntent && typeof trafficIntent.fn === 'function') {
-    try {
-      const trafficData = {
-        ...(resolverOut.bundle || {}),
-        _route: route,
-        _waypoints: waypoints.map(wp => ({
-          label: wp.label,
-          lat: wp.location?.lat,
-          lon: wp.location?.lon,
-        })),
-        // If RouteAdvice set these, pass them through
-        fromLat: route.from?.lat,
-        fromLon: route.from?.lon,
-        toLat: route.to?.lat,
-        toLon: route.to?.lon,
-      }
-      const trafficResult = await trafficIntent.fn(trafficData, question)
-      const normalized = normalizeContent(trafficResult)
-      traffic = {
-        verdict: normalized.verdict || '',
-        summary: normalized.summary || '',
-        note: normalized.note || '',
-        details: normalized.details || [],
-        fullText: normalized.fullText || '',
-      }
-    } catch (err) {
-      console.error('[responseMerger] Traffic intent failed:', err)
-    }
-  }
-
-  // ─── Distance / duration formatting ────────────────────────────
-  const distanceKm = route.distance ? route.distance / 1000 : null
-  const durationMin = route.duration ? route.duration / 60 : null
-
-  const distanceLabel = distanceKm != null
-    ? (distanceKm < 1 ? `${Math.round(distanceKm * 1000)} m`
-      : distanceKm < 10 ? `${distanceKm.toFixed(1)} km`
-      : `${Math.round(distanceKm)} km`)
-    : null
-
-  const durationLabel = durationMin != null
-    ? (durationMin < 60 ? `${Math.round(durationMin)} min`
-      : `${Math.floor(durationMin / 60)}h ${Math.round(durationMin % 60)}m`)
-    : null
-
-  // ─── Warnings ──────────────────────────────────────────────────
-  const routeWarnings = extractRouteWarnings(enrichedWaypoints)
-  const trafficWarnings = traffic?.note ? [traffic.note] : []
-  const allWarnings = [...routeWarnings, ...trafficWarnings]
-
-  // ─── Directions block ──────────────────────────────────────────
-  const directionsText = directions.length > 0
-    ? directions.map((step, i) => `${i + 1}. ${step}`).join('\n')
-    : ''
-
-  // ─── Full text (for "more details") ────────────────────────────
-  const fullTextParts = []
-
-  if (distanceLabel || durationLabel) {
-    fullTextParts.push(`Route Summary: ${[distanceLabel, durationLabel].filter(Boolean).join(' · ')}`)
-    fullTextParts.push('')
-  }
-
-  if (summary) {
-    fullTextParts.push('Weather along the way:')
-    fullTextParts.push(summary)
-    fullTextParts.push('')
-  }
-
-  if (enrichedWaypoints.length > 0) {
-    fullTextParts.push('Waypoints:')
-    enrichedWaypoints.forEach(wp => {
-      const w = wp.weather || {}
-      const bits = []
-      if (w.temp != null) bits.push(`${Math.round(w.temp)}°C`)
-      if (w.condition) bits.push(w.condition)
-      if (w.precipitationProb > 20) bits.push(`${Math.round(w.precipitationProb)}% rain`)
-      if (w.wind > 20) bits.push(`${Math.round(w.wind)} km/h wind`)
-      fullTextParts.push(`  ${wp.label} — ${bits.join(' · ')}`)
-    })
-    fullTextParts.push('')
-  }
-
-  if (traffic?.summary) {
-    fullTextParts.push('Traffic:')
-    fullTextParts.push(traffic.summary)
-    if (traffic.fullText && traffic.fullText !== traffic.summary) {
-      fullTextParts.push(traffic.fullText)
-    }
-    fullTextParts.push('')
-  }
-
-  if (directionsText) {
-    fullTextParts.push(`Directions (${directions.length} steps):`)
-    fullTextParts.push(directionsText)
-  }
-
-  // ─── Verdict / summary / note ──────────────────────────────────
-  const verdictLine = `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`
-
-  const summaryParts = []
-  if (distanceLabel && durationLabel) summaryParts.push(`${distanceLabel} · ${durationLabel}`)
-  if (summary) summaryParts.push(summary)
-
-  const noteParts = []
-  if (traffic?.verdict) noteParts.push(traffic.verdict)
-  if (allWarnings.length > 0) noteParts.push(allWarnings.join(' · '))
-
-  return {
-    type: 'route',
-    title: verdictLine,
-    from: route.from?.label || route.from?.name,
-    to: route.to?.label || route.to?.name,
-    mode: route.mode || 'car',
-    distance: distanceLabel,
-    duration: durationLabel,
-    summary: summaryParts.join('. '),
-    note: noteParts.join(' · '),
-    waypoints: enrichedWaypoints.map(wp => ({
-      label: wp.label,
-      weather: {
-        temp: wp.weather?.temp,
-        condition: wp.weather?.condition,
-        precipitationProb: wp.weather?.precipitationProb,
-        wind: wp.weather?.wind,
-      },
-      narrative: wp.narrative,
-    })),
-    directions,
-    warnings: allWarnings,
-    traffic,
-    fullText: fullTextParts.join('\n'),
-  }
+  return lines.join('\n')
 }
 
 function buildRouteWeatherSummary(waypoints) {
@@ -530,6 +394,191 @@ function extractRouteWarnings(waypoints) {
     if (w.conditionCode >= 95) warnings.push(`Thunderstorm at ${wp.label}`)
   }
   return [...new Set(warnings)]
+}
+
+// ─── MERGE: ROUTE (with traffic) ───────────────────────────────────────
+
+async function mergeRoute(resolverOut, intents, question) {
+  const waypoints = resolverOut.waypoints || []
+  const route = resolverOut.route || {}
+
+  const routeIntent = intents.find(i => i.id === 'route')
+  const trafficIntent = intents.find(i => i.id === 'traffic')
+  const otherIntents = intents.filter(i => i.id !== 'route' && i.id !== 'traffic')
+
+  const enrichedWaypoints = []
+  for (const wp of waypoints) {
+    if (!wp.weather) {
+      enrichedWaypoints.push({ ...wp, narrative: null })
+      continue
+    }
+    const runs = otherIntents.length > 0 ? await runIntents(otherIntents, wp.weather, question) : []
+    const narrative = runs.length > 0
+      ? await mergeSide(runs)
+      : {
+          verdict: `${wp.weather.temp ?? '--'}°C · ${wp.weather.condition ?? 'unknown'}`,
+          summary: '',
+          details: [],
+          fullText: '',
+        }
+    enrichedWaypoints.push({ ...wp, narrative })
+  }
+
+  const summary = buildRouteWeatherSummary(enrichedWaypoints)
+  const diagram = buildRouteDiagram(enrichedWaypoints)
+  const waypointBlock = buildRouteWaypointBlock(enrichedWaypoints)
+
+  let directions = []
+  if (routeIntent && typeof routeIntent.fn === 'function') {
+    try {
+      const routeData = {
+        ...resolverOut.bundle,
+        _route: route,
+        _waypoints: enrichedWaypoints,
+      }
+      const result = await routeIntent.fn(routeData, question)
+      if (typeof result === 'string') {
+        directions = result.split('\n').filter(l => /^\s*\d+\./.test(l)).map(l => l.trim())
+      } else if (result?.directions) {
+        directions = result.directions
+      } else if (result?.fullText) {
+        directions = result.fullText.split('\n').filter(l => /^\s*\d+\./.test(l)).map(l => l.trim())
+      }
+    } catch (err) {
+      console.error('[responseMerger] Route intent failed:', err)
+    }
+  }
+
+  let traffic = null
+  if (trafficIntent && typeof trafficIntent.fn === 'function') {
+    try {
+      const trafficData = {
+        ...(resolverOut.bundle || {}),
+        _route: route,
+        _waypoints: waypoints.map(wp => ({
+          label: wp.label,
+          lat: wp.location?.lat,
+          lon: wp.location?.lon,
+        })),
+        fromLat: route.from?.lat,
+        fromLon: route.from?.lon,
+        toLat: route.to?.lat,
+        toLon: route.to?.lon,
+      }
+      const trafficResult = await trafficIntent.fn(trafficData, question)
+      const normalized = normalizeContent(trafficResult)
+      traffic = {
+        verdict: normalized.verdict || '',
+        summary: normalized.summary || '',
+        note: normalized.note || '',
+        details: normalized.details || [],
+        fullText: normalized.fullText || '',
+      }
+    } catch (err) {
+      console.error('[responseMerger] Traffic intent failed:', err)
+    }
+  }
+
+  const distanceKm = route.distance ? route.distance / 1000 : null
+  const durationMin = route.duration ? route.duration / 60 : null
+
+  const distanceLabel = distanceKm != null
+    ? (distanceKm < 1 ? `${Math.round(distanceKm * 1000)} m`
+      : distanceKm < 10 ? `${distanceKm.toFixed(1)} km`
+      : `${Math.round(distanceKm)} km`)
+    : null
+
+  const durationLabel = durationMin != null
+    ? (durationMin < 60 ? `${Math.round(durationMin)} min`
+      : `${Math.floor(durationMin / 60)}h ${Math.round(durationMin % 60)}m`)
+    : null
+
+  const routeWarnings = extractRouteWarnings(enrichedWaypoints)
+  const trafficWarnings = traffic?.note ? [traffic.note] : []
+  const allWarnings = [...routeWarnings, ...trafficWarnings]
+
+  const directionsText = directions.length > 0
+    ? directions.map((step, i) => `${i + 1}. ${step}`).join('\n')
+    : ''
+
+  const fullTextParts = []
+
+  if (distanceLabel || durationLabel) {
+    fullTextParts.push(`Route Summary: ${[distanceLabel, durationLabel].filter(Boolean).join(' · ')}`)
+    fullTextParts.push('')
+  }
+
+  if (diagram) {
+    fullTextParts.push('Weather along the way:')
+    fullTextParts.push(diagram)
+    fullTextParts.push('')
+  }
+
+  if (summary) {
+    fullTextParts.push(summary)
+    fullTextParts.push('')
+  }
+
+  if (waypointBlock) {
+    fullTextParts.push('Stops:')
+    fullTextParts.push(waypointBlock)
+    fullTextParts.push('')
+  }
+
+  if (traffic?.summary) {
+    fullTextParts.push('Traffic:')
+    fullTextParts.push(traffic.summary)
+    if (traffic.fullText && traffic.fullText !== traffic.summary) {
+      fullTextParts.push(traffic.fullText)
+    }
+    fullTextParts.push('')
+  }
+
+  if (directionsText) {
+    fullTextParts.push(`Directions (${directions.length} steps):`)
+    fullTextParts.push(directionsText)
+  }
+
+  const verdictLine = `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`
+
+  const summaryParts = []
+  if (diagram) summaryParts.push(diagram)
+  if (distanceLabel && durationLabel) summaryParts.push(`${distanceLabel} · ${durationLabel}`)
+  if (summary) summaryParts.push(summary)
+
+  const noteParts = []
+  if (traffic?.verdict) noteParts.push(traffic.verdict)
+  if (allWarnings.length > 0) noteParts.push(allWarnings.join(' · '))
+
+  return {
+    type: 'route',
+    title: verdictLine,
+    from: route.from?.label || route.from?.name,
+    to: route.to?.label || route.to?.name,
+    mode: route.mode || 'car',
+    distance: distanceLabel,
+    duration: durationLabel,
+    summary: summaryParts.join('. '),
+    note: noteParts.join(' · '),
+    diagram,
+    waypoints: enrichedWaypoints.map(wp => ({
+      label: wp.label,
+      labelMedium: wp.labelMedium,
+      labelFull: wp.labelFull,
+      weather: {
+        temp: wp.weather?.temp,
+        condition: wp.weather?.condition,
+        conditionCode: wp.weather?.conditionCode,
+        precipitationProb: wp.weather?.precipitationProb,
+        wind: wp.weather?.wind,
+      },
+      narrative: wp.narrative,
+    })),
+    directions,
+    warnings: allWarnings,
+    traffic,
+    fullText: fullTextParts.join('\n'),
+  }
 }
 
 // ─── MERGE: MULTI-LOCATION ─────────────────────────────────────────────
