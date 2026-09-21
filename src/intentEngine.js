@@ -23,16 +23,17 @@ import { getRouteAdvice } from './data/RouteAdvice.js'
 // ─── CONFIG ─────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  MAX_INTENTS: 2,               // was 3 — 2 is plenty, more causes noise
-  MIN_SCORE_THRESHOLD: 45,      // was 20 — this is the main fix
-  SECONDARY_THRESHOLD: 0.75,    // was 0.4 — 2nd intent must be strong
+  MAX_INTENTS: 3,
+  MIN_SCORE_THRESHOLD: 45,
+  SECONDARY_THRESHOLD: 0.75,
+  SOFT_SECONDARY_THRESHOLD: 0.6,
   EXCLUDE_PENALTY: 30,
   CONTEXT_BOOST: 15,
   PRIORITY_BONUS: 2,
 }
 
-// Words too generic to award single-word points.
-// Prevents "home", "work", "the", etc. from triggering unrelated intents.
+const CONJUNCTION_WORDS = /\b(and|also|plus|with|both|check|as well as|along|while|meanwhile|too)\b/i
+
 const GENERIC_WORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'to', 'from', 'for', 'in', 'on', 'at',
   'is', 'it', 'be', 'was', 'will', 'can', 'how', 'what', 'when', 'where',
@@ -69,8 +70,37 @@ export const INTENT_MAP = [
       'cycling route',
       'from home to work', 'from home to school',
       'from work to home', 'from school to home',
+      'my route',
     ],
     contextBoost: ['route', 'directions', 'get to', 'how far', 'distance', 'drive to', 'navigate'],
+    exclude: [],
+  },
+  {
+    id: 'traffic',
+    name: 'Traffic',
+    priority: 1,
+    section: 'Traffic',
+    fn: getTrafficAdvice,
+    keys: [
+      'traffic', 'traffic conditions', 'traffic report',
+      'is there traffic', 'any traffic', 'traffic jam',
+      'traffic congestion', 'traffic delay', 'traffic update',
+      'traffic today', 'traffic now', 'current traffic',
+      'traffic on my route', 'traffic on the way',
+      'check for traffic', 'check traffic',
+      'accident', 'car accident', 'crash', 'collision',
+      'road accident', 'accident on', 'crash on',
+      'roadworks', 'road construction', 'construction zone',
+      'road work', 'lane closure', 'road closure',
+      'highway closure', 'expect delays',
+      'heavy traffic', 'slow traffic', 'bumper to bumper',
+      'gridlock', 'traffic stopped',
+      'rush hour', 'peak hour', 'morning traffic',
+      'evening traffic', 'commute traffic',
+      'traffic incidents', 'traffic incident',
+      'any incidents', 'incidents on',
+    ],
+    contextBoost: ['traffic', 'accident', 'jam', 'congestion', 'delay', 'incident'],
     exclude: [],
   },
   {
@@ -109,31 +139,6 @@ export const INTENT_MAP = [
     ],
     contextBoost: ['weather', 'forecast', 'temperature', 'rain', 'snow', 'sunny', 'cloudy', 'windy', 'humid', 'storm'],
     exclude: ['crop', 'plant', 'farm', 'sport', 'dog', 'pet', 'skin', 'hair', 'wedding', 'party'],
-  },
-  {
-    id: 'traffic',
-    name: 'Traffic',
-    priority: 1,
-    section: 'Traffic',
-    fn: getTrafficAdvice,
-    keys: [
-      'traffic', 'traffic conditions', 'traffic report',
-      'is there traffic', 'any traffic', 'traffic jam',
-      'traffic congestion', 'traffic delay', 'traffic update',
-      'traffic today', 'traffic now', 'current traffic',
-      'traffic on my route', 'traffic on the way',
-      'accident', 'car accident', 'crash', 'collision',
-      'road accident', 'accident on', 'crash on',
-      'roadworks', 'road construction', 'construction zone',
-      'road work', 'lane closure', 'road closure',
-      'highway closure', 'expect delays',
-      'heavy traffic', 'slow traffic', 'bumper to bumper',
-      'gridlock', 'traffic stopped',
-      'rush hour', 'peak hour', 'morning traffic',
-      'evening traffic', 'commute traffic',
-    ],
-    contextBoost: ['traffic', 'accident', 'jam', 'congestion', 'delay'],
-    exclude: ['weather', 'forecast', 'rain', 'snow'],
   },
   {
     id: 'sports',
@@ -670,12 +675,10 @@ export const INTENT_MAP = [
 
 const scoreQuestion = (question, intent) => {
   const q = question.toLowerCase().trim()
-  const words = q.split(/\s+/)
   let score = 0
   const matched = []
   const excluded = []
 
-  // 1. Exclusions
   if (intent.exclude) {
     for (const ex of intent.exclude) {
       if (q.includes(ex.toLowerCase())) {
@@ -685,28 +688,20 @@ const scoreQuestion = (question, intent) => {
     }
   }
 
-  // 2. Key phrase matches — skip generic words
   for (const key of intent.keys) {
     const k = key.toLowerCase()
-    if (q === k) {
-      score += 100
-      matched.push(`[exact] ${key}`)
-      continue
-    }
+    if (q === k) { score += 100; matched.push(`[exact] ${key}`); continue }
     if (q.includes(k)) {
       const wordCount = k.split(/\s+/).length
       if (wordCount >= 5) { score += 80; matched.push(`[long] ${key}`) }
       else if (wordCount >= 4) { score += 65; matched.push(`[phrase] ${key}`) }
       else if (wordCount >= 3) { score += 45; matched.push(`[3-word] ${key}`) }
       else if (wordCount === 2) {
-        // only award 2-word matches if at least one word is non-generic
         const parts = k.split(/\s+/)
         const hasSpecific = parts.some(p => !GENERIC_WORDS.has(p))
         if (hasSpecific) { score += 25; matched.push(`[2-word] ${key}`) }
       } else {
-        // Single word — SKIP if generic
         if (GENERIC_WORDS.has(k)) continue
-        // Also require 4+ chars
         if (k.length < 4) continue
         score += 8
         matched.push(`[single] ${key}`)
@@ -714,19 +709,14 @@ const scoreQuestion = (question, intent) => {
     }
   }
 
-  // 3. Context boost
   if (intent.contextBoost) {
     for (const boost of intent.contextBoost) {
       const b = boost.toLowerCase()
       if (GENERIC_WORDS.has(b)) continue
-      if (q.includes(b)) {
-        score += CONFIG.CONTEXT_BOOST
-        matched.push(`[context] ${boost}`)
-      }
+      if (q.includes(b)) { score += CONFIG.CONTEXT_BOOST; matched.push(`[context] ${boost}`) }
     }
   }
 
-  // 4. Priority bonus
   score += (10 - intent.priority) * CONFIG.PRIORITY_BONUS
 
   return { score, matched, excluded }
@@ -749,10 +739,20 @@ export const detectIntents = (question) => {
     return a.intent.priority - b.intent.priority
   })
 
-  if (results.length > 0) results[0].isPrimary = true
+  if (results.length === 0) return []
+  results[0].isPrimary = true
 
-  const primaryScore = results[0]?.score || 0
-  const threshold = primaryScore * CONFIG.SECONDARY_THRESHOLD
+  const primaryScore = results[0].score
+
+  // Multi-intent boost: if the question uses a conjunction word,
+  // relax the secondary threshold so secondary intents that scored
+  // well (>= 60% of primary) also fire.
+  const hasConjunction = CONJUNCTION_WORDS.test(question)
+  const thresholdRatio = hasConjunction
+    ? CONFIG.SOFT_SECONDARY_THRESHOLD
+    : CONFIG.SECONDARY_THRESHOLD
+
+  const threshold = primaryScore * thresholdRatio
   const filtered = results.filter(r => r.score >= threshold)
 
   return filtered.slice(0, CONFIG.MAX_INTENTS)
