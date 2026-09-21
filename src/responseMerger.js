@@ -2,6 +2,8 @@
 // RESPONSE MERGER — Assembles final response from resolver + intent outputs
 // ============================================================================
 
+import { buildJourneyContext } from './journeyContext.js'
+
 const ASYNC_INTENTS = new Set([
   'farming', 'stargazing', 'route', 'traffic', 'traveling',
 ])
@@ -396,7 +398,7 @@ function extractRouteWarnings(waypoints) {
   return [...new Set(warnings)]
 }
 
-// ─── MERGE: ROUTE (with traffic) ───────────────────────────────────────
+// ─── MERGE: ROUTE (with traffic + downstream intents) ──────────────────
 
 async function mergeRoute(resolverOut, intents, question) {
   const waypoints = resolverOut.waypoints || []
@@ -404,11 +406,12 @@ async function mergeRoute(resolverOut, intents, question) {
 
   const routeIntent = intents.find(i => i.id === 'route')
   const trafficIntent = intents.find(i => i.id === 'traffic')
-  // 🔥 other intents now run against the destination bundle, not just waypoints
-  const otherIntents = intents.filter(i => i.id !== 'route' && i.id !== 'traffic')
+  const weatherIntent = intents.find(i => i.id === 'weather')
+  const otherIntents = intents.filter(i =>
+    i.id !== 'route' && i.id !== 'traffic' && i.id !== 'weather'
+  )
 
   // ─── Waypoint narratives (weather only per-waypoint) ───────────
-  const weatherIntent = intents.find(i => i.id === 'weather')
   const enrichedWaypoints = []
   for (const wp of waypoints) {
     if (!wp.weather) {
@@ -427,11 +430,14 @@ async function mergeRoute(resolverOut, intents, question) {
     enrichedWaypoints.push({ ...wp, narrative })
   }
 
+  // ─── Build journey context ─────────────────────────────────────
+  const journey = buildJourneyContext({ route, waypoints: enrichedWaypoints })
+
   const summary = buildRouteWeatherSummary(enrichedWaypoints)
   const diagram = buildRouteDiagram(enrichedWaypoints)
   const waypointBlock = buildRouteWaypointBlock(enrichedWaypoints)
 
-  // ─── Directions from route intent ──────────────────────────────
+  // ─── Directions ────────────────────────────────────────────────
   let directions = []
   if (routeIntent && typeof routeIntent.fn === 'function') {
     try {
@@ -439,6 +445,7 @@ async function mergeRoute(resolverOut, intents, question) {
         ...resolverOut.bundle,
         _route: route,
         _waypoints: enrichedWaypoints,
+        _journey: journey,
       }
       const result = await routeIntent.fn(routeData, question)
       if (typeof result === 'string') {
@@ -453,12 +460,10 @@ async function mergeRoute(resolverOut, intents, question) {
     }
   }
 
-  // ─── Traffic on route ──────────────────────────────────────────
+  // ─── Traffic ───────────────────────────────────────────────────
   let traffic = null
   if (trafficIntent && typeof trafficIntent.fn === 'function') {
     try {
-      // FIX: pass the destination as the "current location" so traffic
-      // analyzes the actual endpoint, not the raw question text.
       const destBundle = resolverOut.bundle || {}
       const trafficData = {
         ...destBundle,
@@ -471,6 +476,7 @@ async function mergeRoute(resolverOut, intents, question) {
           lat: wp.location?.lat,
           lon: wp.location?.lon,
         })),
+        _journey: journey,
         fromLat: route.from?.lat,
         fromLon: route.from?.lon,
         toLat: route.to?.lat,
@@ -490,16 +496,15 @@ async function mergeRoute(resolverOut, intents, question) {
     }
   }
 
-  // ─── Other intents (pets, clothing, health, etc.) ──────────────
-  // These run against the destination bundle, not the raw waypoints.
+  // ─── Downstream intents — receive _journey ─────────────────────
   let otherSections = []
   if (otherIntents.length > 0 && resolverOut.bundle) {
-    // Give the bundle the destination identity so intents can reference it
     const destBundle = {
       ...resolverOut.bundle,
       city: route.to?.label || route.to?.name || resolverOut.bundle.city,
       lat: route.to?.lat ?? resolverOut.bundle.lat,
       lon: route.to?.lon ?? resolverOut.bundle.lon,
+      _journey: journey,   // ← downstream modules read this
     }
     const runs = await runIntents(otherIntents, destBundle, question)
     otherSections = runs.map(({ intent, result }) => {
@@ -536,7 +541,6 @@ async function mergeRoute(resolverOut, intents, question) {
     ? directions.map((step, i) => `${i + 1}. ${step}`).join('\n')
     : ''
 
-  // ─── Full text ─────────────────────────────────────────────────
   const fullTextParts = []
 
   if (distanceLabel || durationLabel) {
@@ -570,7 +574,6 @@ async function mergeRoute(resolverOut, intents, question) {
     fullTextParts.push('')
   }
 
-  // Append other sections to full text
   otherSections.forEach(s => {
     const c = s.content
     const text = typeof c === 'string' ? c : [c.verdict, c.summary, c.fullText].filter(Boolean).join('\n')
@@ -586,7 +589,6 @@ async function mergeRoute(resolverOut, intents, question) {
     fullTextParts.push(directionsText)
   }
 
-  // ─── Verdict / summary / note for the collapsed bubble ────────
   const verdictLine = `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`
 
   const summaryParts = []
@@ -598,7 +600,6 @@ async function mergeRoute(resolverOut, intents, question) {
   if (traffic?.verdict) noteParts.push(traffic.verdict)
   if (allWarnings.length > 0) noteParts.push(allWarnings.join(' · '))
 
-  // Small short summary of other sections for the collapsed view
   const otherSummaries = otherSections.map(s => {
     const c = s.content
     const text = typeof c === 'string' ? c : (c.verdict || c.summary || '')
@@ -632,7 +633,7 @@ async function mergeRoute(resolverOut, intents, question) {
     directions,
     warnings: allWarnings,
     traffic,
-    // 🔥 other intents surface here
+    journey,
     sections: otherSections.length > 0 ? otherSections : undefined,
     fullText: fullTextParts.join('\n'),
   }
