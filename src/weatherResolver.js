@@ -6,6 +6,7 @@ import {
   fetchWeather,
   fetchWeatherBatch,
 } from './weatherFetcher.js'
+import { reverseGeocodeBatch } from './reverseGeocode.js'
 
 const DAY_NAMES = [
   'sunday', 'monday', 'tuesday', 'wednesday',
@@ -44,20 +45,14 @@ function stripStopword(text) {
   return LOCATION_STOPWORDS.has(text.toLowerCase()) ? null : text
 }
 
-/**
- * HARD FILTER: is this a plausible place name?
- * Rejects verbs, stopwords, multi-word junk like "compare london".
- */
 function isPlausibleLocation(text) {
   if (!text) return false
   const t = text.toLowerCase().trim()
   if (t.length < 2 || t.length > 40) return false
   if (LOCATION_STOPWORDS.has(t)) return false
-  // Must not start with a verb/stopword
   const firstWord = t.split(/\s+/)[0]
   if (LOCATION_STOPWORDS.has(firstWord)) return false
   if (/^(compare|check|show|tell|give|weather|forecast|what|how|when|where|is|are|will|can|should)\b/.test(t)) return false
-  // Max 3 words (real place names: "New York", "San Francisco", "Rio de Janeiro")
   if (t.split(/\s+/).length > 3) return false
   return true
 }
@@ -356,31 +351,23 @@ export function parseInLocation(question) {
   return stripStopword(hint)
 }
 
-// ─── COMPARISON DETECTION (REWRITTEN) ──────────────────────────────────
+// ─── COMPARISON DETECTION ──────────────────────────────────────────────
 
-/**
- * Detect a comparison question.
- * Returns { type: 'time', time1, time2 } or { type: 'location', locations: [...] }
- */
 export function detectComparison(question, savedLocations = []) {
   if (!question) return null
   const q = question.toLowerCase().trim()
 
-  // Must have a comparison trigger
   const hasCompare = /\b(vs|versus|compare|or|better|best|which|difference|rather)\b/i.test(q)
   if (!hasCompare) return null
 
-  // ─── Time comparison ─────────────────────────────────────────────
   const timeWords = ['today', 'tomorrow', 'yesterday', 'morning', 'afternoon', 'evening', 'night', 'tonight']
   const foundTimes = timeWords.filter(w => q.includes(w))
   if (foundTimes.length >= 2) {
     return { type: 'time', time1: foundTimes[0], time2: foundTimes[1] }
   }
 
-  // ─── Location comparison ─────────────────────────────────────────
   const foundLocations = []
 
-  // (a) Saved location matches
   for (const loc of savedLocations || []) {
     const label = (loc.label || '').toLowerCase()
     const name = (loc.name || '').toLowerCase()
@@ -390,8 +377,6 @@ export function detectComparison(question, savedLocations = []) {
     }
   }
 
-  // (b) Extract tokens that look like place names
-  // Strip the comparison trigger words first so they don't become locations
   const cleaned = q
     .replace(/\b(compare|versus|vs\.?|better|best|which|difference|rather)\b/gi, ' ')
     .replace(/\b(weather|forecast|temperature|conditions?)\b/gi, ' ')
@@ -399,17 +384,14 @@ export function detectComparison(question, savedLocations = []) {
     .replace(/\b(morning|afternoon|evening|night)\b/gi, ' ')
     .replace(/[?!.]/g, ' ')
 
-  // Split on commas, "and", "or"
   const segments = cleaned
     .split(/\s*,\s*|\s+and\s+|\s+or\s+/i)
     .map(s => s.trim())
     .filter(Boolean)
 
   segments.forEach(seg => {
-    // Trim "in X" / "at X" prefix
     const stripped = seg.replace(/^\s*(?:in|at|near)\s+/i, '').trim()
     if (isPlausibleLocation(stripped) && !foundLocations.includes(stripped)) {
-      // Normalize casing: title-case each word
       const normalized = stripped
         .split(/\s+/)
         .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -420,7 +402,6 @@ export function detectComparison(question, savedLocations = []) {
     }
   })
 
-  // (c) "X vs Y" pattern fallback
   if (foundLocations.length < 2) {
     const vsMatch = q.match(/([a-z][a-z\s]{1,25}?)\s+(?:vs\.?|versus)\s+([a-z][a-z\s]{1,25}?)(?:\s+(?:tomorrow|today|tonight|\?)|$)/i)
     if (vsMatch) {
@@ -568,6 +549,68 @@ export function detectMode(question) {
   return 'car'
 }
 
+/**
+ * Sample waypoints from a route, preferring real turns.
+ * Returns [{ lat, lon, fallbackLabel, stepName }]
+ */
+function sampleWaypoints(coords, steps = [], maxPoints = 5) {
+  if (!Array.isArray(coords) || coords.length < 2) return []
+
+  if (Array.isArray(steps) && steps.length > 0) {
+    const candidates = []
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      const wp = step?.way_points
+      if (!Array.isArray(wp) || wp.length < 2) continue
+
+      const endIdx = wp[1]
+      if (endIdx <= 0 || endIdx >= coords.length - 1) continue
+
+      const [lon, lat] = coords[endIdx]
+      const name = (step.name || '').trim()
+
+      const distance = step.distance || 0
+      if (distance < 200 && candidates.length > 0) continue
+
+      candidates.push({
+        lat,
+        lon,
+        fallbackLabel: name || `Point ${candidates.length + 1}`,
+        stepName: name || null,
+        distance,
+      })
+    }
+
+    if (candidates.length > maxPoints) {
+      const stepSize = Math.floor(candidates.length / maxPoints)
+      const trimmed = []
+      for (let i = 0; i < candidates.length && trimmed.length < maxPoints; i += stepSize) {
+        trimmed.push(candidates[i])
+      }
+      return trimmed
+    }
+
+    if (candidates.length > 0) return candidates
+  }
+
+  const total = coords.length
+  const points = []
+  const stepSize = Math.max(1, Math.floor(total / (maxPoints + 1)))
+  for (let i = stepSize; i < total - 1; i += stepSize) {
+    const [lon, lat] = coords[i]
+    points.push({
+      lat,
+      lon,
+      fallbackLabel: `Point ${points.length + 1}`,
+      stepName: null,
+      distance: 0,
+    })
+    if (points.length >= maxPoints) break
+  }
+  return points
+}
+
 export async function fetchRoute(from, to, mode = 'car') {
   if (!from?.lat || !to?.lat) return null
   const profile = MODE_TO_ORS_PROFILE[mode] || 'driving-car'
@@ -589,11 +632,12 @@ export async function fetchRoute(from, to, mode = 'car') {
       distance: s.distance,
       duration: s.duration,
       type: s.type,
+      name: s.name,
       way_points: s.way_points,
     }))
 
     const coords = feature.geometry?.coordinates || []
-    const waypoints = sampleWaypoints(coords, 4)
+    const waypoints = sampleWaypoints(coords, steps, 5)
 
     return {
       distance: segment.distance || 0,
@@ -606,19 +650,6 @@ export async function fetchRoute(from, to, mode = 'car') {
   } catch {
     return null
   }
-}
-
-function sampleWaypoints(coords, maxPoints = 4) {
-  if (!Array.isArray(coords) || coords.length < 2) return []
-  const total = coords.length
-  const points = []
-  const step = Math.max(1, Math.floor(total / (maxPoints + 1)))
-  for (let i = step; i < total - 1; i += step) {
-    const [lon, lat] = coords[i]
-    points.push({ lat, lon, label: `Waypoint ${points.length + 1}` })
-    if (points.length >= maxPoints) break
-  }
-  return points
 }
 
 // ─── MAIN RESOLVER ─────────────────────────────────────────────────────
@@ -690,8 +721,6 @@ export async function resolveWeatherContext({
           }
         }
       }
-
-      // Comparison detected but couldn't resolve — fall through to single
     }
   }
 
@@ -706,18 +735,51 @@ export async function resolveWeatherContext({
       const route = await fetchRoute(fromLoc, toLoc, mode)
 
       if (route) {
-        const allPoints = [
-          { ...fromLoc, role: 'from', label: fromLoc.label || fromLoc.name || 'Origin' },
-          ...route.waypoints.map(wp => ({ ...wp, role: 'waypoint' })),
-          { ...toLoc, role: 'to', label: toLoc.label || toLoc.name || 'Destination' },
+        const rawPoints = [
+          { ...fromLoc, role: 'from', fallbackLabel: fromLoc.label || fromLoc.name || 'Origin' },
+          ...route.waypoints.map((wp, i) => ({
+            ...wp,
+            role: 'waypoint',
+            fallbackLabel: wp.fallbackLabel || wp.label || `Point ${i + 1}`,
+          })),
+          { ...toLoc, role: 'to', fallbackLabel: toLoc.label || toLoc.name || 'Destination' },
         ]
+
+        // Reverse-geocode intermediate waypoints
+        const geocodable = rawPoints.filter(p => p.role === 'waypoint')
+        const geocoded = geocodable.length > 0
+          ? await reverseGeocodeBatch(geocodable.map(p => ({
+              lat: p.lat,
+              lon: p.lon,
+              fallbackLabel: p.fallbackLabel,
+            })))
+          : []
+
+        let gIdx = 0
+        const allPoints = rawPoints.map(p => {
+          if (p.role === 'waypoint') {
+            const g = geocoded[gIdx++]
+            const short = g?.short || p.fallbackLabel
+            const medium = g?.medium || short
+            const full = g?.full || medium
+            return { ...p, label: short, labelMedium: medium, labelFull: full }
+          }
+          return {
+            ...p,
+            label: p.fallbackLabel,
+            labelMedium: p.fallbackLabel,
+            labelFull: p.fallbackLabel,
+          }
+        })
 
         const coords = allPoints.map(p => ({ lat: p.lat, lon: p.lon }))
         const weathers = await fetchWeatherBatch(coords)
         const timeRef = parseTimeReference(question, now)
 
         const waypoints = allPoints.map((p, i) => ({
-          label: p.label || p.name || `Point ${i + 1}`,
+          label: p.label,
+          labelMedium: p.labelMedium,
+          labelFull: p.labelFull,
           role: p.role,
           location: p,
           weather: weathers[i] ? sliceWeatherByTime(weathers[i], timeRef, now) : null,
