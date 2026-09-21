@@ -23,7 +23,7 @@ import { getRouteAdvice } from './data/RouteAdvice.js'
 // ─── CONFIG ─────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  MAX_INTENTS: 3,
+  MAX_INTENTS: 5,
   MIN_SCORE_THRESHOLD: 45,
   SECONDARY_THRESHOLD: 0.75,
   SOFT_SECONDARY_THRESHOLD: 0.6,
