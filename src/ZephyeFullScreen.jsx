@@ -761,7 +761,10 @@ export default function ZephyeFullScreen({
         note: '', details: [], fullText: '',
       }
     }
-
+console.log('[routeQuestion] resolverOut.type:', resolverOut?.type)
+    console.log('[routeQuestion] resolverOut.location:', resolverOut?.location)
+    console.log('[routeQuestion] resolverOut.context:', resolverOut?.context)
+    console.log('[routeQuestion] resolverOut.bundle keys:', resolverOut?.bundle ? Object.keys(resolverOut.bundle).slice(0, 20) : null)
     let detectedIntents = []
     try {
       detectedIntents = detectIntents(question)
@@ -786,6 +789,12 @@ export default function ZephyeFullScreen({
         note: '', details: [], fullText: '',
       }
     }
+ console.log('[routeQuestion] merged.type:', merged?.type)
+    console.log('[routeQuestion] merged has sections?', !!merged?.sections, merged?.sections?.length)
+    console.log('[routeQuestion] merged has traffic?', !!merged?.traffic, merged?.traffic?.summary)
+    console.log('[routeQuestion] merged waypoints count:', merged?.waypoints?.length)
+    console.log('[routeQuestion] merged verdict:', merged?.verdict)
+    console.log('[routeQuestion] merged summary:', merged?.summary?.slice?.(0, 200))
 
     const context = {
       location: resolverOut.context?.location || resolverOut.bundle?.city,
