@@ -1850,3 +1850,272 @@ input:focus, textarea:focus {
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* ═══════════════════════════════════════════════════════════════════
+   LOCATIONS SUB-TAB (inside SavedTab)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.locations-sub-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.locations-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .locations-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.location-glance-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.location-glance-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.lg-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.lg-pin {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.lg-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.lg-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lg-sub {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.lg-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.lg-weather {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lg-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.lg-temp {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text, #fff);
+  letter-spacing: -0.5px;
+}
+
+.lg-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.lg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.lg-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.lg-btn:active {
+  transform: scale(0.96);
+}
+
+.lg-btn.danger {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.lg-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.lg-btn.share {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.2);
+  padding: 6px 10px;
+}
+
+.lg-btn.share:hover {
+  background: rgba(56, 189, 248, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXPANDED WEATHER DETAILS PANEL
+   ═══════════════════════════════════════════════════════════════════ */
+
+.weather-details-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  animation: wdp-fade-in 0.18s ease-out;
+}
+
+.weather-details-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.weather-details-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.weather-details-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.weather-details-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+@keyframes wdp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SAVED TAB — sub-tabs get a subtle underline when active
+   (in case your existing .sub-tab styles don't cover all three)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.saved-tab-sub-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.saved-tab-sub-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ROUTE RESPONSE — expand view extra polish
+   ═══════════════════════════════════════════════════════════════════ */
+
+.structured-response .full-text {
+  /* Routes have a lot of content — make it comfortable to read */
+  line-height: 1.7;
+  letter-spacing: 0.1px;
+}
+
+/* Long direction lists inside expand view */
+.structured-response .full-text pre,
+.structured-response .full-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPARISON — side-by-side details
+   ═══════════════════════════════════════════════════════════════════ */
+
+.structured-response .detail-row.comparison-row {
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.structured-response .detail-row.comparison-row .detail-value {
+  max-width: 60%;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE TWEAKS
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 420px) {
+  .lg-temp {
+    font-size: 20px;
+  }
+
+  .lg-emoji {
+    font-size: 22px;
+  }
+
+  .lg-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .weather-details-panel {
+    max-width: calc(100vw - 32px) !important;
+    max-height: 60vh !important;
+  }
+}
