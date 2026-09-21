@@ -404,15 +404,18 @@ async function mergeRoute(resolverOut, intents, question) {
 
   const routeIntent = intents.find(i => i.id === 'route')
   const trafficIntent = intents.find(i => i.id === 'traffic')
+  // 🔥 other intents now run against the destination bundle, not just waypoints
   const otherIntents = intents.filter(i => i.id !== 'route' && i.id !== 'traffic')
 
+  // ─── Waypoint narratives (weather only per-waypoint) ───────────
+  const weatherIntent = intents.find(i => i.id === 'weather')
   const enrichedWaypoints = []
   for (const wp of waypoints) {
     if (!wp.weather) {
       enrichedWaypoints.push({ ...wp, narrative: null })
       continue
     }
-    const runs = otherIntents.length > 0 ? await runIntents(otherIntents, wp.weather, question) : []
+    const runs = weatherIntent ? await runIntents([weatherIntent], wp.weather, question) : []
     const narrative = runs.length > 0
       ? await mergeSide(runs)
       : {
@@ -428,6 +431,7 @@ async function mergeRoute(resolverOut, intents, question) {
   const diagram = buildRouteDiagram(enrichedWaypoints)
   const waypointBlock = buildRouteWaypointBlock(enrichedWaypoints)
 
+  // ─── Directions from route intent ──────────────────────────────
   let directions = []
   if (routeIntent && typeof routeIntent.fn === 'function') {
     try {
@@ -449,11 +453,18 @@ async function mergeRoute(resolverOut, intents, question) {
     }
   }
 
+  // ─── Traffic on route ──────────────────────────────────────────
   let traffic = null
   if (trafficIntent && typeof trafficIntent.fn === 'function') {
     try {
+      // FIX: pass the destination as the "current location" so traffic
+      // analyzes the actual endpoint, not the raw question text.
+      const destBundle = resolverOut.bundle || {}
       const trafficData = {
-        ...(resolverOut.bundle || {}),
+        ...destBundle,
+        city: route.to?.label || route.to?.name || destBundle.city,
+        lat: route.to?.lat ?? destBundle.lat,
+        lon: route.to?.lon ?? destBundle.lon,
         _route: route,
         _waypoints: waypoints.map(wp => ({
           label: wp.label,
@@ -479,6 +490,30 @@ async function mergeRoute(resolverOut, intents, question) {
     }
   }
 
+  // ─── Other intents (pets, clothing, health, etc.) ──────────────
+  // These run against the destination bundle, not the raw waypoints.
+  let otherSections = []
+  if (otherIntents.length > 0 && resolverOut.bundle) {
+    // Give the bundle the destination identity so intents can reference it
+    const destBundle = {
+      ...resolverOut.bundle,
+      city: route.to?.label || route.to?.name || resolverOut.bundle.city,
+      lat: route.to?.lat ?? resolverOut.bundle.lat,
+      lon: route.to?.lon ?? resolverOut.bundle.lon,
+    }
+    const runs = await runIntents(otherIntents, destBundle, question)
+    otherSections = runs.map(({ intent, result }) => {
+      const n = normalizeContent(result)
+      return {
+        title: intent.section || intent.name || intent.id,
+        content: n.kind === 'structured'
+          ? { verdict: n.verdict, summary: n.summary, note: n.note, details: n.details, fullText: n.fullText }
+          : n.fullText,
+      }
+    })
+  }
+
+  // ─── Formatting ────────────────────────────────────────────────
   const distanceKm = route.distance ? route.distance / 1000 : null
   const durationMin = route.duration ? route.duration / 60 : null
 
@@ -501,6 +536,7 @@ async function mergeRoute(resolverOut, intents, question) {
     ? directions.map((step, i) => `${i + 1}. ${step}`).join('\n')
     : ''
 
+  // ─── Full text ─────────────────────────────────────────────────
   const fullTextParts = []
 
   if (distanceLabel || durationLabel) {
@@ -534,11 +570,23 @@ async function mergeRoute(resolverOut, intents, question) {
     fullTextParts.push('')
   }
 
+  // Append other sections to full text
+  otherSections.forEach(s => {
+    const c = s.content
+    const text = typeof c === 'string' ? c : [c.verdict, c.summary, c.fullText].filter(Boolean).join('\n')
+    if (text) {
+      fullTextParts.push(`${s.title}:`)
+      fullTextParts.push(text)
+      fullTextParts.push('')
+    }
+  })
+
   if (directionsText) {
     fullTextParts.push(`Directions (${directions.length} steps):`)
     fullTextParts.push(directionsText)
   }
 
+  // ─── Verdict / summary / note for the collapsed bubble ────────
   const verdictLine = `Route: ${route.from?.label || route.from?.name || '?'} → ${route.to?.label || route.to?.name || '?'}`
 
   const summaryParts = []
@@ -550,6 +598,13 @@ async function mergeRoute(resolverOut, intents, question) {
   if (traffic?.verdict) noteParts.push(traffic.verdict)
   if (allWarnings.length > 0) noteParts.push(allWarnings.join(' · '))
 
+  // Small short summary of other sections for the collapsed view
+  const otherSummaries = otherSections.map(s => {
+    const c = s.content
+    const text = typeof c === 'string' ? c : (c.verdict || c.summary || '')
+    return `${s.title}: ${text.slice(0, 80)}`
+  })
+
   return {
     type: 'route',
     title: verdictLine,
@@ -558,7 +613,7 @@ async function mergeRoute(resolverOut, intents, question) {
     mode: route.mode || 'car',
     distance: distanceLabel,
     duration: durationLabel,
-    summary: summaryParts.join('. '),
+    summary: [...summaryParts, ...otherSummaries].join('. '),
     note: noteParts.join(' · '),
     diagram,
     waypoints: enrichedWaypoints.map(wp => ({
@@ -577,6 +632,8 @@ async function mergeRoute(resolverOut, intents, question) {
     directions,
     warnings: allWarnings,
     traffic,
+    // 🔥 other intents surface here
+    sections: otherSections.length > 0 ? otherSections : undefined,
     fullText: fullTextParts.join('\n'),
   }
 }
