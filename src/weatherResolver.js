@@ -7,6 +7,12 @@ import {
   fetchWeatherBatch,
 } from './weatherFetcher.js'
 import { reverseGeocodeBatch } from './reverseGeocode.js'
+import {
+  createRouteContext,
+  createLocationContext,
+  createComparisonContext,
+  CONTEXT_TYPES,
+} from './chatContext.js'
 
 const DAY_NAMES = [
   'sunday', 'monday', 'tuesday', 'wednesday',
@@ -70,6 +76,7 @@ export function parseTimeReference(question, now = new Date()) {
     daysAhead: 0,
     explicitHour: null,
     explicitMinute: 0,
+    hasExplicitTime: false,
   }
 
   result.targetDate.setSeconds(0, 0)
@@ -88,6 +95,7 @@ export function parseTimeReference(question, now = new Date()) {
     }
     result.isFuture = true
     result.timePhrase = inMatch[0]
+    result.hasExplicitTime = true
   }
 
   if (/\bday\s+after\s+tomorrow\b/i.test(q)) {
@@ -95,15 +103,18 @@ export function parseTimeReference(question, now = new Date()) {
     result.daysAhead = 2
     result.isFuture = true
     result.timePhrase = 'day after tomorrow'
+    result.hasExplicitTime = true
   } else if (/\btomorrow\b/i.test(q)) {
     result.targetDate.setDate(result.targetDate.getDate() + 1)
     result.daysAhead = 1
     result.isFuture = true
     result.timePhrase = 'tomorrow'
+    result.hasExplicitTime = true
   } else if (/\byesterday\b/i.test(q)) {
     result.targetDate.setDate(result.targetDate.getDate() - 1)
     result.daysAhead = -1
     result.timePhrase = 'yesterday'
+    result.hasExplicitTime = true
   } else {
     const nextDayMatch = q.match(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
     if (nextDayMatch) {
@@ -116,6 +127,7 @@ export function parseTimeReference(question, now = new Date()) {
       result.daysAhead = diff
       result.isFuture = true
       result.timePhrase = nextDayMatch[0]
+      result.hasExplicitTime = true
     } else {
       const thisDayMatch = q.match(/\b(?:this\s+|on\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
       if (thisDayMatch) {
@@ -127,11 +139,13 @@ export function parseTimeReference(question, now = new Date()) {
         result.daysAhead = diff
         result.isFuture = true
         result.timePhrase = thisDayMatch[0].trim()
+        result.hasExplicitTime = true
       } else if (/\bnext\s+week\b/i.test(q)) {
         result.targetDate.setDate(result.targetDate.getDate() + 7)
         result.daysAhead = 7
         result.isFuture = true
         result.timePhrase = 'next week'
+        result.hasExplicitTime = true
       } else if (/\b(?:this\s+)?weekend\b/i.test(q)) {
         const currentDay = result.targetDate.getDay()
         const daysUntilSat = (6 - currentDay + 7) % 7 || 7
@@ -139,6 +153,7 @@ export function parseTimeReference(question, now = new Date()) {
         result.daysAhead = daysUntilSat
         result.isFuture = true
         result.timePhrase = 'this weekend'
+        result.hasExplicitTime = true
       }
     }
   }
@@ -154,6 +169,7 @@ export function parseTimeReference(question, now = new Date()) {
       result.explicitHour = hour
       result.explicitMinute = minute
       result.hasSpecificHour = true
+      result.hasExplicitTime = true
     }
   }
 
@@ -161,18 +177,22 @@ export function parseTimeReference(question, now = new Date()) {
     if (/\b(?:morning|sunrise|dawn)\b/i.test(q)) {
       result.explicitHour = 8
       result.hasSpecificHour = true
+      result.hasExplicitTime = true
       if (!result.timePhrase) result.timePhrase = 'morning'
     } else if (/\b(?:afternoon|noon|midday|lunch)\b/i.test(q)) {
       result.explicitHour = 14
       result.hasSpecificHour = true
+      result.hasExplicitTime = true
       if (!result.timePhrase) result.timePhrase = 'afternoon'
     } else if (/\b(?:evening|sunset|dusk)\b/i.test(q)) {
       result.explicitHour = 19
       result.hasSpecificHour = true
+      result.hasExplicitTime = true
       if (!result.timePhrase) result.timePhrase = 'evening'
     } else if (/\b(?:night|tonight|midnight)\b/i.test(q)) {
       result.explicitHour = 22
       result.hasSpecificHour = true
+      result.hasExplicitTime = true
       if (!result.timePhrase) result.timePhrase = 'night'
     }
   }
@@ -549,10 +569,6 @@ export function detectMode(question) {
   return 'car'
 }
 
-/**
- * Sample waypoints from a route, preferring real turns.
- * Returns [{ lat, lon, fallbackLabel, stepName }]
- */
 function sampleWaypoints(coords, steps = [], maxPoints = 5) {
   if (!Array.isArray(coords) || coords.length < 2) return []
 
@@ -652,6 +668,98 @@ export async function fetchRoute(from, to, mode = 'car') {
   }
 }
 
+// ─── CONTEXT HELPERS ───────────────────────────────────────────────────
+
+/**
+ * Determine what context to set based on the resolver output.
+ * Returns a new context object or null.
+ */
+function buildNewContext(resolverOut, question) {
+  if (!resolverOut) return null
+
+  if (resolverOut.type === 'route' && resolverOut.route) {
+    return createRouteContext({
+      from: resolverOut.route.from,
+      to: resolverOut.route.to,
+      mode: resolverOut.route.mode,
+      question,
+    })
+  }
+
+  if (resolverOut.type === 'comparison' && resolverOut.items) {
+    const items = resolverOut.items.map(it => ({
+      label: it.label,
+      location: it.location,
+    }))
+    return createComparisonContext({
+      comparisonType: resolverOut.comparisonType,
+      items,
+      question,
+    })
+  }
+
+  if (resolverOut.type === 'single' && resolverOut.location) {
+    return createLocationContext({
+      location: resolverOut.location,
+      targetDate: resolverOut.bundle?._targetDate,
+      timeLabel: resolverOut.bundle?._timeLabel,
+      question,
+    })
+  }
+
+  return null
+}
+
+/**
+ * Apply a context as defaults. Fills in missing pieces without
+ * overriding explicit user input.
+ *
+ * Returns { routeFrom, routeTo, targetLocation, timeRef } — hints for the resolver.
+ */
+function applyContext(context, question, now) {
+  const hints = {
+    routeFrom: null,
+    routeTo: null,
+    location: null,
+    targetDate: null,
+    timeLabel: null,
+    mode: null,
+  }
+
+  if (!context?.payload) return hints
+
+  const hasExplicitRoute = !!parseFromTo(question)
+  const hasExplicitLocation = !!(parseInLocation(question) || parseToOnly(question))
+  const timeRef = parseTimeReference(question, now)
+  const hasExplicitTime = timeRef.hasExplicitTime
+
+  if (context.type === CONTEXT_TYPES.ROUTE) {
+    if (!hasExplicitRoute && !hasExplicitLocation) {
+      hints.routeFrom = context.payload.from
+      hints.routeTo = context.payload.to
+    }
+    if (!hasExplicitTime && context.payload.targetDate) {
+      hints.targetDate = context.payload.targetDate
+      hints.timeLabel = context.payload.timeLabel
+    }
+    if (!question.toLowerCase().match(/\b(walk|drive|cycl|bike|hike|truck|wheelchair|foot)\b/)) {
+      hints.mode = context.payload.mode
+    }
+  }
+
+  if (context.type === CONTEXT_TYPES.LOCATION) {
+    if (!hasExplicitLocation && !hasExplicitRoute) {
+      hints.location = context.payload.location
+    }
+    if (!hasExplicitTime && context.payload.targetDate) {
+      hints.targetDate = context.payload.targetDate
+      hints.timeLabel = context.payload.timeLabel
+    }
+  }
+
+  return hints
+}
+
 // ─── MAIN RESOLVER ─────────────────────────────────────────────────────
 
 export async function resolveWeatherContext({
@@ -661,12 +769,16 @@ export async function resolveWeatherContext({
   location,
   savedLocations = [],
   homeLocation = null,
+  context = null,
 }) {
   const now = new Date()
-  const context = {
+  const contextMeta = {
     question,
     location: location?.name || homeLocation?.name || null,
   }
+
+  // ─── Apply context as defaults ─────────────────────────────────
+  const hints = applyContext(context, question, now)
 
   // ─── 1. Comparison ────────────────────────────────────────────────
   const comparison = detectComparison(question, savedLocations)
@@ -674,23 +786,25 @@ export async function resolveWeatherContext({
     if (comparison.type === 'time') {
       const baseLat = location?.lat
       const baseLon = location?.lon
-      if (baseLat == null) return { type: 'single', bundle: null, context }
+      if (baseLat == null) return { type: 'single', bundle: null, context: contextMeta, newContext: null }
 
       const weather = baseWeather || await fetchWeather(baseLat, baseLon)
-      if (!weather) return { type: 'single', bundle: null, context }
+      if (!weather) return { type: 'single', bundle: null, context: contextMeta, newContext: null }
 
       const t1 = parseTimeReference(comparison.time1, now)
       const t2 = parseTimeReference(comparison.time2, now)
 
-      return {
+      const out = {
         type: 'comparison',
         comparisonType: 'time',
         items: [
           { label: comparison.time1, bundle: sliceWeatherByTime(weather, t1, now) },
           { label: comparison.time2, bundle: sliceWeatherByTime(weather, t2, now) },
         ],
-        context,
+        context: contextMeta,
       }
+      out.newContext = buildNewContext(out, question)
+      return out
     }
 
     if (comparison.type === 'location') {
@@ -712,26 +826,45 @@ export async function resolveWeatherContext({
         })).filter(item => item.bundle != null)
 
         if (items.length >= 2) {
-          context.location = items.map(it => it.label).join(' vs ')
-          return {
+          contextMeta.location = items.map(it => it.label).join(' vs ')
+          const out = {
             type: 'comparison',
             comparisonType: 'location',
             items,
-            context,
+            context: contextMeta,
           }
+          out.newContext = buildNewContext(out, question)
+          return out
         }
       }
     }
   }
 
-  // ─── 2. Route ─────────────────────────────────────────────────────
-  const fromTo = parseFromTo(question)
-  if (fromTo) {
-    const fromLoc = await resolveLocation(fromTo.from, savedLocations, homeLocation)
-    const toLoc = await resolveLocation(fromTo.to, savedLocations, homeLocation)
+  // ─── 2. Route (from question OR from context) ────────────────────
+  let routeFromTo = parseFromTo(question)
+  if (!routeFromTo && hints.routeFrom && hints.routeTo) {
+    // Context provides route — only use if question didn't specify one
+    // AND question doesn't specify a new location either
+    const hasNewLocation = !!(parseInLocation(question) || parseToOnly(question))
+    if (!hasNewLocation) {
+      routeFromTo = {
+        from: hints.routeFrom.label,
+        to: hints.routeTo.label,
+        fromResolved: hints.routeFrom,
+        toResolved: hints.routeTo,
+      }
+    }
+  }
+
+  if (routeFromTo) {
+    let fromLoc = routeFromTo.fromResolved
+    let toLoc = routeFromTo.toResolved
+
+    if (!fromLoc) fromLoc = await resolveLocation(routeFromTo.from, savedLocations, homeLocation)
+    if (!toLoc) toLoc = await resolveLocation(routeFromTo.to, savedLocations, homeLocation)
 
     if (fromLoc?.lat != null && toLoc?.lat != null) {
-      const mode = detectMode(question)
+      const mode = hints.mode || detectMode(question)
       const route = await fetchRoute(fromLoc, toLoc, mode)
 
       if (route) {
@@ -745,7 +878,6 @@ export async function resolveWeatherContext({
           { ...toLoc, role: 'to', fallbackLabel: toLoc.label || toLoc.name || 'Destination' },
         ]
 
-        // Reverse-geocode intermediate waypoints
         const geocodable = rawPoints.filter(p => p.role === 'waypoint')
         const geocoded = geocodable.length > 0
           ? await reverseGeocodeBatch(geocodable.map(p => ({
@@ -774,7 +906,17 @@ export async function resolveWeatherContext({
 
         const coords = allPoints.map(p => ({ lat: p.lat, lon: p.lon }))
         const weathers = await fetchWeatherBatch(coords)
-        const timeRef = parseTimeReference(question, now)
+
+        // Time ref: explicit in question > hints from context > default
+        let timeRef = parseTimeReference(question, now)
+        if (!timeRef.hasExplicitTime && hints.targetDate) {
+          timeRef = {
+            ...timeRef,
+            targetDate: new Date(hints.targetDate),
+            timePhrase: hints.timeLabel,
+            isFuture: new Date(hints.targetDate).getTime() > now.getTime(),
+          }
+        }
 
         const waypoints = allPoints.map((p, i) => ({
           label: p.label,
@@ -787,7 +929,7 @@ export async function resolveWeatherContext({
 
         const destWeather = waypoints[waypoints.length - 1]?.weather
 
-        return {
+        const out = {
           type: 'route',
           bundle: destWeather,
           route: {
@@ -799,44 +941,74 @@ export async function resolveWeatherContext({
             steps: route.steps,
           },
           waypoints,
-          context,
+          context: contextMeta,
         }
+        out.newContext = buildNewContext(out, question)
+        return out
       }
 
       const destWeather = await fetchWeather(toLoc.lat, toLoc.lon)
       const timeRef = parseTimeReference(question, now)
-      return {
+      const out = {
         type: 'single',
         bundle: destWeather ? sliceWeatherByTime(destWeather, timeRef, now) : null,
         location: toLoc,
-        context,
+        context: contextMeta,
       }
+      out.newContext = buildNewContext(out, question)
+      return out
     }
   }
 
-  // ─── 3. Single location ──────────────────────────────────────────
-  const hint = parseInLocation(question) || parseToOnly(question)
+  // ─── 3. Single location (explicit OR from context) ───────────────
+  let hint = parseInLocation(question) || parseToOnly(question)
+  let loc = null
 
   if (hint) {
-    const loc = await resolveLocation(hint, savedLocations, homeLocation)
-    if (loc?.lat != null) {
-      const weather = await fetchWeather(loc.lat, loc.lon)
-      const timeRef = parseTimeReference(question, now)
-      const bundle = weather ? sliceWeatherByTime(weather, timeRef, now) : null
-      if (bundle) {
-        bundle.city = loc.label || loc.name
-        bundle.lat = loc.lat
-        bundle.lon = loc.lon
-      }
-      context.location = loc.label || loc.name
+    loc = await resolveLocation(hint, savedLocations, homeLocation)
+  } else if (hints.location?.lat != null) {
+    loc = hints.location
+  }
 
-      return { type: 'single', bundle, location: loc, context }
+  if (loc?.lat != null) {
+    const weather = await fetchWeather(loc.lat, loc.lon)
+    let timeRef = parseTimeReference(question, now)
+    if (!timeRef.hasExplicitTime && hints.targetDate) {
+      timeRef = {
+        ...timeRef,
+        targetDate: new Date(hints.targetDate),
+        timePhrase: hints.timeLabel,
+        isFuture: new Date(hints.targetDate).getTime() > now.getTime(),
+      }
+    }
+
+    const bundle = weather ? sliceWeatherByTime(weather, timeRef, now) : null
+    if (bundle) {
+      bundle.city = loc.label || loc.name
+      bundle.lat = loc.lat
+      bundle.lon = loc.lon
+    }
+    contextMeta.location = loc.label || loc.name
+
+    const out = { type: 'single', bundle, location: loc, context: contextMeta }
+    // Only set newContext if this was an EXPLICIT location (not from context)
+    out.newContext = hint ? buildNewContext(out, question) : null
+    return out
+  }
+
+  // ─── 4. Current location (fallback) ──────────────────────────────
+  let weather = baseWeather
+  let timeRef = parseTimeReference(question, now)
+
+  if (!timeRef.hasExplicitTime && hints.targetDate) {
+    timeRef = {
+      ...timeRef,
+      targetDate: new Date(hints.targetDate),
+      timePhrase: hints.timeLabel,
+      isFuture: new Date(hints.targetDate).getTime() > now.getTime(),
     }
   }
 
-  // ─── 4. Current location ─────────────────────────────────────────
-  let weather = baseWeather
-  const timeRef = parseTimeReference(question, now)
   const needsForecast = timeRef.isFuture || timeRef.daysAhead > 0 || !weather?.hourly?.time?.length
 
   if (needsForecast && location?.lat != null) {
@@ -854,7 +1026,9 @@ export async function resolveWeatherContext({
     bundle.homeName = homeLocation?.name
   }
 
-  return { type: 'single', bundle, location, context }
+  const out = { type: 'single', bundle, location, context: contextMeta }
+  out.newContext = null
+  return out
 }
 
 export default {
