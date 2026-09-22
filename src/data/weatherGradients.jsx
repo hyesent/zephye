@@ -1,4 +1,3 @@
-```js
 // ============================================================================
 // ZEPHYE WEATHER THEMES + SVG ART
 // Atmospheric / Premium / Restrained
@@ -246,24 +245,27 @@ const edgeBiasedPosition = (
 // SVG HELPERS
 // ============================================================================
 
+// IMPORTANT:
+// This intentionally uses string concatenation instead of a nested template
+// literal. It prevents esbuild from mis-parsing the SVG wrapper in JSX builds.
+
 const svg = (w, h, content, defs = '') => {
   const defsMarkup = defs
-    ? `<defs>${defs}</defs>`
+    ? '<defs>' + defs + '</defs>'
     : ''
 
   return (
-    `<svg ` +
-    `width="${w}" ` +
-    `height="${h}" ` +
-    `viewBox="0 0 ${w} ${h}" ` +
-    `xmlns="http://www.w3.org/2000/svg" ` +
-    `preserveAspectRatio="xMidYMid slice">` +
+    '<svg ' +
+    'width="' + w + '" ' +
+    'height="' + h + '" ' +
+    'viewBox="0 0 ' + w + ' ' + h + '" ' +
+    'xmlns="http://www.w3.org/2000/svg" ' +
+    'preserveAspectRatio="xMidYMid slice">' +
     defsMarkup +
     content +
-    `</svg>`
+    '</svg>'
   )
 }
-`
 
 const blurFilter = (id, amount) => `
   <filter
@@ -517,7 +519,12 @@ const snowField = (
           stroke-width="1"
           stroke-linecap="round"
         >
-          <line x1="${-radius * 2}" y1="0" x2="${radius * 2}" y2="0"/>
+          <line
+            x1="${-radius * 2}"
+            y1="0"
+            x2="${radius * 2}"
+            y2="0"
+          />
           <line
             x1="${-radius}"
             y1="${-radius * 1.7}"
@@ -597,9 +604,7 @@ export const getSVGArt = (
         />
 
         <g
-          transform="
-            translate(${w * 0.5} ${h * 0.16})
-          "
+          transform="translate(${w * 0.5} ${h * 0.16})"
           stroke="#FFF3C4"
           stroke-linecap="round"
           opacity="0.46"
@@ -1811,4 +1816,3 @@ export const getSVGArt = (
 
   return svgs[svgType] || svgs.sunny
 }
-```
