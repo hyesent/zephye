@@ -246,17 +246,23 @@ const edgeBiasedPosition = (
 // SVG HELPERS
 // ============================================================================
 
-const svg = (w, h, content, defs = '') => `
-  <svg
-    width="${w}"
-    height="${h}"
-    viewBox="0 0 ${w} ${h}"
-    xmlns="http://www.w3.org/2000/svg"
-    preserveAspectRatio="xMidYMid slice"
-  >
-    ${defs ? `<defs>${defs}</defs>` : ''}
-    ${content}
-  </svg>
+const svg = (w, h, content, defs = '') => {
+  const defsMarkup = defs
+    ? `<defs>${defs}</defs>`
+    : ''
+
+  return (
+    `<svg ` +
+    `width="${w}" ` +
+    `height="${h}" ` +
+    `viewBox="0 0 ${w} ${h}" ` +
+    `xmlns="http://www.w3.org/2000/svg" ` +
+    `preserveAspectRatio="xMidYMid slice">` +
+    defsMarkup +
+    content +
+    `</svg>`
+  )
+}
 `
 
 const blurFilter = (id, amount) => `
