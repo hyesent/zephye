@@ -25,7 +25,7 @@ export default function EnvironmentPage({ weather, aqi, location, onBack, onLoca
     const time = value => value ? new Date(value).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) : '—'
     return [
       { title:'Atmosphere', subtitle:'Air quality, pressure and moisture', metrics:[
-        ['US Air Quality Index',val(aqi?.us_aqi),'AQI'],['PM2.5',val(aqi?.pm2_5,1),'µg/m³'],['Relative humidity',val(current.relative_humidity_2m),'%'],['Dew point',val(current.dew_point_2m),'°C'],['Sea-level pressure',val(current.pressure_msl),'hPa'],['Visibility',val(current.visibility == null ? null : current.visibility/1000,1),'km']
+        ['Air Quality Index',val(aqi?.us_aqi),'AQI'],['PM2.5',val(aqi?.pm2_5,1),'µg/m³'],['Relative humidity',val(current.relative_humidity_2m),'%'],['Dew point',val(current.dew_point_2m),'°C'],['Sea-level pressure',val(current.pressure_msl),'hPa'],['Visibility',val(current.visibility == null ? null : current.visibility/1000,1),'km']
       ]},
       { title:'Sky', subtitle:'Cloud, rain and changing conditions', metrics:[
         ['Cloud cover',val(current.cloud_cover),'%'],['Weather code',current.weather_code ?? '—',''],['Rain probability',val(h('precipitation_probability')),'%'],['Precipitation',val(h('precipitation'),1),'mm'],['Rain today',val(d('precipitation_sum'),1),'mm'],['Thunder probability',val(h('precipitation_probability')), '%'],['Snowfall',val(h('snowfall'),1),'cm']
